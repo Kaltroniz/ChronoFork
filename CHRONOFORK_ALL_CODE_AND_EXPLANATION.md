@@ -21,7 +21,7 @@
 
 ChronoFork is a multi-agent coding swarm coordinator where **FalkorDB is the core brain**. 
 
-When multiple AI coding agents work in parallel on a shared repository, standard Git tooling fails silently. If Agent 1 modifies a function signature in `config.py` and Agent 2 edits a consumer in `worker.py` (which transitively calls `config.py` through `auth.py`), Git detects zero line conflicts and produces a clean merge that breaks runtime execution.
+When multiple AI coding agents work in parallel on a shared repository, standard Git tooling fails silently. If Agent 1 modifies a function signature in `config.py` and Agent 2 edits a consumer in `worker.py` (which transitively calls `config.py` across 4 hops through `queue.py`, `auth.py`, and `database.py`), Git detects zero line conflicts and produces a clean merge that breaks runtime execution.
 
 ChronoFork solves this with:
 1. **Import-Aware AST Parsing**: Compiles code into a live `:Symbol` graph in FalkorDB with `CALLS`, `DEFINES`, `IMPORTS`, and `TESTED_BY` edges.
@@ -7255,6 +7255,9 @@ services:
 # FalkorDB Connection (default: 127.0.0.1:6379 for local, 'falkordb' in docker)
 FALKORDB_HOST=127.0.0.1
 FALKORDB_PORT=6379
+FALKORDB_USERNAME=default
+FALKORDB_PASSWORD=
+FALKORDB_SSL=false
 
 # LLM Provider Configuration (Optional for Replay Mode; Required for Live Mode)
 # Supported options: 'gemini', 'anthropic', 'openai'
