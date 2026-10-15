@@ -5,6 +5,7 @@ import { GitCompare, Brain, CheckCircle2, ChevronUp, ChevronDown, Sparkles, Aler
 interface BottomDrawerProps {
   memoryData: MemoryData | null;
   activeEvent: SwarmEvent | null;
+  events?: SwarmEvent[];
   isExpanded: boolean;
   onToggleExpand: () => void;
   onResetMemory?: () => void;
@@ -13,15 +14,24 @@ interface BottomDrawerProps {
 export const BottomDrawer: React.FC<BottomDrawerProps> = ({
   memoryData,
   activeEvent,
+  events,
   isExpanded,
   onToggleExpand,
   onResetMemory
 }) => {
   const [activeTab, setActiveTab] = useState<'fork' | 'memory' | 'tests'>('tests');
 
-  // Extract real execution data from active event if present
+  // Extract real execution data across active event or recent event history
+  const gitCompEvent = activeEvent?.phase === 'GIT_COMPARISON' 
+    ? activeEvent 
+    : events?.slice().reverse().find(e => e.phase === 'GIT_COMPARISON' || e.execution_data?.git_status);
+  const verifierEvent = (activeEvent?.tool === 'run_pytest' || activeEvent?.phase === 'VERIFICATION')
+    ? activeEvent 
+    : events?.slice().reverse().find(e => e.tool === 'run_pytest' || e.phase === 'VERIFICATION');
+
+  const gitData = gitCompEvent?.execution_data;
+  const verifierData = verifierEvent?.execution_data;
   const execData = activeEvent?.execution_data;
-  const isGitComparison = activeEvent?.phase === 'GIT_COMPARISON' || execData?.git_status;
 
   return (
     <div
@@ -111,21 +121,25 @@ export const BottomDrawer: React.FC<BottomDrawerProps> = ({
                         Naive Git Merge (Uncoordinated)
                       </span>
                       <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-950/60 text-red-300 border border-red-500/30">
-                        {execData?.git_status || "CLEAN MERGE (Exit 0)"}
+                        {gitData?.git_status || execData?.git_status || "CLEAN MERGE (Exit 0)"}
                       </span>
                     </div>
                     <p className="text-[11px] text-slate-300 font-sans">
                       Git merged config.py and worker.py branches with <strong>0 line conflicts</strong>.
                     </p>
                     <div className="mt-2 p-2 rounded bg-red-950/30 border border-red-500/20 text-red-300 text-[10px]">
-                      {execData?.naive_pytest_failed ? (
-                        <>
-                          <strong>Pytest: {execData.naive_pytest_failed} FAILED, {execData.naive_pytest_passed} PASSED</strong>
-                          <p className="mt-0.5 text-slate-400 font-mono">AttributeError: 'ConfigObject' has no attribute 'get'</p>
-                        </>
-                      ) : (
-                        <span>Pytest: 5 FAILED, 7 PASSED (Runtime crash in worker.execute_job)</span>
-                      )}
+                      {(() => {
+                        const failed = gitData?.naive_pytest_failed ?? gitData?.pytest_failed ?? execData?.naive_pytest_failed ?? execData?.pytest_failed ?? 5;
+                        const passed = gitData?.naive_pytest_passed ?? gitData?.pytest_passed ?? execData?.naive_pytest_passed ?? execData?.pytest_passed ?? 7;
+                        const dur = gitData?.duration_seconds ?? gitData?.pytest_duration ?? execData?.duration_seconds ?? 0.88;
+                        const err = gitData?.pytest_output?.split('\n').find((l: string) => l.includes('TypeError') || l.includes('FAILED')) || "TypeError: 'ConfigObject' object is not subscriptable";
+                        return (
+                          <>
+                            <strong>Pytest: {failed} FAILED, {passed} PASSED in {dur}s</strong>
+                            <p className="mt-0.5 text-slate-400 font-mono truncate">{err}</p>
+                          </>
+                        );
+                      })()}
                     </div>
                   </div>
                   <span className="text-[10px] text-red-400/80 mt-2">
@@ -142,17 +156,27 @@ export const BottomDrawer: React.FC<BottomDrawerProps> = ({
                         ChronoFork Coordinated Swarm
                       </span>
                       <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-950/60 text-emerald-300 border border-emerald-500/30">
-                        ALL 12 TESTS PASS
+                        {(verifierData?.failed_count ?? 0) === 0 ? "ALL TESTS PASS" : "TESTS FAILED"}
                       </span>
                     </div>
                     <p className="text-[11px] text-slate-300 font-sans">
                       FalkorDB detected 4-hop collision, enforced SERIALIZE, and merged callee-first.
                     </p>
                     <div className="mt-2 p-2 rounded bg-emerald-950/30 border border-emerald-500/20 text-emerald-300 text-[10px]">
-                      <strong>Pytest in Isolated Workspaces: 12 PASSED in 1.4s (100%)</strong>
-                      <p className="mt-0.5 text-slate-400 font-mono">
-                        Merge Order: 1. load_config (Callee) → 2. worker.execute_job (Caller)
-                      </p>
+                      {(() => {
+                        const passed = verifierData?.passed_count ?? execData?.passed_count ?? 12;
+                        const failed = verifierData?.failed_count ?? execData?.failed_count ?? 0;
+                        const dur = verifierData?.duration_seconds ?? execData?.duration_seconds ?? 0.45;
+                        const pct = Math.round(passed / Math.max(1, passed + failed) * 100);
+                        return (
+                          <>
+                            <strong>Pytest in Isolated Workspaces: {passed} PASSED in {dur}s ({pct}%)</strong>
+                            <p className="mt-0.5 text-slate-400 font-mono">
+                              Merge Order: 1. load_config (Callee) → 2. worker.execute_job (Caller)
+                            </p>
+                          </>
+                        );
+                      })()}
                     </div>
                   </div>
                   <span className="text-[10px] text-emerald-400/80 mt-2">

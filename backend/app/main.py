@@ -13,6 +13,7 @@ Endpoints:
 
 import os
 import time
+import json
 import asyncio
 from typing import Dict, Any, Optional
 from fastapi import FastAPI, Query, BackgroundTasks, HTTPException
@@ -33,14 +34,30 @@ from backend.app.scenario_runner import (
     ensure_demo_repos_ingested
 )
 
+REPLAYS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "replays"))
+
+
+def get_replay_path(scenario: int, memory_enabled: bool) -> str:
+    if scenario == 2:
+        fname = "scenario_2_mem.json" if memory_enabled else "scenario_2.json"
+    else:
+        fname = f"scenario_{scenario}.json"
+    return os.path.join(REPLAYS_DIR, fname)
+
 app = FastAPI(title="ChronoFork Graph-Coordinated Coding Swarm API", version="1.0.0")
 
-# Enable CORS for React frontend (Vite port 5173 and preview ports)
+# Restrict CORS for secure production and local environments
+cors_origins_env = os.getenv(
+    "CORS_ORIGINS", 
+    "http://localhost:5173,http://localhost:3000,http://localhost:8000,http://127.0.0.1:5173,http://127.0.0.1:3000,http://127.0.0.1:8000"
+)
+allowed_origins = [o.strip() for o in cors_origins_env.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -77,25 +94,63 @@ class RunRequest(BaseModel):
 async def start_run(req: RunRequest):
     """Initiates a coordination run or scenario replay."""
     run_id = req.run_id or f"run_{int(time.time() * 1000)}"
-    
-    # Run the appropriate scenario
+    demo_mode = os.getenv("DEMO_MODE", "false").lower() in ("true", "1", "yes")
+
+    # In DEMO_MODE, force replay mode
+    req_mode = "replay" if demo_mode else req.mode
+    cache_file = get_replay_path(req.scenario or 1, req.memory_enabled)
+
+    # 1. Mode = Replay: Serve from cache instantly
+    if req_mode == "replay" and os.path.exists(cache_file):
+        try:
+            with open(cache_file, "r", encoding="utf-8") as f:
+                cached_events = json.load(f)
+
+            event_bus.init_run(run_id)
+            for evt in cached_events:
+                evt_copy = dict(evt)
+                evt_copy["run_id"] = run_id
+                event_bus._buffers[run_id].append(evt_copy)
+            event_bus.mark_completed(run_id)
+
+            return {
+                "run_id": run_id,
+                "status": "REPLAY_CACHED",
+                "scenario": req.scenario,
+                "mode": "replay",
+                "cached": True,
+                "events_count": len(cached_events)
+            }
+        except Exception as ex:
+            print(f"Warning: Failed to load replay cache {cache_file}: {ex}")
+
+    # 2. Mode = Live (or cache missing): Execute live
     if req.scenario == 1:
-        execute_scenario_1(run_id)
+        events = execute_scenario_1(run_id, mode=req_mode)
     elif req.scenario == 2:
-        execute_scenario_2(run_id, memory_enabled=req.memory_enabled)
+        events = execute_scenario_2(run_id, memory_enabled=req.memory_enabled)
     elif req.scenario == 3:
-        execute_scenario_3(run_id)
+        events = execute_scenario_3(run_id)
     elif req.scenario == 4:
-        execute_scenario_4(run_id)
+        events = execute_scenario_4(run_id)
     else:
-        execute_scenario_1(run_id)
+        events = execute_scenario_1(run_id, mode=req_mode)
+
+    # Save to replay cache after successful live run
+    try:
+        os.makedirs(REPLAYS_DIR, exist_ok=True)
+        with open(cache_file, "w", encoding="utf-8") as f:
+            json.dump(events, f, indent=2)
+    except Exception as ex:
+        print(f"Warning: Failed to save replay cache: {ex}")
 
     return {
         "run_id": run_id,
-        "status": "STARTED",
+        "status": "LIVE_EXECUTED",
         "scenario": req.scenario,
-        "mode": req.mode,
-        "memory_enabled": req.memory_enabled
+        "mode": "live",
+        "cached": False,
+        "events_count": len(events)
     }
 
 
@@ -276,17 +331,17 @@ class IngestRequest(BaseModel):
 @app.post("/repos")
 def ingest_repo(req: IngestRequest):
     """Parses and ingests a repository into FalkorDB with path sanitization."""
+    # Disable /repos endpoint completely when DEMO_MODE is active
+    demo_mode = os.getenv("DEMO_MODE", "false").lower() in ("true", "1", "yes")
+    if demo_mode:
+        raise HTTPException(status_code=403, detail="Repository upload and ingestion is disabled in Demo Mode.")
+
     # Sanitize path to prevent arbitrary directory traversal
     resolved_path = os.path.abspath(req.repo_path)
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
     
     if not os.path.exists(resolved_path):
         raise HTTPException(status_code=400, detail="Repository path does not exist.")
-
-    # Restrict to project directories in demo / public deployment
-    demo_mode = os.getenv("DEMO_MODE", "false").lower() in ("true", "1")
-    if demo_mode and not resolved_path.startswith(base_dir):
-        raise HTTPException(status_code=403, detail="Path traversal restricted in demo mode.")
 
     cg = parse_repository(resolved_path, req.repo_name)
     stats = ingest_code_graph_to_falkordb(cg, falkor_client)

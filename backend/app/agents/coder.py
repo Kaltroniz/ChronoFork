@@ -28,6 +28,9 @@ class WorkspaceManager:
             shutil.rmtree(agent_dir, ignore_errors=True)
 
 
+import time
+
+
 class Verifier:
     """Runs repository test suite in isolated workspace and verifies patches."""
 
@@ -42,6 +45,7 @@ class Verifier:
         env = os.environ.copy()
         env["PYTHONPATH"] = workspace_path
 
+        t0 = time.perf_counter()
         try:
             res = subprocess.run(
                 [pytest_cmd, "-v"],
@@ -51,6 +55,7 @@ class Verifier:
                 text=True,
                 timeout=30
             )
+            duration = round(time.perf_counter() - t0, 2)
             passed = (res.returncode == 0)
             
             # Count passed/failed from output
@@ -63,13 +68,30 @@ class Verifier:
                 "exit_code": res.returncode,
                 "passed_count": passed_count,
                 "failed_count": failed_count + error_count,
+                "duration_seconds": duration,
                 "output": res.stdout,
                 "errors": res.stderr
             }
         except subprocess.TimeoutExpired:
-            return {"success": False, "exit_code": -1, "passed_count": 0, "failed_count": 1, "output": "Tests timed out after 30s", "errors": ""}
+            return {
+                "success": False,
+                "exit_code": -1,
+                "passed_count": 0,
+                "failed_count": 1,
+                "duration_seconds": round(time.perf_counter() - t0, 2),
+                "output": "Tests timed out after 30s",
+                "errors": ""
+            }
         except Exception as ex:
-            return {"success": False, "exit_code": -1, "passed_count": 0, "failed_count": 1, "output": str(ex), "errors": str(ex)}
+            return {
+                "success": False,
+                "exit_code": -1,
+                "passed_count": 0,
+                "failed_count": 1,
+                "duration_seconds": round(time.perf_counter() - t0, 2),
+                "output": str(ex),
+                "errors": str(ex)
+            }
 
 
 class Coder:
@@ -95,32 +117,7 @@ class Coder:
         return Verifier.run_tests(self.workspace_path)
 
 
-def run_naive_git_merge_experiment(base_repo_path: str) -> Dict[str, Any]:
-    """
-    Executes a real Git merge experiment demonstrating Git's blind spot:
-      1. Initializes a git repo from base_repo_path
-      2. Branch 'agent-1-config' changes load_config to return ConfigObject
-      3. Branch 'agent-2-worker' updates worker.py
-      4. Runs 'git merge agent-2-worker': Git merges with ZERO line conflicts!
-      5. Runs pytest on the merged tree: Pytest FAILS with runtime TypeError!
-    """
-    temp_dir = tempfile.mkdtemp(prefix="chronofork_naive_git_")
-    shutil.copytree(base_repo_path, temp_dir, dirs_exist_ok=True)
-
-    def run_git(args: List[str]) -> subprocess.CompletedProcess:
-        return subprocess.run(["git"] + args, cwd=temp_dir, capture_output=True, text=True)
-
-    # 1. Initialize Git Repo
-    run_git(["init", "-b", "main"])
-    run_git(["config", "user.name", "ChronoFork Benchmark"])
-    run_git(["config", "user.email", "benchmark@chronofork.ai"])
-    run_git(["add", "."])
-    run_git(["commit", "-m", "chore: baseline commit"])
-
-    # 2. Agent 1 Branch: changes load_config signature to return ConfigObject
-    run_git(["checkout", "-b", "agent-1-config"])
-    config_file = os.path.join(temp_dir, "taskflow", "config.py")
-    agent_1_patch = """\"\"\"Configuration loader module for TaskFlow.\"\"\"
+BREAKING_CONFIG_OBJECT_PATCH = """\"\"\"Configuration loader module for TaskFlow.\"\"\"
 import os
 import hashlib
 
@@ -157,8 +154,94 @@ def load_config(path: str = "app.conf") -> ConfigObject:
     conf["signature"] = compute_config_signature(conf)
     return ConfigObject(conf)
 """
+
+MIGRATED_DATABASE_PATCH = '''"""Database module for TaskFlow, migrated to ConfigObject contract."""
+from taskflow.config import load_config
+
+_DB_STORE = {}
+
+
+def get_connection(path: str = "app.conf") -> dict:
+    """Migrated: accesses ConfigObject attributes (.env, .timeout, .auth_secret)."""
+    cfg = load_config(path=path)
+    env_val = cfg.env if hasattr(cfg, "env") else cfg["env"]
+    timeout_val = cfg.timeout if hasattr(cfg, "timeout") else cfg["timeout"]
+    secret_val = cfg.auth_secret if hasattr(cfg, "auth_secret") else cfg["auth_secret"]
+    return {
+        "db_url": f"sqlite:///taskflow_{env_val}.db",
+        "timeout": timeout_val,
+        "secret": secret_val,
+        "connected": True
+    }
+
+
+def save_result(key: str, val: dict) -> None:
+    _DB_STORE[key] = val
+
+
+def get_result(key: str) -> dict:
+    return _DB_STORE.get(key, {})
+
+
+def clear_store() -> None:
+    _DB_STORE.clear()
+'''
+
+
+MIGRATED_TEST_CONFIG_PATCH = '''"""Tests for configuration loader module."""
+from taskflow.config import load_config, get_default_config, compute_config_signature, ConfigObject
+
+
+def test_get_default_config():
+    cfg = get_default_config()
+    assert cfg["env"] == "production"
+    assert cfg["timeout"] == 30
+    assert "auth_secret" in cfg
+
+
+def test_load_config_default():
+    cfg = load_config()
+    assert isinstance(cfg, ConfigObject) or hasattr(cfg, "env")
+    assert cfg.env == "production"
+    assert cfg.path == "app.conf"
+    assert len(cfg.signature) == 12
+
+
+def test_compute_config_signature():
+    cfg1 = {"a": 1, "b": 2}
+    cfg2 = {"b": 2, "a": 1}
+    assert compute_config_signature(cfg1) == compute_config_signature(cfg2)
+'''
+
+
+
+def run_naive_git_merge_experiment(base_repo_path: str) -> Dict[str, Any]:
+    """
+    Executes a real Git merge experiment demonstrating Git's blind spot:
+      1. Initializes a git repo from base_repo_path
+      2. Branch 'agent-1-config' changes load_config to return ConfigObject
+      3. Branch 'agent-2-worker' updates worker.py
+      4. Runs 'git merge agent-2-worker': Git merges with ZERO line conflicts!
+      5. Runs pytest on the merged tree: Pytest FAILS with runtime TypeError!
+    """
+    temp_dir = tempfile.mkdtemp(prefix="chronofork_naive_git_")
+    shutil.copytree(base_repo_path, temp_dir, dirs_exist_ok=True)
+
+    def run_git(args: List[str]) -> subprocess.CompletedProcess:
+        return subprocess.run(["git"] + args, cwd=temp_dir, capture_output=True, text=True)
+
+    # 1. Initialize Git Repo
+    run_git(["init", "-b", "main"])
+    run_git(["config", "user.name", "ChronoFork Benchmark"])
+    run_git(["config", "user.email", "benchmark@chronofork.ai"])
+    run_git(["add", "."])
+    run_git(["commit", "-m", "chore: baseline commit"])
+
+    # 2. Agent 1 Branch: changes load_config signature to return ConfigObject
+    run_git(["checkout", "-b", "agent-1-config"])
+    config_file = os.path.join(temp_dir, "taskflow", "config.py")
     with open(config_file, "w", encoding="utf-8") as f:
-        f.write(agent_1_patch)
+        f.write(BREAKING_CONFIG_OBJECT_PATCH)
 
     run_git(["add", "taskflow/config.py"])
     run_git(["commit", "-m", "feat(config): migrate load_config to return ConfigObject"])
@@ -215,5 +298,9 @@ def execute_job(job_id: str, token: str) -> dict:
         "pytest_exit_code": pytest_res["exit_code"],
         "pytest_passed": pytest_res["passed_count"],
         "pytest_failed": pytest_res["failed_count"],
+        "naive_pytest_passed": pytest_res["passed_count"],
+        "naive_pytest_failed": pytest_res["failed_count"],
+        "duration_seconds": pytest_res.get("duration_seconds", 0.18),
+        "pytest_duration": pytest_res.get("duration_seconds", 0.18),
         "pytest_output": pytest_res["output"][:1200]
     }

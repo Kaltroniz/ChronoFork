@@ -31,12 +31,17 @@ from backend.app.memory import (
     update_rule_confidence,
     reset_memory
 )
+from backend.app.algorithms import query_impact
 from backend.app.agents.coder import (
     WorkspaceManager,
     Verifier,
     Coder,
-    run_naive_git_merge_experiment
+    run_naive_git_merge_experiment,
+    BREAKING_CONFIG_OBJECT_PATCH,
+    MIGRATED_DATABASE_PATCH,
+    MIGRATED_TEST_CONFIG_PATCH
 )
+from backend.app.agents.llm import llm_provider
 
 
 def get_repo_path(repo_name: str) -> str:
@@ -59,7 +64,7 @@ def ensure_demo_repos_ingested():
         ingest_code_graph_to_falkordb(cg2, falkor_client)
 
 
-def execute_scenario_1(run_id: str = "run_scenario_1") -> List[Dict[str, Any]]:
+def execute_scenario_1(run_id: str = "run_scenario_1", mode: str = "replay") -> List[Dict[str, Any]]:
     """
     Scenario 1: Hidden 4-Hop Collision & Naive Git vs ChronoFork Serialization.
     Task: 'Migrate load_config to return a ConfigObject and add retry logic to worker jobs'
@@ -203,49 +208,60 @@ def execute_scenario_1(run_id: str = "run_scenario_1") -> List[Dict[str, Any]]:
         )
     )
 
-    # 9. Real Workspace Execution: Agent 1 (ConfigCoder) Patches config.py & database adapter
+    # 9. Coordinated Flow: Graph-Aware Impact Analysis on load_config
+    impact = query_impact("taskflow", "taskflow.config.load_config", max_depth=4)
+    caller_names = [c["qualname"] for c in impact.get("dependent_callers", [])]
+    event_bus.emit_event(
+        run_id=run_id,
+        agent="ConfigCoder",
+        phase="IMPACT_ANALYSIS",
+        tool="get_impact",
+        node_ids=["taskflow.config.load_config"] + caller_names,
+        execution_data=impact,
+        message=(
+            f"FalkorDB Graph Impact on taskflow.config.load_config: "
+            f"Found {impact['dependent_callers_count']} callers ({', '.join(caller_names)}) "
+            f"and {impact['affected_tests_count']} test suites. ConfigCoder migrates callers to prevent runtime crashes."
+        )
+    )
+
+    # 10. Real Workspace Execution: Agent 1 (ConfigCoder) Patches config.py & Migrates Callers (database.py + tests)
     ws_mgr = WorkspaceManager(taskflow_path)
     coder_1 = Coder("agent_1", "ConfigCoder", run_id, ws_mgr)
 
-    agent_1_patch = """\"\"\"Configuration loader module for TaskFlow.\"\"\"
-import os
-import hashlib
+    # Use the SAME breaking ConfigObject patch in both naive git and coordinated flow!
+    coder_1.apply_patch("taskflow/config.py", BREAKING_CONFIG_OBJECT_PATCH)
+    coder_1.apply_patch("tests/test_config.py", MIGRATED_TEST_CONFIG_PATCH)
 
+    # Live Mode: Attempt Gemini LLM patch generation for database.py from graph impact list
+    migrated_db_patch = MIGRATED_DATABASE_PATCH
+    patch_source = "deterministic"
+    if mode == "live":
+        try:
+            with open(os.path.join(taskflow_path, "taskflow", "database.py"), "r", encoding="utf-8") as f:
+                orig_db_code = f.read()
+            gemini_patch = llm_provider.generate_migration_patch(
+                symbol_name="taskflow.config.load_config",
+                callers=caller_names,
+                original_code=orig_db_code
+            )
+            if gemini_patch:
+                coder_1.apply_patch("taskflow/database.py", gemini_patch)
+                verify_gemini = coder_1.verify()
+                if verify_gemini["success"]:
+                    migrated_db_patch = gemini_patch
+                    patch_source = "Gemini LLM (Verified)"
+                else:
+                    # Fall back to verified cached patch on pytest failure
+                    coder_1.apply_patch("taskflow/database.py", MIGRATED_DATABASE_PATCH)
+                    patch_source = "Deterministic Fallback (Verified)"
+            else:
+                coder_1.apply_patch("taskflow/database.py", MIGRATED_DATABASE_PATCH)
+        except Exception:
+            coder_1.apply_patch("taskflow/database.py", MIGRATED_DATABASE_PATCH)
+    else:
+        coder_1.apply_patch("taskflow/database.py", MIGRATED_DATABASE_PATCH)
 
-class ConfigObject(dict):
-    \"\"\"Strongly-typed configuration object with backward-compatible dict access.\"\"\"
-    def __init__(self, data: dict):
-        super().__init__(data)
-        self.env = data.get("env", "production")
-        self.timeout = data.get("timeout", 30)
-        self.auth_secret = data.get("auth_secret", "chrono-secret-key-42")
-        self.path = data.get("path", "app.conf")
-        self.signature = data.get("signature", "")
-
-
-def get_default_config() -> dict:
-    return {
-        "env": "production",
-        "timeout": 30,
-        "auth_secret": "chrono-secret-key-42",
-        "retries": 3,
-        "max_workers": 4
-    }
-
-
-def compute_config_signature(conf: dict) -> str:
-    serialized = str(sorted(conf.items()))
-    return hashlib.sha256(serialized.encode("utf-8")).hexdigest()[:12]
-
-
-def load_config(path: str = "app.conf") -> ConfigObject:
-    \"\"\"Migrated: returns ConfigObject contract.\"\"\"
-    conf = get_default_config()
-    conf["path"] = path
-    conf["signature"] = compute_config_signature(conf)
-    return ConfigObject(conf)
-"""
-    coder_1.apply_patch("taskflow/config.py", agent_1_patch)
     pytest_1 = coder_1.verify()
 
     event_bus.emit_event(
@@ -253,13 +269,13 @@ def load_config(path: str = "app.conf") -> ConfigObject:
         agent="ConfigCoder",
         phase="CODE_GEN",
         tool="generate_patch",
-        node_ids=["taskflow.config.load_config"],
+        node_ids=["taskflow.config.load_config", "taskflow.database.get_connection"],
         execution_data=pytest_1,
-        message=f"ConfigCoder patched config.py. Executed real pytest in isolated workspace: {pytest_1['passed_count']} passed, {pytest_1['failed_count']} failed."
+        message=f"ConfigCoder migrated config.py and callers (database.py via {patch_source}). Real pytest in isolated workspace: {pytest_1['passed_count']} passed, {pytest_1['failed_count']} failed in {pytest_1['duration_seconds']}s."
     )
 
-    # 10. Agent 1 Handoff to Agent 2
-    record_handoff(run_id, "agent_1", "agent_2", "ConfigObject contract verified with pytest")
+    # 11. Agent 1 Handoff to Agent 2
+    record_handoff(run_id, "agent_1", "agent_2", "ConfigObject contract and callers migrated")
     event_bus.emit_event(
         run_id=run_id,
         agent="Coordinator",
@@ -268,10 +284,12 @@ def load_config(path: str = "app.conf") -> ConfigObject:
         message="Agent handoff: FalkorDB cleared BLOCKED_BY and wrote (:ConfigCoder)-[:HANDED_OFF_TO]->(:WorkerCoder). WorkerCoder unblocked!"
     )
 
-    # 11. Agent 2 (WorkerCoder) Patches worker.py
+    # 12. Agent 2 (WorkerCoder) Patches worker.py against migrated contract
     coder_2 = Coder("agent_2", "WorkerCoder", run_id, ws_mgr)
-    # Apply both config patch and worker patch into coder_2's workspace (pulled from merged contract)
-    coder_2.apply_patch("taskflow/config.py", agent_1_patch)
+    coder_2.apply_patch("taskflow/config.py", BREAKING_CONFIG_OBJECT_PATCH)
+    coder_2.apply_patch("taskflow/database.py", migrated_db_patch)
+    coder_2.apply_patch("tests/test_config.py", MIGRATED_TEST_CONFIG_PATCH)
+
     worker_patch = """\"\"\"Worker execution and background job dispatch.\"\"\"
 from taskflow.queue import dequeue_task
 from taskflow.models import create_job_result
@@ -305,10 +323,10 @@ def execute_job(job_id: str, token: str) -> dict:
         tool="generate_patch",
         node_ids=["taskflow.worker.execute_job"],
         execution_data=pytest_2,
-        message=f"WorkerCoder patched worker.py against updated contract. Real pytest: {pytest_2['passed_count']} passed, {pytest_2['failed_count']} failed."
+        message=f"WorkerCoder patched worker.py against migrated contract. Real pytest: {pytest_2['passed_count']} passed, {pytest_2['failed_count']} failed in {pytest_2['duration_seconds']}s."
     )
 
-    # 12. Verifier Final Merge
+    # 13. Verifier Final Merge
     event_bus.emit_event(
         run_id=run_id,
         agent="Verifier",
@@ -316,10 +334,10 @@ def execute_job(job_id: str, token: str) -> dict:
         tool="run_pytest",
         node_ids=["taskflow.config.load_config", "taskflow.worker.execute_job"],
         execution_data=pytest_2,
-        message=f"Verifier executed pytest on merged workspace: {pytest_2['passed_count']} passed in 1.4s. All 12 test suites passing!"
+        message=f"Verifier executed pytest on merged workspace: {pytest_2['passed_count']} passed in {pytest_2['duration_seconds']}s. All {pytest_2['passed_count']} test suites passing!"
     )
 
-    # 13. Memory Persistence
+    # 14. Memory Persistence
     ep = record_episode(
         repo_name=repo,
         run_id=run_id,
@@ -331,6 +349,7 @@ def execute_job(job_id: str, token: str) -> dict:
             "id": "rule_cfg_worker_transitive",
             "rule": "load_config signature changes break transitive caller worker.execute_job (4 hops via database, auth, queue)",
             "advice": "Serialize execution or provide backward-compatible dict access/default kwargs when modifying load_config.",
+            "recommended_intent": "BODY_EDIT",
             "confidence": 0.85
         }
     )
@@ -382,88 +401,97 @@ def execute_scenario_2(run_id: str = "run_scenario_2", memory_enabled: bool = Tr
     register_agent(run_id, "agent_2", "WorkerCoder", "Pipeline Agent", "#f59e0b")
 
     if memory_enabled:
-        # Check memory; if empty, record baseline rule so memory recall is authentic
         recalled = recall_memory(repo, ["taskflow.config.load_config"])
         if not recalled["rules"]:
-            record_episode(
-                repo_name=repo,
-                run_id="seed_ep",
-                task="Baseline taskflow dependency mapping",
-                outcome="SUCCESS",
-                summary="Learned 4-hop transitive hazard between config and worker",
-                involved_symbols=["taskflow.config.load_config", "taskflow.worker.execute_job"],
-                rule_learned={
-                    "id": "rule_cfg_worker_transitive",
-                    "rule": "load_config signature changes break transitive caller worker.execute_job (4 hops)",
-                    "advice": "Preserve signature contract with default kwargs and backward-compatible dict interface",
-                    "confidence": 0.88
-                }
+            # COLD START: Memory is empty! Do NOT silently seed. Say so and run as cold start!
+            event_bus.emit_event(
+                run_id=run_id,
+                agent="ConfigCoder",
+                phase="RECALL",
+                tool="recall_memory",
+                node_ids=["taskflow.config.load_config"],
+                message="Cold Start: No prior rules found in mem:taskflow. Running unguided cold start without prior memory."
             )
-            recalled = recall_memory(repo, ["taskflow.config.load_config"])
 
-        rule = recalled["rules"][0]
-        event_bus.emit_event(
-            run_id=run_id,
-            agent="ConfigCoder",
-            phase="RECALL",
-            tool="recall_memory",
-            node_ids=["taskflow.config.load_config"],
-            memory_write={"rule_id": rule["id"], "confidence": rule["confidence"]},
-            message=(
-                f"MEMORY HIT! ConfigCoder recalled ProceduralRule '{rule['rule']}' with {rule['confidence'] * 100:.0f}% confidence. "
-                f"Advice: {rule.get('advice', '')}."
+            # Cold start: unguided ConfigCoder claims breaking SIGNATURE_CHANGE
+            register_claim(run_id, "agent_1", "taskflow.config.load_config", "SIGNATURE_CHANGE", "Cold start claim")
+            register_claim(run_id, "agent_2", "taskflow.worker.execute_job", "BODY_EDIT", "Extend worker job timeout")
+            collisions = detect_collisions(run_id)
+            c = collisions[0] if collisions else None
+            event_bus.emit_event(
+                run_id=run_id,
+                agent="Coordinator",
+                phase="COLLISION_DETECTION",
+                tool="detect_collisions",
+                collision=c,
+                node_ids=c["path_nodes"] if c else [],
+                message="COLLISION DETECTED on cold start! Without prior memory rules, agents collide on transitive call chain."
             )
-        )
+        else:
+            rule = recalled["rules"][0]
+            rec_intent = rule.get("recommended_intent", "BODY_EDIT")
+            event_bus.emit_event(
+                run_id=run_id,
+                agent="ConfigCoder",
+                phase="RECALL",
+                tool="recall_memory",
+                node_ids=["taskflow.config.load_config"],
+                memory_write={"rule_id": rule["id"], "confidence": rule["confidence"]},
+                message=(
+                    f"MEMORY HIT! ConfigCoder recalled ProceduralRule '{rule['rule']}' with {rule['confidence'] * 100:.0f}% confidence. "
+                    f"Recommended intent: {rec_intent}. Advice: {rule.get('advice', '')}."
+                )
+            )
 
-        # DERIVE INTENT DIRECTLY FROM RECALLED RULE ADVICE
-        derived_intent = "BODY_EDIT"
-        event_bus.emit_event(
-            run_id=run_id,
-            agent="ConfigCoder",
-            phase="MEMORY_ADAPTATION",
-            tool="adapt_intent",
-            node_ids=["taskflow.config.load_config"],
-            message=f"Memory-Driven Adaptation: Rule advice derives intent '{derived_intent}' instead of breaking SIGNATURE_CHANGE. Preserving signature compatibility!"
-        )
+            # DERIVE INTENT DIRECTLY FROM RECALLED RULE RECOMMENDED_INTENT
+            derived_intent = rec_intent
+            event_bus.emit_event(
+                run_id=run_id,
+                agent="ConfigCoder",
+                phase="MEMORY_ADAPTATION",
+                tool="adapt_intent",
+                node_ids=["taskflow.config.load_config"],
+                message=f"Memory-Driven Adaptation: Rule '{rule['id']}' recommends intent '{derived_intent}' instead of breaking SIGNATURE_CHANGE. Preserving signature compatibility!"
+            )
 
-        register_claim(run_id, "agent_1", "taskflow.config.load_config", derived_intent, "Preserve signature compatibility as advised by memory rule")
-        register_claim(run_id, "agent_2", "taskflow.worker.execute_job", "BODY_EDIT", "Extend worker job timeout")
+            register_claim(run_id, "agent_1", "taskflow.config.load_config", derived_intent, "Preserve signature compatibility as advised by memory rule")
+            register_claim(run_id, "agent_2", "taskflow.worker.execute_job", "BODY_EDIT", "Extend worker job timeout")
 
-        # Collision Check: 0 collisions
-        collisions = detect_collisions(run_id)
-        event_bus.emit_event(
-            run_id=run_id,
-            agent="Coordinator",
-            phase="COLLISION_DETECTION",
-            tool="detect_collisions",
-            collision=None,
-            message="Collision check: ZERO collisions! Memory-guided constraint prevented the breaking change before code was written."
-        )
+            # Collision Check: 0 collisions
+            collisions = detect_collisions(run_id)
+            event_bus.emit_event(
+                run_id=run_id,
+                agent="Coordinator",
+                phase="COLLISION_DETECTION",
+                tool="detect_collisions",
+                collision=None,
+                message="Collision check: ZERO collisions! Memory-guided constraint prevented the breaking change before code was written."
+            )
 
-        # Real Pytest in Workspace
-        ws_mgr = WorkspaceManager(taskflow_path)
-        coder_1 = Coder("agent_1", "ConfigCoder", run_id, ws_mgr)
-        test_res = coder_1.verify()
+            # Real Pytest in Workspace
+            ws_mgr = WorkspaceManager(taskflow_path)
+            coder_1 = Coder("agent_1", "ConfigCoder", run_id, ws_mgr)
+            test_res = coder_1.verify()
 
-        event_bus.emit_event(
-            run_id=run_id,
-            agent="Verifier",
-            phase="VERIFICATION",
-            tool="run_pytest",
-            node_ids=["taskflow.config.load_config", "taskflow.worker.execute_job"],
-            execution_data=test_res,
-            message=f"Both agents executed concurrently without serialization. Real pytest: {test_res['passed_count']} passed in 1.3s!"
-        )
+            event_bus.emit_event(
+                run_id=run_id,
+                agent="Verifier",
+                phase="VERIFICATION",
+                tool="run_pytest",
+                node_ids=["taskflow.config.load_config", "taskflow.worker.execute_job"],
+                execution_data=test_res,
+                message=f"Both agents executed concurrently without serialization. Real pytest: {test_res['passed_count']} passed in {test_res['duration_seconds']}s!"
+            )
 
-        new_conf = update_rule_confidence(repo, rule["id"], success=True)
-        event_bus.emit_event(
-            run_id=run_id,
-            agent="Coordinator",
-            phase="MEMORY_UPDATE",
-            tool="record_episode",
-            memory_write={"rule_id": rule["id"], "confidence": new_conf},
-            message=f"Memory reinforced: Rule confidence increased to {new_conf * 100:.0f}%."
-        )
+            new_conf = update_rule_confidence(repo, rule["id"], success=True)
+            event_bus.emit_event(
+                run_id=run_id,
+                agent="Coordinator",
+                phase="MEMORY_UPDATE",
+                tool="record_episode",
+                memory_write={"rule_id": rule["id"], "confidence": new_conf},
+                message=f"Memory reinforced: Rule confidence increased to {new_conf * 100:.0f}%."
+            )
     else:
         # MEMORY OFF: Blindly claims SIGNATURE_CHANGE -> collision re-occurs!
         event_bus.emit_event(
@@ -485,6 +513,7 @@ def execute_scenario_2(run_id: str = "run_scenario_2", memory_enabled: bool = Tr
             phase="COLLISION_DETECTION",
             tool="detect_collisions",
             collision=c,
+            node_ids=c["path_nodes"] if c else [],
             message="COLLISION RE-OCCURS! Without memory, agents collide on the transitive call chain."
         )
 
@@ -497,6 +526,7 @@ def execute_scenario_3(run_id: str = "run_scenario_3") -> List[Dict[str, Any]]:
     """
     Scenario 3: Safe Parallel Execution.
     Agent 1 on taskflow core worker; Agent 3 on reports subsystem. Disjoint subgraphs -> PARALLEL_OK.
+    Applies small real patches in parallel isolated workspaces and verifies with pytest.
     """
     ensure_demo_repos_ingested()
     event_bus.init_run(run_id)
@@ -537,7 +567,7 @@ def execute_scenario_3(run_id: str = "run_scenario_3") -> List[Dict[str, Any]]:
         message="ReportsCoder claimed taskflow.reports.generator.generate_summary in reports subsystem."
     )
 
-    # Collision Check
+    # Collision Check: Disjoint Subgraphs
     collisions = detect_collisions(run_id)
     event_bus.emit_event(
         run_id=run_id,
@@ -553,13 +583,51 @@ def execute_scenario_3(run_id: str = "run_scenario_3") -> List[Dict[str, Any]]:
         agent="Coordinator",
         phase="RESOLUTION",
         tool="apply_policy",
-        message="Both agents proceed simultaneously in parallel workspaces. No serialization needed."
+        message="Both agents proceed simultaneously in parallel workspaces. Zero lock contention or serialization."
     )
 
-    # Real Pytest in Workspace
+    # Real Workspace Execution: Apply Real Non-Conflicting Patches
     ws_mgr = WorkspaceManager(taskflow_path)
-    coder = Coder("agent_1", "ParallelCoder", run_id, ws_mgr)
-    test_res = coder.verify()
+    coder_1 = Coder("agent_1", "WorkerCoder", run_id, ws_mgr)
+    worker_patch_sc3 = """\"\"\"Worker execution and background job dispatch.\"\"\"
+from taskflow.queue import dequeue_task
+from taskflow.models import create_job_result
+from taskflow.database import save_result
+
+
+def execute_job(job_id: str, token: str) -> dict:
+    \"\"\"Worker execution with optimized queue dequeue.\"\"\"
+    task = dequeue_task(job_id, token)
+    if not task or not task.get("authorized"):
+        return create_job_result(job_id=job_id, status="UNAUTHORIZED", data=None)
+
+    processed_data = {"job_id": job_id, "items_processed": 42, "checksum": "ok", "subsystem": "worker_core"}
+    result = create_job_result(job_id=job_id, status="COMPLETED", data=processed_data)
+    save_result(job_id, result)
+    return result
+"""
+    coder_1.apply_patch("taskflow/worker.py", worker_patch_sc3)
+
+    coder_3 = Coder("agent_3", "ReportsCoder", run_id, ws_mgr)
+    reports_patch_sc3 = """\"\"\"Reporting subsystem for TaskFlow.\"\"\"
+from taskflow.models import create_job_result
+
+
+def generate_summary(results: list) -> dict:
+    \"\"\"Aggregates job results for executive report summary.\"\"\"
+    total = len(results)
+    completed = sum(1 for r in results if r.get("status") == "COMPLETED")
+    return {
+        "total_jobs": total,
+        "completed_jobs": completed,
+        "success_rate": (completed / total) if total > 0 else 0.0,
+        "report_format": "v2_summary"
+    }
+"""
+    coder_3.apply_patch("taskflow/reports/generator.py", reports_patch_sc3)
+
+    # Verifier runs real pytest on parallel merged workspace
+    test_res = coder_1.verify()
 
     event_bus.emit_event(
         run_id=run_id,
@@ -568,7 +636,7 @@ def execute_scenario_3(run_id: str = "run_scenario_3") -> List[Dict[str, Any]]:
         tool="run_pytest",
         node_ids=["taskflow.worker.execute_job", "taskflow.reports.generator.generate_summary"],
         execution_data=test_res,
-        message=f"Parallel merges validated. Real pytest: {test_res['passed_count']} passed in 1.4s."
+        message=f"Parallel merges validated. Real pytest: {test_res['passed_count']} passed in {test_res['duration_seconds']}s."
     )
 
     cleanup_run_graphs(run_id)
@@ -580,6 +648,7 @@ def execute_scenario_4(run_id: str = "run_scenario_4") -> List[Dict[str, Any]]:
     """
     Scenario 4: Multi-Tenant Repo Graph & Memory Isolation.
     Demonstrates switching to analytics repo where claims and memory are strictly isolated.
+    Applies small real telemetry patch in isolated workspace and verifies with pytest.
     """
     ensure_demo_repos_ingested()
     event_bus.init_run(run_id)
@@ -610,7 +679,7 @@ def execute_scenario_4(run_id: str = "run_scenario_4") -> List[Dict[str, Any]]:
         node_ids=["analytics.collector.collect_datapoint"]
     )
 
-    register_claim(run_id, "agent_4", "analytics.collector.collect_datapoint", "BODY_EDIT", "Add timestamp field")
+    register_claim(run_id, "agent_4", "analytics.collector.collect_datapoint", "BODY_EDIT", "Add high-precision timestamp")
     event_bus.emit_event(
         run_id=run_id,
         agent="TelemetryCoder",
@@ -620,9 +689,23 @@ def execute_scenario_4(run_id: str = "run_scenario_4") -> List[Dict[str, Any]]:
         message="TelemetryCoder claimed analytics.collector.collect_datapoint in repo:analytics."
     )
 
-    # Real Pytest in Analytics Workspace
+    # Real Workspace Execution: Apply Real Telemetry Patch
     ws_mgr = WorkspaceManager(analytics_path)
     coder = Coder("agent_4", "TelemetryCoder", run_id, ws_mgr)
+    analytics_patch_sc4 = """\"\"\"Telemetry and metric collection pipeline for Analytics.\"\"\"
+import time
+
+
+def collect_datapoint(metric_name: str, value: float) -> dict:
+    \"\"\"Records high-precision telemetry datapoint with timestamp.\"\"\"
+    return {
+        "metric": metric_name,
+        "value": float(value),
+        "timestamp": time.time(),
+        "collector_status": "active"
+    }
+"""
+    coder.apply_patch("analytics/collector.py", analytics_patch_sc4)
     test_res = coder.verify()
 
     event_bus.emit_event(
@@ -632,7 +715,7 @@ def execute_scenario_4(run_id: str = "run_scenario_4") -> List[Dict[str, Any]]:
         tool="run_pytest",
         node_ids=["analytics.collector.collect_datapoint"],
         execution_data=test_res,
-        message=f"Analytics tests verified in isolated workspace: {test_res['passed_count']} passed. Clean multi-tenant repository isolation confirmed."
+        message=f"Analytics tests verified in isolated workspace: {test_res['passed_count']} passed in {test_res['duration_seconds']}s. Clean multi-tenant repository isolation confirmed."
     )
 
     cleanup_run_graphs(run_id)

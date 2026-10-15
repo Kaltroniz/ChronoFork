@@ -84,5 +84,43 @@ class LLMProvider:
         # Fallback
         return self.plan_subtasks(user_task, repo_symbols)
 
+    def generate_migration_patch(self, symbol_name: str, callers: list, original_code: str) -> Optional[str]:
+        """Uses Gemini to generate the caller migration patch from graph impact list."""
+        if not self.api_key:
+            return None
+
+        try:
+            import httpx
+            prompt = f"""
+            You are a Python software engineer in an autonomous coding swarm.
+            Function `{symbol_name}` was migrated to return a strongly-typed `ConfigObject` with attributes (.env, .timeout, .auth_secret, .path, .signature) instead of a dict.
+            The code graph uncovered the following dependent callers that must be migrated:
+            {callers}
+
+            Here is the caller file code:
+            ```python
+            {original_code}
+            ```
+
+            Rewrite the code so it safely accesses ConfigObject attributes (`cfg.env`, `cfg.timeout`, `cfg.auth_secret`) or falls back to dict access.
+            Return ONLY the raw Python code. Do not wrap in markdown or explanations.
+            """
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={self.api_key}"
+            payload = {"contents": [{"parts": [{"text": prompt}]}]}
+            res = httpx.post(url, json=payload, timeout=12.0)
+            if res.status_code == 200:
+                raw = res.json()["candidates"][0]["content"]["parts"][0]["text"]
+                cleaned = raw.strip()
+                if cleaned.startswith("```python"):
+                    cleaned = cleaned[len("```python"):].strip()
+                if cleaned.startswith("```"):
+                    cleaned = cleaned[len("```"):].strip()
+                if cleaned.endswith("```"):
+                    cleaned = cleaned[:-3].strip()
+                return cleaned
+        except Exception as ex:
+            print(f"Gemini live patch generation exception: {ex}")
+        return None
+
 
 llm_provider = LLMProvider()

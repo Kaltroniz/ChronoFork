@@ -47,12 +47,10 @@ class EventBuffer:
         if run_id not in self._buffers:
             self.init_run(run_id)
 
-        # Pull real FalkorDB query execution trace if not passed explicitly
-        if not trace:
+        # Pull real FalkorDB query execution trace strictly for this tool (no stale fallback)
+        if not trace and tool:
             from backend.app.falkor_client import falkor_client
-            last_t = falkor_client.get_last_trace()
-            if last_t and (cypher is None or last_t.get("cypher") == cypher.strip()):
-                trace = last_t
+            trace = falkor_client.get_trace_for_tool(tool, consume=True)
 
         event = {
             "index": len(self._buffers[run_id]),

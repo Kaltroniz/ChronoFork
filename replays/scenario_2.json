@@ -1,0 +1,164 @@
+[
+  {
+    "index": 0,
+    "ts": 1792108171.2941613,
+    "run_id": "replay_gen_sc2_nomem",
+    "agent": "Planner",
+    "phase": "PLANNING",
+    "tool": "decompose_task",
+    "cypher": null,
+    "params": {},
+    "trace": null,
+    "execution_data": null,
+    "node_ids": [
+      "taskflow.config.load_config",
+      "taskflow.worker.execute_job"
+    ],
+    "edge_ids": [],
+    "scores": {},
+    "collision": null,
+    "memory_write": null,
+    "message": "Planner received task: 'Refactor config schema and extend worker timeout'. Memory Coordination: OFF."
+  },
+  {
+    "index": 1,
+    "ts": 1792108171.347908,
+    "run_id": "replay_gen_sc2_nomem",
+    "agent": "ConfigCoder",
+    "phase": "CLAIM",
+    "tool": "claim_symbols",
+    "cypher": "MATCH (a:Agent {id: $agent_id})\n    MATCH (s:Symbol {qualname: $symbol_qname})\n    MERGE (a)-[c:CLAIMS {intent: $intent}]->(s)\n    SET c.subtask = $subtask, c.claimed_at = timestamp()",
+    "params": {
+      "agent_id": "agent_2",
+      "symbol_qname": "taskflow.worker.execute_job",
+      "intent": "BODY_EDIT",
+      "subtask": "Extend worker job timeout"
+    },
+    "trace": {
+      "graph": "coord:replay_gen_sc2_mem",
+      "cypher": "MATCH (a:Agent {id: $agent_id})\n    MATCH (s:Symbol {qualname: $symbol_qname})\n    MERGE (a)-[c:CLAIMS {intent: $intent}]->(s)\n    SET c.subtask = $subtask, c.claimed_at = timestamp()",
+      "params": {
+        "agent_id": "agent_2",
+        "symbol_qname": "taskflow.worker.execute_job",
+        "intent": "BODY_EDIT",
+        "subtask": "Extend worker job timeout"
+      },
+      "duration_ms": 0.89,
+      "row_count": 0,
+      "rows": [],
+      "header": [],
+      "tool": "claim_symbols"
+    },
+    "execution_data": null,
+    "node_ids": [
+      "taskflow.config.load_config"
+    ],
+    "edge_ids": [],
+    "scores": {},
+    "collision": null,
+    "memory_write": null,
+    "message": "Memory Coordination OFF: ConfigCoder claims load_config with breaking SIGNATURE_CHANGE."
+  },
+  {
+    "index": 2,
+    "ts": 1792108171.3665924,
+    "run_id": "replay_gen_sc2_nomem",
+    "agent": "Coordinator",
+    "phase": "COLLISION_DETECTION",
+    "tool": "detect_collisions",
+    "cypher": "MATCH (a1:Agent)-[c1:CLAIMS]->(s1:Symbol),\n          (a2:Agent)-[c2:CLAIMS]->(s2:Symbol)\n    WHERE a1.id <> a2.id\n      AND c1.intent IN ['SIGNATURE_CHANGE', 'DELETE']\n    MATCH path = (s2)-[:CALLS*1..4]->(s1)\n    RETURN a1.id AS a1, a2.id AS a2, s1.qualname AS s1_qname, s2.qualname AS s2_qname,\n           c1.intent AS intent1, c2.intent AS intent2,\n           [n in nodes(path) | n.qualname] AS path_nodes, length(path) AS hops",
+    "params": {},
+    "trace": {
+      "graph": "coord:replay_gen_sc2_nomem",
+      "cypher": "MATCH (a1:Agent)-[c1:CLAIMS]->(s1:Symbol),\n          (a2:Agent)-[c2:CLAIMS]->(s2:Symbol)\n    WHERE a1.id <> a2.id\n      AND c1.intent IN ['SIGNATURE_CHANGE', 'DELETE']\n    MATCH path = (s2)-[:CALLS*1..4]->(s1)\n    RETURN a1.id AS a1, a2.id AS a2, s1.qualname AS s1_qname, s2.qualname AS s2_qname,\n           c1.intent AS intent1, c2.intent AS intent2,\n           [n in nodes(path) | n.qualname] AS path_nodes, length(path) AS hops",
+      "params": {},
+      "duration_ms": 2.9,
+      "row_count": 1,
+      "rows": [
+        [
+          "agent_1",
+          "agent_2",
+          "taskflow.config.load_config",
+          "taskflow.worker.execute_job",
+          "SIGNATURE_CHANGE",
+          "BODY_EDIT",
+          [
+            "taskflow.worker.execute_job",
+            "taskflow.queue.dequeue_task",
+            "taskflow.auth.validate_token",
+            "taskflow.database.get_connection",
+            "taskflow.config.load_config"
+          ],
+          4
+        ]
+      ],
+      "header": [
+        [
+          1,
+          "a1"
+        ],
+        [
+          1,
+          "a2"
+        ],
+        [
+          1,
+          "s1_qname"
+        ],
+        [
+          1,
+          "s2_qname"
+        ],
+        [
+          1,
+          "intent1"
+        ],
+        [
+          1,
+          "intent2"
+        ],
+        [
+          1,
+          "path_nodes"
+        ],
+        [
+          1,
+          "hops"
+        ]
+      ],
+      "tool": "detect_collisions"
+    },
+    "execution_data": null,
+    "node_ids": [
+      "taskflow.worker.execute_job",
+      "taskflow.queue.dequeue_task",
+      "taskflow.auth.validate_token",
+      "taskflow.database.get_connection",
+      "taskflow.config.load_config"
+    ],
+    "edge_ids": [],
+    "scores": {},
+    "collision": {
+      "type": "TRANSITIVE_CALL_COLLISION",
+      "agent_a": "agent_1",
+      "agent_b": "agent_2",
+      "symbol_a": "taskflow.config.load_config",
+      "symbol_b": "taskflow.worker.execute_job",
+      "intent_a": "SIGNATURE_CHANGE",
+      "intent_b": "BODY_EDIT",
+      "hops": 4,
+      "path_nodes": [
+        "taskflow.worker.execute_job",
+        "taskflow.queue.dequeue_task",
+        "taskflow.auth.validate_token",
+        "taskflow.database.get_connection",
+        "taskflow.config.load_config"
+      ],
+      "risk_score": 0.8542,
+      "policy": "SERIALIZE",
+      "reason": "Agent agent_1 claims taskflow.config.load_config (SIGNATURE_CHANGE, risk=0.85); Agent agent_2 touches taskflow.worker.execute_job which depends on it via a 4-hop call chain: taskflow.worker.execute_job -> taskflow.queue.dequeue_task -> taskflow.auth.validate_token -> taskflow.database.get_connection -> taskflow.config.load_config. Git would merge cleanly; runtime will break!"
+    },
+    "memory_write": null,
+    "message": "COLLISION RE-OCCURS! Without memory, agents collide on the transitive call chain."
+  }
+]

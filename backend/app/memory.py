@@ -86,11 +86,13 @@ def record_episode(
         falkor_client.query(mem_key, link_sym_query, {"ep_id": ep_id, "qname": qname})
 
     # Record or link ProceduralRule if provided
+    # Record or link ProceduralRule if provided
     rule_id = None
     if rule_learned:
         rule_id = rule_learned.get("id") or f"rule_{uuid.uuid4().hex[:6]}"
         rule_text = rule_learned.get("rule", "")
         advice_text = rule_learned.get("advice", "")
+        rec_intent = rule_learned.get("recommended_intent", "BODY_EDIT")
         initial_conf = float(rule_learned.get("confidence", 0.85))
 
         # Upsert rule without double-counting confidence
@@ -98,9 +100,11 @@ def record_episode(
         MERGE (r:ProceduralRule {id: $rule_id})
         ON CREATE SET r.rule = $rule,
                       r.advice = $advice,
+                      r.recommended_intent = $rec_intent,
                       r.confidence = $conf,
                       r.samples = 1,
                       r.created_at = $ts
+        ON MATCH SET r.recommended_intent = $rec_intent
         WITH r
         MATCH (ep:Episode {id: $ep_id})
         MERGE (ep)-[:LEARNED_RULE]->(r)
@@ -109,17 +113,18 @@ def record_episode(
             "rule_id": rule_id,
             "rule": rule_text,
             "advice": advice_text,
+            "rec_intent": rec_intent,
             "conf": initial_conf,
             "ts": now_ts,
             "ep_id": ep_id
-        })
+        }, tool="record_episode")
 
         # Link rule to involved symbols
         for qname in involved_symbols:
             falkor_client.query(mem_key, """
             MATCH (r:ProceduralRule {id: $rule_id}), (s:Symbol {qualname: $qname})
             MERGE (r)-[:INVOLVED]->(s)
-            """, {"rule_id": rule_id, "qname": qname})
+            """, {"rule_id": rule_id, "qname": qname}, tool="record_episode")
 
     return {
         "episode_id": ep_id,
@@ -151,7 +156,7 @@ def recall_memory(repo_name: str, candidate_symbols: List[str]) -> Dict[str, Any
             RETURN DISTINCT neighbor.qualname
             """
             try:
-                res = cg.query(neighbor_query, {"sym": sym})
+                res, _ = falkor_client.query(code_graph_key, neighbor_query, {"sym": sym}, tool="recall_memory")
                 for row in res.result_set:
                     expanded_symbols.add(row[0])
             except Exception:
@@ -161,10 +166,10 @@ def recall_memory(repo_name: str, candidate_symbols: List[str]) -> Dict[str, Any
     rules_query = """
     MATCH (s:Symbol)<-[:INVOLVED]-(r:ProceduralRule)
     WHERE s.qualname IN $qnames
-    RETURN DISTINCT r.id AS id, r.rule AS rule, r.advice AS advice, r.confidence AS confidence, r.samples AS samples, s.qualname AS trigger_symbol
+    RETURN DISTINCT r.id AS id, r.rule AS rule, r.advice AS advice, r.confidence AS confidence, r.samples AS samples, s.qualname AS trigger_symbol, r.recommended_intent AS recommended_intent
     ORDER BY r.confidence DESC
     """
-    rules_res, _ = falkor_client.query(mem_key, rules_query, {"qnames": list(expanded_symbols)})
+    rules_res, _ = falkor_client.query(mem_key, rules_query, {"qnames": list(expanded_symbols)}, tool="recall_memory")
     
     rules = []
     for row in rules_res.result_set:
@@ -176,7 +181,8 @@ def recall_memory(repo_name: str, candidate_symbols: List[str]) -> Dict[str, Any
             "advice": row[2],
             "confidence": clamped_conf,
             "samples": int(row[4]),
-            "trigger_symbol": row[5]
+            "trigger_symbol": row[5],
+            "recommended_intent": row[6] or "BODY_EDIT"
         })
 
     # Step 3: Query mem:<repo> for Episodes

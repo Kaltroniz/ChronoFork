@@ -82,7 +82,7 @@ def register_claim(
         "symbol_qname": symbol_qualname,
         "intent": intent,
         "subtask": subtask_desc
-    })
+    }, tool="claim_symbols")
     return {
         "run_id": run_id,
         "agent_id": agent_id,
@@ -143,7 +143,7 @@ def detect_collisions(run_id: str) -> List[Dict[str, Any]]:
            c1.intent AS intent1, c2.intent AS intent2,
            [n in nodes(path) | n.qualname] AS path_nodes, length(path) AS hops
     """
-    res_trans, _ = falkor_client.query(coord_key, transitive_query)
+    res_trans, _ = falkor_client.query(coord_key, transitive_query, tool="detect_collisions")
 
     for row in res_trans.result_set:
         a1, a2, s1_q, s2_q, intent1, intent2, path_nodes, hops = (
@@ -213,7 +213,7 @@ def record_handoff(run_id: str, from_agent: str, to_agent: str, reason: str = "C
         "from_agent": from_agent,
         "to_agent": to_agent,
         "reason": reason
-    })
+    }, tool="record_handoff")
 
 
 def compute_merge_order(run_id: str) -> List[Dict[str, Any]]:
@@ -232,7 +232,7 @@ def compute_merge_order(run_id: str) -> List[Dict[str, Any]]:
            collect(DISTINCT dep.qualname) AS depends_on
     ORDER BY outgoing_claimed_dependencies ASC
     """
-    res, _ = falkor_client.query(coord_key, order_query)
+    res, _ = falkor_client.query(coord_key, order_query, tool="apply_policy")
     merge_order = []
     for rank, row in enumerate(res.result_set, 1):
         merge_order.append({
@@ -309,7 +309,7 @@ def simulate_on_fork(
     MATCH (caller:Symbol)-[:CALLS]->(target:Symbol {qualname: $qname})
     RETURN caller.qualname AS caller_qname
     """
-    callers_res, _ = falkor_client.query(fork_key, callers_query, {"qname": claim_symbol})
+    callers_res, _ = falkor_client.query(fork_key, callers_query, {"qname": claim_symbol}, tool="fork_graph")
     direct_callers = [r[0] for r in callers_res.result_set]
 
     # Transitive callers via reverse path
@@ -318,7 +318,7 @@ def simulate_on_fork(
     RETURN DISTINCT caller.qualname AS caller_qname, length(path) AS depth
     ORDER BY depth ASC
     """
-    trans_res, _ = falkor_client.query(fork_key, trans_callers_q, {"qname": claim_symbol})
+    trans_res, _ = falkor_client.query(fork_key, trans_callers_q, {"qname": claim_symbol}, tool="fork_graph")
     transitive_callers = [r[0] for r in trans_res.result_set]
 
     # 5. After metrics

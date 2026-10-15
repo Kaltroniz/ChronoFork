@@ -226,6 +226,7 @@ export const App: React.FC = () => {
         <BottomDrawer
           memoryData={memoryData}
           activeEvent={activeEvent}
+          events={events}
           isExpanded={bottomDrawerExpanded}
           onToggleExpand={() => setBottomDrawerExpanded(!bottomDrawerExpanded)}
           onResetMemory={handleResetMemory}

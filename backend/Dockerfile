@@ -12,6 +12,7 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 
 COPY backend/ /app/backend/
 COPY demo_repo/ /app/demo_repo/
+COPY replays/ /app/replays/
 
 ENV PYTHONPATH=/app
 ENV FALKORDB_HOST=falkordb

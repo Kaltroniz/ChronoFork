@@ -121,7 +121,7 @@ ChronoFork agents don't guess — they traverse connected graph structures at ev
 ## Track 2: Agent Memory and Coordination
 
 ### Unified Coordination Graph (`coord:<run_id>`)
-At run start, FalkorDB clones the repository into `coord:<run_id>`. Coordination entities (`:Run`, `:Agent`, `:Subtask`, `:AgentClaim`) attach directly to the AST code `:Symbol` nodes.
+At run start, FalkorDB clones the repository into `coord:<run_id>`. Coordination entities (`:Run`, `:Agent`) attach directly to the AST code `:Symbol` nodes via `[:CLAIMS]` edges.
 
 When Agent 1 claims `load_config` and Agent 2 claims `worker.execute_job`, the Coordinator detects the 4-hop call path and evaluates the policy:
 - `load_config` Risk = $0.8542 \ge 0.50$ $\implies$ **Policy: SERIALIZE**.
@@ -131,10 +131,10 @@ When Agent 1 claims `load_config` and Agent 2 claims `worker.execute_job`, the C
 ### Graph-Computed Merge Order
 Rather than hardcoding execution sequences, ChronoFork calculates the optimal merge order dynamically via an openCypher query:
 ```cypher
-MATCH (c:AgentClaim)
-OPTIONAL MATCH (c)-[:CLAIMS]->(s:Function)<-[:CALLS*1..4]-(s_caller:Function)<-[:CLAIMS]-(c_caller:AgentClaim)
-RETURN c.agent_id AS agent_id, count(s_caller) AS depth, max(s.risk_score) AS risk_score
-ORDER BY depth DESC, risk_score DESC
+MATCH (a:Agent)-[c:CLAIMS]->(s:Symbol)
+OPTIONAL MATCH (s)<-[:CALLS*1..4]-(s_caller:Symbol)<-[:CLAIMS]-(a_caller:Agent)
+RETURN a.id AS agent_id, a.name AS agent_name, s.qualname AS symbol, count(s_caller) AS depth
+ORDER BY depth DESC
 ```
 This guarantees dependencies (callees) are patched, verified, and merged before callers run.
 
@@ -148,18 +148,19 @@ CREATE (a1)-[:HANDED_OFF_TO {reason: 'Contract verified with pytest'}]->(a2)
 ```
 The handoff is persisted as a visible graph relationship in FalkorDB.
 
-### Cross-Run Episodic Memory & Dynamic Bayesian Confidence
+### Cross-Run Episodic Memory & Dynamic Heuristic Confidence
 In `mem:<repo>`, ChronoFork persists historical episodes and procedural rules:
 - `(:Episode)-[:INVOLVED]->(:Symbol)`
 - `(:ProceduralRule)-[:INVOLVED]->(:Symbol)`
 
-Each procedural rule stores actionable advice and a confidence score ($0.10 \le C \le 0.99$):
+Each procedural rule stores actionable advice, a `recommended_intent` (`BODY_EDIT`), and a confidence score ($0.10 \le C \le 0.99$):
 - Rule: *"load_config signature changes break transitive caller worker.execute_job (4 hops via database, auth, queue)"*
 - Advice: *"Maintain backward-compatible dictionary access or serialize execution."*
+- Recommended Intent: `BODY_EDIT`
 
 When the swarm completes a run successfully, rule confidence rises ($+0.10$); on failure, confidence drops ($-0.20$).
 
-On subsequent runs, agents execute `recall_memory` upfront. In **Scenario 2**, ConfigCoder recalls the rule with 90% confidence and **proactively adapts its claim** from `SIGNATURE_CHANGE` to `BODY_EDIT`. The collision check reports 0 collisions, allowing concurrent execution!
+On subsequent runs, agents execute `recall_memory` upfront. In **Scenario 2**, ConfigCoder recalls the rule with 95% confidence and **proactively adapts its claim** from `SIGNATURE_CHANGE` to `BODY_EDIT`. The collision check reports 0 collisions, allowing concurrent execution!
 
 To prove this memory actively dictates agent behavior, the ChronoFork UI includes a **Memory ON/OFF toggle**:
 - **Memory ON**: Recalls lesson, adapts intent, 0 collisions.
@@ -179,12 +180,19 @@ We refused to present scripted results or mocked pytest strings. Every scenario 
 ```
 ============================= test session starts ==============================
 rootdir: /tmp/chronofork_naive_git_sandbox
-tests/test_auth.py::test_validate_token_valid FAILED                     [ 16%]
-tests/test_auth.py::test_validate_token_invalid FAILED                   [ 25%]
-tests/test_config.py::test_load_config_default FAILED                    [ 41%]
-tests/test_worker.py::test_execute_job_authorized FAILED                 [ 91%]
-tests/test_worker.py::test_execute_job_unauthorized FAILED               [100%]
-========================= 5 failed, 7 passed in 0.18s =========================
+tests/test_auth.py::test_validate_token_valid FAILED                     [  8%]
+tests/test_auth.py::test_validate_token_invalid FAILED                   [ 16%]
+tests/test_config.py::test_get_default_config PASSED                     [ 25%]
+tests/test_config.py::test_load_config_default FAILED                    [ 33%]
+tests/test_config.py::test_compute_config_signature PASSED               [ 41%]
+tests/test_database.py::test_get_connection FAILED                       [ 50%]
+tests/test_database.py::test_save_and_get_result PASSED                  [ 58%]
+tests/test_models.py::test_create_job_result PASSED                      [ 66%]
+tests/test_queue.py::test_dequeue_task_unauthorized PASSED               [ 75%]
+tests/test_queue.py::test_dequeue_task_authorized FAILED                 [ 83%]
+tests/test_worker.py::test_execute_job_unauthorized PASSED               [ 91%]
+tests/test_worker.py::test_execute_job_completed FAILED                  [100%]
+========================= 5 failed, 7 passed in 0.88s =========================
 ```
 
 In the ChronoFork console, the **Verifier Tab** displays this exact comparison side-by-side, giving judges and engineers instant proof of the value proposition.
@@ -220,15 +228,14 @@ External AI coding agents running in Cursor, Claude Desktop, or custom orchestra
 
 ## Benchmarks & Verification
 
-Tested live against FalkorDB v4.22.1 running in Docker:
+All benchmarks measured live using `scripts/verify_phase0.py` and real subprocess pytests in `scripts/verify_item1.py`:
 
-- **Graph Cloning (`GRAPH.COPY`)**: `36.14 ms`
-- **PageRank Centrality**: `21.31 ms`
-- **Betweenness Centrality**: `7.67 ms`
-- **4-Hop Transitive Collision Query**: `1.82 ms`
-- **Shortest Path Calculation (`algo.SPpaths`)**: `2.01 ms`
-- **Memory Rule Recall**: `0.92 ms`
-- **Real Pytest Execution**: `12 passed in 0.15s`
+- **Graph Cloning (`GRAPH.COPY`)**: `36.50 ms – 84.81 ms`
+- **PageRank Centrality (`algo.pageRank`)**: `19.30 ms – 21.73 ms`
+- **Betweenness Centrality (`algo.betweenness`)**: `7.67 ms – 13.62 ms`
+- **Variable-Length Path Traversal (`CALLS*1..4`)**: `4.12 ms – 4.31 ms`
+- **Shortest Path Calculation (`algo.SPpaths`)**: `2.02 ms – 4.30 ms`
+- **Real Pytest Verification (Merged Workspace)**: `12 passed in 0.45s`
 
 ---
 

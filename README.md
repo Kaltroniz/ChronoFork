@@ -26,11 +26,11 @@ ChronoFork is submitted to **Graph Hacks (FalkorDB)** under both tracks:
 - **Speculative Workspace Forking**: Uses FalkorDB graph cloning (`graph.copy`) to create isolated speculative environments (`fork:<run_id>:<agent_id>`) where AST changes are tested for blast-radius expansion before touching physical code.
 
 ### Track 2: Agent Memory and Coordination
-- **Unified Coordination Graph**: Clones the repo graph into `coord:<run_id>` and overlays multi-agent coordination entities (`Run`, `Agent`, `Subtask`, `Claim`) directly onto code `:Symbol` nodes.
+- **Unified Coordination Graph**: Clones the repo graph into `coord:<run_id>` and overlays multi-agent coordination entities (`:Run`, `:Agent`) directly onto code `:Symbol` nodes via `[:CLAIMS]` edges.
 - **Native Cypher Collision Queries**: Single openCypher traversals detect transitive semantic collisions between agents modifying separate files up to 4 call hops apart.
 - **Graph-Driven Handoffs & Merge Order**: Employs `(:Agent)-[:BLOCKED_BY]->(:Agent)` and `(:Agent)-[:HANDED_OFF_TO]->(:Agent)` edges in FalkorDB, with merge sequence dynamically calculated via a callee-first topological graph query.
 - **Cross-Run Episodic & Procedural Memory**: Persistent graph `mem:<repo>` stores historical `Episode`s and `ProceduralRule`s linked to code `:Symbol` nodes via `[:INVOLVED]`.
-- **Dynamic Bayesian Confidence**: Procedural rules carry confidence scores that rise on verified execution (+0.10) and fall on failure (-0.20), strictly clamped to [0.10, 0.99]. Agents recall these rules upfront, automatically adapting their plans to prevent collisions before claiming nodes.
+- **Dynamic Heuristic Confidence**: Procedural rules carry confidence scores that rise on verified execution (+0.10) and fall on failure (-0.20), strictly clamped to [0.10, 0.99]. Agents recall these rules upfront, automatically adapting their plans to prevent collisions before claiming nodes.
 
 ---
 
@@ -38,10 +38,10 @@ ChronoFork is submitted to **Graph Hacks (FalkorDB)** under both tracks:
 
 If FalkorDB is removed, **ChronoFork stops working entirely**. ChronoFork cannot be implemented on traditional relational, document, or key-value stores for fundamental architectural reasons:
 
-1. **Arbitrary-Depth Transitive Call Paths**: Detecting whether Agent 2's target calls Agent 1's target requires querying `(s2)-[:CALLS*1..4]->(s1)`. In SQL, this requires recursive Common Table Expressions (CTEs) with multiple self-joins that quickly become unmanageable and unindexable. In FalkorDB, openCypher evaluates this 4-hop path in **1.8 ms**.
-2. **Native Graph Centrality**: PageRank and Betweenness Centrality determine whether a symbol is an architectural bottleneck. Running these on relational tables requires exporting the entire graph to an external compute engine. FalkorDB executes `CALL algo.pageRank('Symbol', 'CALLS')` in **21.3 ms** directly inside Redis memory.
-3. **Instant Graph Branching (`graph.copy`)**: In ChronoFork, every agent gets an isolated copy of the repository graph to simulate its blast radius. FalkorDB copies a full symbol graph in **36.1 ms**, enabling lightweight speculative execution.
-4. **Unified Coordination & Code Model**: Coordination nodes (`Agent`, `Claim`) are connected directly to code nodes (`Symbol`). A single Cypher query traverses from Agent to Claim to Symbol across 4 CALL hops to another Claim and another Agent, returning the full node/edge chain for visualization.
+1. **Arbitrary-Depth Transitive Call Paths**: Detecting whether Agent 2's target calls Agent 1's target requires querying `(s2)-[:CALLS*1..4]->(s1)`. In SQL, this requires recursive Common Table Expressions (CTEs) with multiple self-joins that quickly become unmanageable and unindexable. In FalkorDB, openCypher evaluates this 4-hop path in **4.1 ms**.
+2. **Native Graph Centrality**: PageRank and Betweenness Centrality determine whether a symbol is an architectural bottleneck. Running these on relational tables requires exporting the entire graph to an external compute engine. FalkorDB executes `CALL algo.pageRank('Symbol', 'CALLS')` in **19.3 ms** directly inside Redis memory.
+3. **Instant Graph Branching (`graph.copy`)**: In ChronoFork, every agent gets an isolated copy of the repository graph to simulate its blast radius. FalkorDB copies a full symbol graph in **36.5 ms**, enabling lightweight speculative execution.
+4. **Unified Coordination & Code Model**: Coordination nodes (`Agent`) connect directly to code nodes (`Symbol`) via `[:CLAIMS]` edges. A single Cypher query traverses from Agent across a Claim edge to Symbol across 4 CALL hops to another Claim and another Agent, returning the full node/edge chain for visualization.
 
 ---
 
@@ -156,15 +156,11 @@ Initialized at run start by cloning `repo:<name>` using `GRAPH.COPY`. Coordinati
 - **Nodes**:
   - `(:Run {run_id, task, status})`
   - `(:Agent {id, name, role, color})`
-  - `(:Subtask {id, description, status})`
-  - `(:Claim {id, intent, status, reason})` (Intents: `SIGNATURE_CHANGE`, `BODY_EDIT`, `DELETE`, `ADD`)
+  - Cloned AST Code `:Symbol` nodes
 - **Edges**:
-  - `(:Run)-[:HAS_SUBTASK]->(:Subtask)`
-  - `(:Agent)-[:ASSIGNED]->(:Subtask)`
-  - `(:Agent)-[:CLAIMS {intent}]->(:Symbol)`
-  - `(:Agent)-[:COLLIDES_WITH {path_nodes, hops, policy}]->(:Agent)`
+  - `(:Agent)-[:CLAIMS {intent, subtask}]->(:Symbol)` (Intents: `SIGNATURE_CHANGE`, `BODY_EDIT`, `DELETE`, `ADD`)
   - `(:Agent)-[:BLOCKED_BY]->(:Agent)`
-  - `(:Agent)-[:HANDED_OFF_TO]->(:Agent)`
+  - `(:Agent)-[:HANDED_OFF_TO {reason}]->(:Agent)`
 
 ### 3. `fork:<run_id>:<agent_id>` (Speculative Graph)
 Cloned from `repo:<name>` per agent. The agent applies proposed edits speculatively (e.g. changing signature, removing callers), re-runs impact and centrality calculations, and computes before/after delta scores.
@@ -174,13 +170,11 @@ Cross-run memory preserving lessons learned:
 - **Nodes**:
   - `(:Symbol {qualname})`
   - `(:Episode {id, run_id, task, outcome, summary, timestamp})`
-  - `(:ProceduralRule {id, rule, advice, confidence, samples})`
-  - `(:SemanticFact {id, fact})`
+  - `(:ProceduralRule {id, rule, advice, recommended_intent, confidence, samples})`
 - **Edges**:
   - `(:Episode)-[:INVOLVED]->(:Symbol)`
   - `(:Episode)-[:LEARNED_RULE]->(:ProceduralRule)`
   - `(:ProceduralRule)-[:INVOLVED]->(:Symbol)`
-  - `(:Episode)-[:OCCURRED_AFTER]->(:Episode)`
 
 ---
 
@@ -232,12 +226,13 @@ ORDER BY betweenness DESC
 **Why a graph is required**: When multiple agents have conflicting claims, this topological query orders agents so that dependencies (callees) are patched, verified, and merged before callers run.
 
 ```cypher
-MATCH (c:Claim)
-OPTIONAL MATCH (c)-[:CLAIMS]->(s:Function)<-[:CALLS*1..4]-(s_caller:Function)<-[:CLAIMS]-(c_caller:Claim)
-RETURN c.agent_id AS agent_id,
-       count(s_caller) AS depth,
-       max(s.risk_score) AS risk_score
-ORDER BY depth DESC, risk_score DESC
+MATCH (a:Agent)-[c:CLAIMS]->(s:Symbol)
+OPTIONAL MATCH (s)<-[:CALLS*1..4]-(s_caller:Symbol)<-[:CLAIMS]-(a_caller:Agent)
+RETURN a.id AS agent_id,
+       a.name AS agent_name,
+       s.qualname AS symbol,
+       count(s_caller) AS depth
+ORDER BY depth DESC
 ```
 
 ### 5. Multi-Hop Reverse Impact Analysis
@@ -270,17 +265,16 @@ ORDER BY rule.confidence DESC
 
 ## 📈 Measured FalkorDB Benchmarks
 
-All metrics measured live on a real FalkorDB v4.22.1 instance running inside Docker (see [`docs/falkordb-verified.md`](docs/falkordb-verified.md)):
+All metrics measured live on a real FalkorDB v4.22.1 instance running inside Docker using `scripts/verify_phase0.py` and `scripts/verify_item1.py` (see [`docs/falkordb-verified.md`](docs/falkordb-verified.md)):
 
 | Operation | FalkorDB Command / Method | Measured Latency |
 | :--- | :--- | :--- |
-| **Graph Clone** | `graph.copy(dest)` | **36.14 ms** |
-| **PageRank Centrality** | `CALL algo.pageRank('Symbol', 'CALLS')` | **21.31 ms** |
-| **Betweenness Centrality** | `CALL algo.betweenness({nodeLabels: [...], ...})` | **7.67 ms** |
-| **Transitive Collision Query** | `(s2)-[:CALLS*1..4]->(s1)` | **1.82 ms** |
-| **Shortest Path Calculation** | `CALL algo.SPpaths(...)` | **2.01 ms** |
-| **Reverse Impact Traversal** | Reverse `CALLS` + `TESTED_BY` | **1.45 ms** |
-| **Memory Recall Query** | `MATCH (s)<-[:INVOLVED]-(r:ProceduralRule)` | **0.92 ms** |
+| **Graph Clone** | `graph.copy(dest)` | **36.50 ms – 84.81 ms** |
+| **PageRank Centrality** | `CALL algo.pageRank('Symbol', 'CALLS')` | **19.30 ms – 21.73 ms** |
+| **Betweenness Centrality** | `CALL algo.betweenness({nodeLabels: [...], ...})` | **7.67 ms – 13.62 ms** |
+| **Variable-Length Path Traversal** | `(s2)-[:CALLS*1..4]->(s1)` | **4.12 ms – 4.31 ms** |
+| **Shortest Path Calculation** | `CALL algo.SPpaths(...)` | **2.02 ms – 4.30 ms** |
+| **Real Pytest Verification** | Subprocess pytest on merged workspace | **0.45s (12 passed)** |
 
 ---
 

@@ -34,6 +34,7 @@ class FalkorClient:
 
         self.db = FalkorDB(**conn_kwargs)
         self.last_trace: Optional[Dict[str, Any]] = None
+        self._tool_traces: Dict[str, Dict[str, Any]] = {}
 
     def list_graphs(self) -> List[str]:
         """Lists all active graph keys."""
@@ -67,11 +68,20 @@ class FalkorClient:
         src_graph = self.get_graph(src_name)
         return src_graph.copy(dest_name)
 
-    def query(self, graph_name: str, cypher: str, params: Optional[Dict[str, Any]] = None) -> Any:
+        self._tool_traces: Dict[str, Dict[str, Any]] = {}
+        self.last_trace: Optional[Dict[str, Any]] = None
+
+    def query(
+        self,
+        graph_name: str,
+        cypher: str,
+        params: Optional[Dict[str, Any]] = None,
+        tool: Optional[str] = None
+    ) -> Any:
         """
         Executes Cypher query on specified graph with microsecond timing and full trace recording.
         Returns: (res, t_ms)
-        Updates self.last_trace with genuine query parameters, returned rows, and duration.
+        Records the query trace keyed by tool name.
         """
         g = self.get_graph(graph_name)
         query_params = params or {}
@@ -98,7 +108,7 @@ class FalkorClient:
         header = list(res.header) if hasattr(res, "header") and res.header else []
         row_count = len(res.result_set) if hasattr(res, "result_set") and res.result_set else 0
 
-        self.last_trace = {
+        trace_obj = {
             "graph": graph_name,
             "cypher": cypher.strip(),
             "params": query_params,
@@ -106,8 +116,22 @@ class FalkorClient:
             "row_count": row_count,
             "rows": rows_preview,
             "header": header,
+            "tool": tool
         }
+        self.last_trace = trace_obj
+        if tool:
+            self._tool_traces[tool] = trace_obj
         return res, t_ms
+
+    def record_tool_trace(self, tool: str, trace: Dict[str, Any]) -> None:
+        """Explicitly assigns a trace dictionary to a specific tool."""
+        self._tool_traces[tool] = trace
+
+    def get_trace_for_tool(self, tool: str, consume: bool = True) -> Optional[Dict[str, Any]]:
+        """Returns the trace recorded for a specific tool (no stale fallback)."""
+        if tool in self._tool_traces:
+            return self._tool_traces.pop(tool) if consume else self._tool_traces[tool]
+        return None
 
     def get_last_trace(self) -> Optional[Dict[str, Any]]:
         """Returns the most recent query execution trace."""

@@ -1,0 +1,246 @@
+[
+  {
+    "index": 0,
+    "ts": 1792108167.246892,
+    "run_id": "replay_gen_sc2_mem",
+    "agent": "Planner",
+    "phase": "PLANNING",
+    "tool": "decompose_task",
+    "cypher": null,
+    "params": {},
+    "trace": null,
+    "execution_data": null,
+    "node_ids": [
+      "taskflow.config.load_config",
+      "taskflow.worker.execute_job"
+    ],
+    "edge_ids": [],
+    "scores": {},
+    "collision": null,
+    "memory_write": null,
+    "message": "Planner received task: 'Refactor config schema and extend worker timeout'. Memory Coordination: ON."
+  },
+  {
+    "index": 1,
+    "ts": 1792108167.3233256,
+    "run_id": "replay_gen_sc2_mem",
+    "agent": "ConfigCoder",
+    "phase": "RECALL",
+    "tool": "recall_memory",
+    "cypher": "MATCH (s:Symbol)<-[:INVOLVED]-(r:ProceduralRule)\n    WHERE s.qualname IN $qnames\n    RETURN DISTINCT r.id AS id, r.rule AS rule, r.advice AS advice, r.confidence AS confidence, r.samples AS samples, s.qualname AS trigger_symbol, r.recommended_intent AS recommended_intent\n    ORDER BY r.confidence DESC",
+    "params": {
+      "qnames": [
+        "taskflow.config.load_config",
+        "taskflow.config.compute_config_signature",
+        "tests.test_config.test_compute_config_signature",
+        "taskflow.database.get_connection",
+        "tests.test_config.test_get_default_config",
+        "taskflow.auth.validate_token",
+        "tests.test_config.test_load_config_default",
+        "taskflow.config.get_default_config"
+      ]
+    },
+    "trace": {
+      "graph": "mem:taskflow",
+      "cypher": "MATCH (s:Symbol)<-[:INVOLVED]-(r:ProceduralRule)\n    WHERE s.qualname IN $qnames\n    RETURN DISTINCT r.id AS id, r.rule AS rule, r.advice AS advice, r.confidence AS confidence, r.samples AS samples, s.qualname AS trigger_symbol, r.recommended_intent AS recommended_intent\n    ORDER BY r.confidence DESC",
+      "params": {
+        "qnames": [
+          "taskflow.config.load_config",
+          "taskflow.config.compute_config_signature",
+          "tests.test_config.test_compute_config_signature",
+          "taskflow.database.get_connection",
+          "tests.test_config.test_get_default_config",
+          "taskflow.auth.validate_token",
+          "tests.test_config.test_load_config_default",
+          "taskflow.config.get_default_config"
+        ]
+      },
+      "duration_ms": 1.07,
+      "row_count": 1,
+      "rows": [
+        [
+          "rule_cfg_worker_transitive",
+          "load_config signature changes break transitive caller worker.execute_job (4 hops via database, auth, queue)",
+          "Serialize execution or provide backward-compatible dict access/default kwargs when modifying load_config.",
+          0.95,
+          2,
+          "taskflow.config.load_config",
+          "BODY_EDIT"
+        ]
+      ],
+      "header": [
+        [
+          1,
+          "id"
+        ],
+        [
+          1,
+          "rule"
+        ],
+        [
+          1,
+          "advice"
+        ],
+        [
+          1,
+          "confidence"
+        ],
+        [
+          1,
+          "samples"
+        ],
+        [
+          1,
+          "trigger_symbol"
+        ],
+        [
+          1,
+          "recommended_intent"
+        ]
+      ],
+      "tool": "recall_memory"
+    },
+    "execution_data": null,
+    "node_ids": [
+      "taskflow.config.load_config"
+    ],
+    "edge_ids": [],
+    "scores": {},
+    "collision": null,
+    "memory_write": {
+      "rule_id": "rule_cfg_worker_transitive",
+      "confidence": 0.95
+    },
+    "message": "MEMORY HIT! ConfigCoder recalled ProceduralRule 'load_config signature changes break transitive caller worker.execute_job (4 hops via database, auth, queue)' with 95% confidence. Recommended intent: BODY_EDIT. Advice: Serialize execution or provide backward-compatible dict access/default kwargs when modifying load_config.."
+  },
+  {
+    "index": 2,
+    "ts": 1792108167.3233314,
+    "run_id": "replay_gen_sc2_mem",
+    "agent": "ConfigCoder",
+    "phase": "MEMORY_ADAPTATION",
+    "tool": "adapt_intent",
+    "cypher": null,
+    "params": {},
+    "trace": null,
+    "execution_data": null,
+    "node_ids": [
+      "taskflow.config.load_config"
+    ],
+    "edge_ids": [],
+    "scores": {},
+    "collision": null,
+    "memory_write": null,
+    "message": "Memory-Driven Adaptation: Rule 'rule_cfg_worker_transitive' recommends intent 'BODY_EDIT' instead of breaking SIGNATURE_CHANGE. Preserving signature compatibility!"
+  },
+  {
+    "index": 3,
+    "ts": 1792108167.335272,
+    "run_id": "replay_gen_sc2_mem",
+    "agent": "Coordinator",
+    "phase": "COLLISION_DETECTION",
+    "tool": "detect_collisions",
+    "cypher": "MATCH (a1:Agent)-[c1:CLAIMS]->(s1:Symbol),\n          (a2:Agent)-[c2:CLAIMS]->(s2:Symbol)\n    WHERE a1.id <> a2.id\n      AND c1.intent IN ['SIGNATURE_CHANGE', 'DELETE']\n    MATCH path = (s2)-[:CALLS*1..4]->(s1)\n    RETURN a1.id AS a1, a2.id AS a2, s1.qualname AS s1_qname, s2.qualname AS s2_qname,\n           c1.intent AS intent1, c2.intent AS intent2,\n           [n in nodes(path) | n.qualname] AS path_nodes, length(path) AS hops",
+    "params": {},
+    "trace": {
+      "graph": "coord:replay_gen_sc2_mem",
+      "cypher": "MATCH (a1:Agent)-[c1:CLAIMS]->(s1:Symbol),\n          (a2:Agent)-[c2:CLAIMS]->(s2:Symbol)\n    WHERE a1.id <> a2.id\n      AND c1.intent IN ['SIGNATURE_CHANGE', 'DELETE']\n    MATCH path = (s2)-[:CALLS*1..4]->(s1)\n    RETURN a1.id AS a1, a2.id AS a2, s1.qualname AS s1_qname, s2.qualname AS s2_qname,\n           c1.intent AS intent1, c2.intent AS intent2,\n           [n in nodes(path) | n.qualname] AS path_nodes, length(path) AS hops",
+      "params": {},
+      "duration_ms": 1.93,
+      "row_count": 0,
+      "rows": [],
+      "header": [
+        [
+          1,
+          "a1"
+        ],
+        [
+          1,
+          "a2"
+        ],
+        [
+          1,
+          "s1_qname"
+        ],
+        [
+          1,
+          "s2_qname"
+        ],
+        [
+          1,
+          "intent1"
+        ],
+        [
+          1,
+          "intent2"
+        ],
+        [
+          1,
+          "path_nodes"
+        ],
+        [
+          1,
+          "hops"
+        ]
+      ],
+      "tool": "detect_collisions"
+    },
+    "execution_data": null,
+    "node_ids": [],
+    "edge_ids": [],
+    "scores": {},
+    "collision": null,
+    "memory_write": null,
+    "message": "Collision check: ZERO collisions! Memory-guided constraint prevented the breaking change before code was written."
+  },
+  {
+    "index": 4,
+    "ts": 1792108171.2689154,
+    "run_id": "replay_gen_sc2_mem",
+    "agent": "Verifier",
+    "phase": "VERIFICATION",
+    "tool": "run_pytest",
+    "cypher": null,
+    "params": {},
+    "trace": null,
+    "execution_data": {
+      "success": true,
+      "exit_code": 0,
+      "passed_count": 12,
+      "failed_count": 0,
+      "duration_seconds": 0.64,
+      "output": "============================= test session starts ==============================\nplatform linux -- Python 3.12.3, pytest-9.1.1, pluggy-1.7.0 -- /opt/venv/bin/python3\ncachedir: .pytest_cache\nrootdir: /tmp/chronofork_ws__3apz9vf/replay_gen_sc2_mem_agent_1\nplugins: anyio-4.15.1\ncollecting ... collected 12 items\n\ntests/test_auth.py::test_extract_claims PASSED                           [  8%]\ntests/test_auth.py::test_validate_token_valid PASSED                     [ 16%]\ntests/test_auth.py::test_validate_token_invalid PASSED                   [ 25%]\ntests/test_config.py::test_get_default_config PASSED                     [ 33%]\ntests/test_config.py::test_load_config_default PASSED                    [ 41%]\ntests/test_config.py::test_compute_config_signature PASSED               [ 50%]\ntests/test_reports.py::test_calculate_metrics_summary PASSED             [ 58%]\ntests/test_reports.py::test_generate_summary PASSED                      [ 66%]\ntests/test_reports.py::test_format_as_markdown PASSED                    [ 75%]\ntests/test_reports.py::test_schedule_report_generation PASSED            [ 83%]\ntests/test_worker.py::test_execute_job_authorized PASSED                 [ 91%]\ntests/test_worker.py::test_execute_job_unauthorized PASSED               [100%]\n\n============================== 12 passed in 0.12s ==============================\n",
+      "errors": ""
+    },
+    "node_ids": [
+      "taskflow.config.load_config",
+      "taskflow.worker.execute_job"
+    ],
+    "edge_ids": [],
+    "scores": {},
+    "collision": null,
+    "memory_write": null,
+    "message": "Both agents executed concurrently without serialization. Real pytest: 12 passed in 0.64s!"
+  },
+  {
+    "index": 5,
+    "ts": 1792108171.2713833,
+    "run_id": "replay_gen_sc2_mem",
+    "agent": "Coordinator",
+    "phase": "MEMORY_UPDATE",
+    "tool": "record_episode",
+    "cypher": null,
+    "params": {},
+    "trace": null,
+    "execution_data": null,
+    "node_ids": [],
+    "edge_ids": [],
+    "scores": {},
+    "collision": null,
+    "memory_write": {
+      "rule_id": "rule_cfg_worker_transitive",
+      "confidence": 0.99
+    },
+    "message": "Memory reinforced: Rule confidence increased to 99%."
+  }
+]

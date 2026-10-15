@@ -69,13 +69,18 @@ def query_impact(graph_name: str, symbol_qualname: str, max_depth: int = 4) -> D
     """
     Multi-hop impact analysis traversal over reverse CALLS edges plus affected tests.
     """
+    if not graph_name.startswith("repo:") and not graph_name.startswith("fork:"):
+        graph_name = f"repo:{graph_name}"
+
     # 1. Reverse callers traversal: symbols that directly or transitively call the target symbol
     callers_query = f"""
     MATCH path = (caller:Symbol)-[:CALLS*1..{max_depth}]->(target:Symbol {{qualname: $target_qname}})
     RETURN caller.qualname AS caller, caller.path AS file_path, length(path) AS depth, [n in nodes(path) | n.qualname] AS chain
     ORDER BY depth, caller
     """
-    callers_res, t_callers = falkor_client.query(graph_name, callers_query, {"target_qname": symbol_qualname})
+    callers_res, t_callers = falkor_client.query(
+        graph_name, callers_query, {"target_qname": symbol_qualname}, tool="get_impact"
+    )
 
     dependent_callers = []
     seen = set()
@@ -96,7 +101,9 @@ def query_impact(graph_name: str, symbol_qualname: str, max_depth: int = 4) -> D
     RETURN DISTINCT tst.qualname AS test_name, tst.path AS test_path, tst.lineno AS lineno
     ORDER BY test_name
     """
-    tests_res, t_tests = falkor_client.query(graph_name, tests_query, {"target_qname": symbol_qualname})
+    tests_res, t_tests = falkor_client.query(
+        graph_name, tests_query, {"target_qname": symbol_qualname}, tool="get_impact"
+    )
 
     affected_tests = [
         {"test_name": row[0], "test_path": row[1], "lineno": int(row[2])}
