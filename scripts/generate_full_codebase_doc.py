@@ -215,6 +215,14 @@ def generate_master_document():
         "scripts/test_p4.py",
         "scripts/test_p6.py",
         "scripts/test_all_scenarios.py",
+        "scripts/test_api_execution.py",
+        "scripts/test_memory_toggle.py",
+
+        # Documentation & Hackathon Deliverables
+        "README.md",
+        "docs/blog-post.md",
+        "docs/demo-script.md",
+        "docs/falkordb-verified.md",
 
         # Deployment & Config
         "docker-compose.yml",

@@ -431,6 +431,15 @@ ChronoFork was created for the FalkorDB Graph Hacks Hackathon. An AI coding assi
 
 ---
 
+## 📚 Documentation & Hackathon Deliverables
+
+- 📝 **[Technical Submission Blog Post](docs/blog-post.md)**: Deep dive into the architecture, Git blind spot proof, FalkorDB benchmarks, and coordination algorithms.
+- 🎬 **[Demo Video Script & Storyboard](docs/demo-script.md)**: Timed 3-minute video presentation script.
+- 🔬 **[FalkorDB Live Verification Report](docs/falkordb-verified.md)**: Empirical benchmarks and syntax verification on live FalkorDB v4.22.1.
+- 📖 **[Master Codebase & Architecture File](CHRONOFORK_ALL_CODE_AND_EXPLANATION.md)**: Single comprehensive document containing every line of code with implementation explanations.
+
+---
+
 ## 📄 License
 
 MIT License. Designed and engineered for FalkorDB Graph Hacks.
