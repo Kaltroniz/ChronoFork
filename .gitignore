@@ -1,0 +1,32 @@
+# Environment & Secrets
+.env
+.env.local
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node & Frontend
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Logs & Temp
+*.log
+/tmp/chronofork_*
+
+# OS
+.DS_Store
+Thumbs.db
