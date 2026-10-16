@@ -1,7 +1,7 @@
 [
   {
     "index": 0,
-    "ts": 1792108171.2941613,
+    "ts": 1792110822.3527665,
     "run_id": "replay_gen_sc2_nomem",
     "agent": "Planner",
     "phase": "PLANNING",
@@ -22,7 +22,7 @@
   },
   {
     "index": 1,
-    "ts": 1792108171.347908,
+    "ts": 1792110822.4587705,
     "run_id": "replay_gen_sc2_nomem",
     "agent": "ConfigCoder",
     "phase": "CLAIM",
@@ -43,7 +43,7 @@
         "intent": "BODY_EDIT",
         "subtask": "Extend worker job timeout"
       },
-      "duration_ms": 0.89,
+      "duration_ms": 1.4,
       "row_count": 0,
       "rows": [],
       "header": [],
@@ -61,7 +61,7 @@
   },
   {
     "index": 2,
-    "ts": 1792108171.3665924,
+    "ts": 1792110822.48468,
     "run_id": "replay_gen_sc2_nomem",
     "agent": "Coordinator",
     "phase": "COLLISION_DETECTION",
@@ -72,7 +72,7 @@
       "graph": "coord:replay_gen_sc2_nomem",
       "cypher": "MATCH (a1:Agent)-[c1:CLAIMS]->(s1:Symbol),\n          (a2:Agent)-[c2:CLAIMS]->(s2:Symbol)\n    WHERE a1.id <> a2.id\n      AND c1.intent IN ['SIGNATURE_CHANGE', 'DELETE']\n    MATCH path = (s2)-[:CALLS*1..4]->(s1)\n    RETURN a1.id AS a1, a2.id AS a2, s1.qualname AS s1_qname, s2.qualname AS s2_qname,\n           c1.intent AS intent1, c2.intent AS intent2,\n           [n in nodes(path) | n.qualname] AS path_nodes, length(path) AS hops",
       "params": {},
-      "duration_ms": 2.9,
+      "duration_ms": 2.59,
       "row_count": 1,
       "rows": [
         [
