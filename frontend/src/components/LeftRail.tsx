@@ -16,6 +16,7 @@ interface LeftRailProps {
   memoryEnabled: boolean;
   onToggleMemory: () => void;
   isDevFixture?: boolean;
+  memoryWasReset?: boolean;
 }
 
 const SCENARIOS = [
@@ -65,7 +66,8 @@ export const LeftRail: React.FC<LeftRailProps> = ({
   onChangeSpeed,
   memoryEnabled,
   onToggleMemory,
-  isDevFixture = false
+  isDevFixture = false,
+  memoryWasReset = false
 }) => {
   return (
     <aside className="w-[280px] h-full bg-[var(--bg-1)] border-r border-[var(--line)] flex flex-col justify-between p-4 select-none shrink-0 z-20">
@@ -117,6 +119,11 @@ export const LeftRail: React.FC<LeftRailProps> = ({
                   <span className="text-[13px] text-[var(--text-dim)] font-sans leading-tight">
                     {sc.subtitle}
                   </span>
+                  {sc.id === 2 && !memoryWasReset && (
+                    <span className="text-[13px] font-mono text-[var(--signal)] mt-1 block">
+                      Memory state: carried over from previous runs
+                    </span>
+                  )}
                 </button>
               );
             })}

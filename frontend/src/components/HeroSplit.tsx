@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { SwarmEvent, GraphData } from '../types';
 import { getCollision, getGitComparisonData } from '../adapters/events';
 import { SymbolChip } from './VerifiedText';
-import { X } from 'lucide-react';
+import { X, ChevronDown } from 'lucide-react';
 
 interface HeroSplitProps {
   activeEvent: SwarmEvent | null;
@@ -21,13 +21,29 @@ export const HeroSplit: React.FC<HeroSplitProps> = ({
   onDismiss,
   dismissed
 }) => {
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
+
   const collision = getCollision(activeEvent);
+
+  // Auto-collapse to docked top-center bar after 3 seconds
+  useEffect(() => {
+    setIsCollapsed(false);
+    if (!collision) return;
+
+    const timer = setTimeout(() => {
+      setIsCollapsed(true);
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, [activeEvent, collision]);
+
   if (!collision || dismissed) return null;
 
   // Find git comparison event in history (if already executed or available)
-  const gitEvent = activeEvent?.phase === 'GIT_COMPARISON'
-    ? activeEvent
-    : events.find(e => e.phase === 'GIT_COMPARISON' || e.execution_data?.git_status);
+  const gitEvent =
+    activeEvent?.phase === 'GIT_COMPARISON'
+      ? activeEvent
+      : events.find((e) => e.phase === 'GIT_COMPARISON' || e.execution_data?.git_status);
 
   const gitData = getGitComparisonData(gitEvent);
 
@@ -43,25 +59,61 @@ export const HeroSplit: React.FC<HeroSplitProps> = ({
     }
   }
 
+  // Collapsed One-Line Bar Docked Top-Center
+  if (isCollapsed) {
+    return (
+      <div
+        onClick={() => setIsCollapsed(false)}
+        className="absolute top-4 left-1/2 -translate-x-1/2 z-30 px-4 py-2 rounded-[6px] border border-[var(--breach)] bg-[var(--bg-1)] font-mono text-[13px] font-semibold text-[var(--text)] shadow-xl cursor-pointer hover:border-[var(--accent)] flex items-center gap-3 select-none transition-all duration-200"
+        role="alert"
+        aria-label="Collision Detection Docked Bar"
+        title="Click to expand collision details"
+      >
+        <span className="w-2 h-2 rounded-full bg-[var(--breach)] animate-pulse inline-block" />
+        <span>
+          Git: 0 conflicts · ChronoFork: {hops !== undefined ? `${hops}-hop` : 'transitive'} collision ·{' '}
+          {collision.policy || 'SERIALIZE'}
+        </span>
+        <span className="flex items-center gap-0.5 text-[13px] text-[var(--accent)] hover:underline ml-1">
+          <span>Expand</span>
+          <ChevronDown className="w-3.5 h-3.5" />
+        </span>
+      </div>
+    );
+  }
+
   return (
     <div
-      className="absolute top-4 left-1/2 -translate-x-1/2 z-30 w-[760px] max-w-[94%] cf-floating-card p-5 transition-opacity duration-200"
+      className="absolute top-4 left-1/2 -translate-x-1/2 z-30 w-[780px] max-w-[94%] cf-floating-card p-5 transition-opacity duration-200 shadow-2xl select-none"
       role="alert"
       aria-label="Collision Detection Split View"
     >
-      {/* Dismiss Button */}
-      {onDismiss && (
+      {/* Dismiss / Collapse Buttons */}
+      <div className="absolute top-3 right-3 flex items-center gap-1">
         <button
-          onClick={onDismiss}
-          className="absolute top-3 right-3 p-1 rounded hover:bg-[var(--bg-2)] text-[var(--text-dim)] hover:text-[var(--text)] transition-colors cursor-pointer"
-          title="Dismiss card"
-          aria-label="Close"
+          onClick={() => setIsCollapsed(true)}
+          className="p-1 rounded hover:bg-[var(--bg-2)] text-[var(--text-dim)] hover:text-[var(--text)] transition-colors cursor-pointer text-[13px] font-mono px-2"
+          title="Dock to top-center bar"
         >
-          <X className="w-4 h-4" />
+          Dock
         </button>
-      )}
+        {onDismiss && (
+          <button
+            onClick={onDismiss}
+            className="p-1 rounded hover:bg-[var(--bg-2)] text-[var(--text-dim)] hover:text-[var(--text)] transition-colors cursor-pointer"
+            title="Dismiss card"
+            aria-label="Close"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
+      </div>
 
-      <div className={`grid ${gitData ? 'grid-cols-2 divide-x divide-[var(--line)]' : 'grid-cols-1'} gap-6`}>
+      <div
+        className={`grid ${
+          gitData ? 'grid-cols-2 divide-x divide-[var(--line)]' : 'grid-cols-1'
+        } gap-6`}
+      >
         {/* LEFT COLUMN: Git merge */}
         {gitData && (
           <div className="flex flex-col justify-between pr-4 space-y-3">
@@ -85,11 +137,13 @@ export const HeroSplit: React.FC<HeroSplitProps> = ({
                   : 'Tests Failed at Runtime'}
               </div>
               <div className="text-[13px] text-[var(--text-dim)] mt-1 font-mono">
-                {gitData.durationSeconds !== undefined ? `duration: ${gitData.durationSeconds}s` : 'exit code: 1'}
+                {gitData.durationSeconds !== undefined
+                  ? `duration: ${gitData.durationSeconds.toFixed(2)}s`
+                  : 'exit code: 1'}
               </div>
             </div>
 
-            <div className="text-[13px] text-[var(--text-dim)] italic">
+            <div className="text-[13px] text-[var(--text-dim)] italic font-sans">
               Git merged clean branches with no text conflicts; runtime crashed on missing contract.
             </div>
           </div>
@@ -122,7 +176,8 @@ export const HeroSplit: React.FC<HeroSplitProps> = ({
 
           <div>
             <div className="text-eyebrow mb-1.5">Dependency Call Chain</div>
-            <div className="flex flex-wrap items-center gap-1.5">
+            {/* Horizontal chip path with -> connectors, wrapping to two rows if needed */}
+            <div className="flex flex-wrap items-center gap-1.5 max-w-full">
               {pathNodes.map((nodeName, idx) => {
                 const isVerified = knownNodes.has(nodeName);
                 return (
@@ -133,7 +188,9 @@ export const HeroSplit: React.FC<HeroSplitProps> = ({
                       onSelectNode={onSelectNode}
                     />
                     {idx < pathNodes.length - 1 && (
-                      <span className="text-[var(--text-faint)] font-mono text-[13px]">→</span>
+                      <span className="text-[var(--text-faint)] font-mono text-[13px] select-none">
+                        →
+                      </span>
                     )}
                   </React.Fragment>
                 );

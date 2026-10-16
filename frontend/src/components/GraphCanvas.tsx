@@ -1,9 +1,9 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import cytoscape, { Core, NodeSingular } from 'cytoscape';
 import dagre from 'cytoscape-dagre';
-import { GraphData, SwarmEvent, CollisionInfo } from '../types';
+import { GraphData, SwarmEvent } from '../types';
 import { getCollision, getAgentColor, getAgentInitials } from '../adapters/events';
-import { Maximize2, ZoomIn, ZoomOut } from 'lucide-react';
+import { Maximize2, ZoomIn, ZoomOut, Tag, Eye } from 'lucide-react';
 
 try {
   cytoscape.use(dagre);
@@ -29,6 +29,23 @@ interface TooltipInfo {
   risk?: string;
 }
 
+interface PersistentClaim {
+  nodeId: string;
+  agent: string;
+  initials: string;
+  color: string;
+  intent: string;
+  chipLabel: string;
+}
+
+interface ClaimChipRender {
+  nodeId: string;
+  chipLabel: string;
+  color: string;
+  x: number;
+  y: number;
+}
+
 export const GraphCanvas: React.FC<GraphCanvasProps> = ({
   graphData,
   activeEvent,
@@ -38,23 +55,64 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const cyRef = useRef<Core | null>(null);
-  const cachedPositionsRef = useRef<Record<string, Record<string, { x: number; y: number }>>>({});
-  const persistentClaimsRef = useRef<Record<string, { agent: string; intent?: string }>>({});
+  const persistentClaimsRef = useRef<Record<string, PersistentClaim>>({});
+  const isFocusModeRef = useRef<boolean>(false);
 
   const [tooltip, setTooltip] = useState<TooltipInfo | null>(null);
   const [hopCountBadge, setHopCountBadge] = useState<number | null>(null);
+  const [showAllLabels, setShowAllLabels] = useState<boolean>(false);
+  const [showTestedBy, setShowTestedBy] = useState<boolean>(false);
+  const [claimChips, setClaimChips] = useState<ClaimChipRender[]>([]);
 
   // Check if reduced motion is requested
   const prefersReducedMotion = useRef(
     window.matchMedia('(prefers-reduced-motion: reduce)').matches
   );
 
+  // Identify top 8 nodes by risk_score for idle mode
+  const top8NodeIds = useMemo(() => {
+    if (!graphData?.nodes) return new Set<string>();
+    const funcNodes = graphData.nodes.filter(
+      (n) => !n.data.parent && n.data.label !== 'Module'
+    );
+    const sorted = [...funcNodes].sort(
+      (a, b) => (b.data.risk_score || 0) - (a.data.risk_score || 0)
+    );
+    return new Set(sorted.slice(0, 8).map((n) => n.data.id));
+  }, [graphData]);
+
   // Reset persistent claims on new run or reset
   useEffect(() => {
     if (activeEvent && activeEvent.index === 0) {
       persistentClaimsRef.current = {};
+      isFocusModeRef.current = false;
+      setClaimChips([]);
     }
   }, [activeEvent]);
+
+  // Update claim chips overlay positions from cytoscape
+  const updateClaimChipPositions = useCallback(() => {
+    const cy = cyRef.current;
+    if (!cy) return;
+
+    const chips: ClaimChipRender[] = [];
+    Object.values(persistentClaimsRef.current).forEach((claim) => {
+      const node = cy.getElementById(claim.nodeId);
+      if (node.length > 0 && !node.hasClass('hidden-node') && node.visible()) {
+        const pos = node.renderedPosition();
+        const outerH = node.renderedOuterHeight();
+        chips.push({
+          nodeId: claim.nodeId,
+          chipLabel: claim.chipLabel,
+          color: claim.color,
+          x: pos.x,
+          y: pos.y - outerH / 2 - 8
+        });
+      }
+    });
+
+    setClaimChips(chips);
+  }, []);
 
   // Initialize and render Cytoscape instance
   useEffect(() => {
@@ -64,8 +122,24 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
       cyRef.current.destroy();
     }
 
-    const graphKey = graphData.graph_name || 'default';
-    const cachedPositions = cachedPositionsRef.current[graphKey];
+    // Filter edges: render only CALLS (solid) and TESTED_BY (dashed). Exclude DEFINES and IMPORTS.
+    // Exclude self-loops.
+    const filteredEdges = graphData.edges
+      .filter((e) => {
+        if (e.data.source === e.data.target) return false;
+        const type = (e.data.type || e.data.label || 'CALLS').toUpperCase();
+        return type === 'CALLS' || type === 'TESTED_BY';
+      })
+      .map((e) => ({
+        group: 'edges' as const,
+        data: {
+          id: e.data.id,
+          source: e.data.source,
+          target: e.data.target,
+          label: e.data.label || '',
+          type: (e.data.type || e.data.label || 'CALLS').toUpperCase()
+        }
+      }));
 
     // Build elements
     const elements = [
@@ -84,16 +158,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
           betweenness: n.data.betweenness || 0
         }
       })),
-      ...graphData.edges.map((e) => ({
-        group: 'edges' as const,
-        data: {
-          id: e.data.id,
-          source: e.data.source,
-          target: e.data.target,
-          label: e.data.label || '',
-          type: e.data.type || e.data.label || 'CALLS'
-        }
-      }))
+      ...filteredEdges
     ];
 
     const cy = cytoscape({
@@ -102,26 +167,35 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
       boxSelectionEnabled: false,
       autounselectify: false,
       style: [
-        // Base Function Node
+        // Base Function Node in Focus: 40–52px, label 14px function name only
         {
           selector: 'node',
           style: {
             'background-color': '#171D26',
-            'label': 'data(name)',
+            'label': (ele: NodeSingular) => {
+              if (ele.isParent()) return ele.data('name');
+              if (showAllLabels) return ele.data('name');
+              if (top8NodeIds.has(ele.id())) return ele.data('name');
+              if (isFocusModeRef.current || ele.hasClass('collision-hop-node')) {
+                return ele.data('name');
+              }
+              return '';
+            },
             'color': '#E6E8EC',
-            'font-size': '13px',
+            'font-size': '14px',
+            'min-zoomed-font-size': 13,
             'font-family': 'Inter, system-ui, sans-serif',
             'text-valign': 'bottom',
             'text-margin-y': 6,
-            'width': 'mapData(risk_score, 0, 1, 24, 44)',
-            'height': 'mapData(risk_score, 0, 1, 24, 44)',
+            'width': 'mapData(risk_score, 0, 1, 40, 52)',
+            'height': 'mapData(risk_score, 0, 1, 40, 52)',
             'border-width': 1.5,
             'border-color': '#6B7686',
-            'transition-property': 'background-color, border-color, border-width, opacity',
-            'transition-duration': 0.2
+            'transition-property': 'background-color, border-color, border-width, opacity, width, height',
+            'transition-duration': 0.3
           }
         },
-        // Compound Module Container
+        // Compound Module Container: 13px label
         {
           selector: 'node:parent',
           style: {
@@ -132,6 +206,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
             'border-style': 'dashed',
             'label': 'data(name)',
             'font-size': '13px',
+            'min-zoomed-font-size': 13,
             'font-family': 'Inter, system-ui, sans-serif',
             'color': '#6B7686',
             'text-valign': 'top',
@@ -140,23 +215,31 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
             'padding': '16px'
           }
         },
-        // Test Node: small square in --text-faint
+        // Test Node
         {
           selector: 'node[label = "Test"]',
           style: {
             'shape': 'rectangle',
-            'width': 18,
-            'height': 18,
+            'width': 22,
+            'height': 22,
             'background-color': '#171D26',
             'border-color': '#6B7686',
             'border-width': 1,
             'color': '#6B7686',
-            'font-size': '13px'
+            'font-size': '13px',
+            'min-zoomed-font-size': 13
           }
         },
-        // CALLS Edge: thin --text-faint
+        // Hidden node for focus mode
         {
-          selector: 'edge',
+          selector: '.hidden-node',
+          style: {
+            'display': 'none'
+          }
+        },
+        // CALLS Edge: solid, arrowheads, no self loops
+        {
+          selector: 'edge[type = "CALLS"]',
           style: {
             'width': 1.5,
             'line-color': '#6B7686',
@@ -167,15 +250,17 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
             'opacity': 0.75
           }
         },
-        // TESTED_BY: dashed, fainter
+        // TESTED_BY: dashed, hidden by default (toggleable)
         {
-          selector: 'edge[label = "TESTED_BY"], edge[type = "TESTED_BY"]',
+          selector: 'edge[type = "TESTED_BY"]',
           style: {
             'line-style': 'dashed',
             'line-color': '#6B7686',
             'target-arrow-color': '#6B7686',
-            'opacity': 0.35,
-            'width': 1.2
+            'target-arrow-shape': 'triangle',
+            'opacity': 0.4,
+            'width': 1.2,
+            'display': showTestedBy ? 'element' : 'none'
           }
         },
         // Persistent Agent Halos
@@ -226,35 +311,38 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
             'opacity': 0.25
           }
         },
-        // Active Collision Hop Nodes
+        // Active Collision Path: 56px in --breach
         {
           selector: '.collision-hop-node',
           style: {
+            'width': 56,
+            'height': 56,
             'border-color': '#D9534F !important',
             'border-width': 4,
             'background-color': '#171D26 !important',
             'color': '#D9534F',
             'font-weight': 'bold',
-            'opacity': 1.0
+            'opacity': 1.0,
+            'z-index': 99
           }
         },
-        // Active Collision Hop Edges
         {
           selector: '.collision-hop-edge',
           style: {
             'line-color': '#D9534F !important',
             'target-arrow-color': '#D9534F !important',
-            'width': 3.5,
+            'width': 3,
             'opacity': 1.0,
             'z-index': 99
           }
         },
-        // Resolved Path State (Transitions to Signal, then Clear)
+        // Resolution: Fades to --signal at BLOCKED/HANDOFF, then --clear when merged
         {
           selector: '.resolved-signal-node',
           style: {
             'border-color': '#E3A23B !important',
             'border-width': 3,
+            'color': '#E3A23B',
             'opacity': 1.0
           }
         },
@@ -272,6 +360,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
           style: {
             'border-color': '#3FA796 !important',
             'border-width': 3,
+            'color': '#3FA796',
             'opacity': 1.0
           }
         },
@@ -284,7 +373,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
             'opacity': 0.9
           }
         },
-        // Selected Node & 2-Hop Callers
+        // Selected Node & Callers
         {
           selector: '.selected-target',
           style: {
@@ -311,40 +400,26 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
       ]
     });
 
-    // Run layout or use cached positions to guarantee the graph never jumps between events
-    if (cachedPositions && Object.keys(cachedPositions).length > 0) {
-      cy.layout({
-        name: 'preset',
-        positions: (node: NodeSingular) => cachedPositions[node.id()] || { x: 0, y: 0 },
-        fit: true,
-        padding: 40
-      } as any).run();
-    } else {
-      const layout = cy.layout({
-        name: 'dagre',
-        rankDir: 'TB',
-        nodeSep: 35,
-        rankSep: 60,
-        padding: 40
-      } as any);
+    // Idle initial layout: dagre Top-to-Bottom, fitted to canvas with 60px padding
+    const initialLayout = cy.layout({
+      name: 'dagre',
+      rankDir: 'TB',
+      nodeSep: 40,
+      rankSep: 70,
+      padding: 60
+    } as any);
 
-      layout.on('layoutstop', () => {
-        // Cache computed positions for this graph
-        const posMap: Record<string, { x: number; y: number }> = {};
-        cy.nodes().forEach((n) => {
-          posMap[n.id()] = n.position();
-        });
-        cachedPositionsRef.current[graphKey] = posMap;
-      });
+    initialLayout.on('layoutstop', () => {
+      cy.fit(undefined, 60);
+      updateClaimChipPositions();
+    });
 
-      layout.run();
-    }
+    initialLayout.run();
 
-    // Node Interaction Events: Click & Hover
+    // Node Interaction Events
     cy.on('tap', 'node', (evt) => {
       const node = evt.target;
-      const id = node.id();
-      onSelectNode(id);
+      onSelectNode(node.id());
     });
 
     cy.on('mouseover', 'node', (evt) => {
@@ -370,46 +445,158 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
       setTooltip(null);
     });
 
+    // Synchronize chip positions on pan, zoom, position
+    cy.on('pan zoom position render', () => {
+      updateClaimChipPositions();
+    });
+
     cyRef.current = cy;
 
     return () => {
       cy.destroy();
       cyRef.current = null;
     };
-  }, [graphData, onSelectNode]);
+  }, [graphData, showAllLabels, showTestedBy, top8NodeIds, onSelectNode, updateClaimChipPositions]);
 
-  // Imperative class mutation: Persistent Halos, Animations, and Selections without re-rendering Cytoscape
+  // Window / Container resize observer: refit full graph on idle resize
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const ro = new ResizeObserver(() => {
+      if (cyRef.current) {
+        cyRef.current.resize();
+        if (!isFocusModeRef.current) {
+          cyRef.current.fit(undefined, 60);
+        }
+        updateClaimChipPositions();
+      }
+    });
+    ro.observe(containerRef.current);
+    return () => ro.disconnect();
+  }, [updateClaimChipPositions]);
+
+  // Focus Mode & Dynamic State updates during a run
   useEffect(() => {
     const cy = cyRef.current;
     if (!cy) return;
 
     // 1. Track persistent agent claims
     if (activeEvent && activeEvent.node_ids && activeEvent.node_ids.length > 0) {
-      const agentInitials = getAgentInitials(activeEvent.agent).toLowerCase();
-      let haloClass = 'agent-claim-a1';
-      if (agentInitials === 'a2') haloClass = 'agent-claim-a2';
-      else if (agentInitials === 'a3') haloClass = 'agent-claim-a3';
-      else if (agentInitials === 'a4') haloClass = 'agent-claim-a4';
+      const agentInitials = getAgentInitials(activeEvent.agent).toUpperCase();
+      const agentColor = getAgentColor(activeEvent.agent);
+      const haloClass = `agent-claim-${agentInitials.toLowerCase()}`;
+      const intent = activeEvent.params?.intent || 'SIGNATURE_CHANGE';
 
       if (['CLAIM', 'CODE_GEN', 'FORK_SIMULATION'].includes(activeEvent.phase)) {
         activeEvent.node_ids.forEach((nid) => {
           persistentClaimsRef.current[nid] = {
+            nodeId: nid,
             agent: haloClass,
-            intent: activeEvent.params?.intent
+            initials: agentInitials,
+            color: agentColor,
+            intent,
+            chipLabel: `${agentInitials} · ${intent}`
           };
         });
       }
     }
 
+    const claimedNodes = Object.values(persistentClaimsRef.current);
+    const hasActiveClaims = claimedNodes.length > 0;
+    const isRunActive = activeEvent !== null && activeEvent.phase !== 'IDLE' && hasActiveClaims;
+
+    // 2. FOCUS MODE: Visible set = claimed symbols + within 4 CALLS hops + parent modules
+    if (isRunActive && !isFocusModeRef.current) {
+      isFocusModeRef.current = true;
+
+      const claimedIds = claimedNodes.map((c) => c.nodeId);
+      const visibleIds = new Set<string>(claimedIds);
+      let currentFrontier = new Set<string>(claimedIds);
+
+      // 4 CALLS hops in either direction
+      for (let hop = 0; hop < 4; hop++) {
+        const nextFrontier = new Set<string>();
+        currentFrontier.forEach((nid) => {
+          const node = cy.getElementById(nid);
+          if (node.length > 0) {
+            // Outgoing CALLS
+            const outTargets = node.outgoers('edge[type = "CALLS"]').targets();
+            outTargets.forEach((tgt) => {
+              const tid = tgt.id();
+              if (!visibleIds.has(tid)) {
+                visibleIds.add(tid);
+                nextFrontier.add(tid);
+              }
+            });
+            // Incoming CALLS
+            const inSources = node.incomers('edge[type = "CALLS"]').sources();
+            inSources.forEach((src) => {
+              const sid = src.id();
+              if (!visibleIds.has(sid)) {
+                visibleIds.add(sid);
+                nextFrontier.add(sid);
+              }
+            });
+          }
+        });
+        currentFrontier = nextFrontier;
+      }
+
+      // Add parent module containers of all visible nodes
+      visibleIds.forEach((nid) => {
+        const node = cy.getElementById(nid);
+        const parentId = node.data('parent');
+        if (parentId) {
+          visibleIds.add(parentId);
+        }
+      });
+
+      // Hide all non-visible nodes
+      cy.nodes().forEach((n) => {
+        if (visibleIds.has(n.id())) {
+          n.removeClass('hidden-node');
+        } else {
+          n.addClass('hidden-node');
+        }
+      });
+
+      // Re-layout subgraph LEFT→RIGHT by call depth (dagre rankDir LR, nodeSep 50, rankSep 120)
+      const visibleNodes = cy.nodes().not('.hidden-node');
+      const focusLayout = visibleNodes.layout({
+        name: 'dagre',
+        rankDir: 'LR',
+        nodeSep: 50,
+        rankSep: 120,
+        animate: !prefersReducedMotion.current,
+        animationDuration: 300,
+        padding: 60
+      } as any);
+
+      focusLayout.on('layoutstop', () => {
+        cy.animate({
+          fit: { eles: visibleNodes, padding: 60 },
+          duration: 300
+        });
+        updateClaimChipPositions();
+      });
+
+      focusLayout.run();
+    } else if (!isRunActive && isFocusModeRef.current) {
+      // Revert to idle mode
+      isFocusModeRef.current = false;
+      cy.nodes().removeClass('hidden-node');
+      cy.fit(undefined, 60);
+      updateClaimChipPositions();
+    }
+
     // Apply persistent halos across nodes
     Object.entries(persistentClaimsRef.current).forEach(([nid, claim]) => {
       const node = cy.getElementById(nid);
-      if (node && !node.hasClass(claim.agent)) {
+      if (node.length > 0 && !node.hasClass(claim.agent)) {
         node.addClass(claim.agent);
       }
     });
 
-    // 2. Clear transient classes
+    // 3. Clear transient classes
     cy.elements().removeClass(
       'dimmed collision-hop-node collision-hop-edge resolved-signal-node resolved-signal-edge resolved-clear-node resolved-clear-edge'
     );
@@ -417,7 +604,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
 
     const collision = getCollision(activeEvent);
 
-    // 3. Collision Path Animation
+    // 4. Collision Path Animation: 56px path nodes in --breach, 25% opacity other visible nodes, 3px edges drawn sequentially
     if (collision && collision.path_nodes && collision.path_nodes.length > 1) {
       const pathNodes = collision.path_nodes;
       setHopCountBadge(collision.hops || pathNodes.length - 1);
@@ -426,20 +613,20 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
       const pathEles = cy.collection();
       pathNodes.forEach((nid, i) => {
         const node = cy.getElementById(nid);
-        if (node) pathEles.merge(node);
+        if (node.length > 0) pathEles.merge(node);
         if (i < pathNodes.length - 1) {
           const nextId = pathNodes[i + 1];
           const edge = cy.edges(
             `[source = "${nid}"][target = "${nextId}"], [source = "${nextId}"][target = "${nid}"]`
           );
-          if (edge) pathEles.merge(edge);
+          if (edge.length > 0) pathEles.merge(edge);
         }
       });
 
-      // Dim non-path elements to 25% opacity
+      // Dim non-path visible elements to 25% opacity
       cy.elements().not(pathEles).addClass('dimmed');
 
-      // Camera animates to fit path with padding
+      // Camera animates to fit path with 80px padding
       if (!prefersReducedMotion.current) {
         cy.animate({
           fit: { eles: pathEles, padding: 80 },
@@ -453,32 +640,37 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
         const delay = prefersReducedMotion.current ? 0 : hopIndex * 300;
         setTimeout(() => {
           const node = cy.getElementById(nid);
-          if (node) node.addClass('collision-hop-node');
+          if (node.length > 0) node.addClass('collision-hop-node');
 
           if (hopIndex < pathNodes.length - 1) {
             const nextId = pathNodes[hopIndex + 1];
             const edge = cy.edges(
               `[source = "${nid}"][target = "${nextId}"], [source = "${nextId}"][target = "${nid}"]`
             );
-            if (edge) edge.addClass('collision-hop-edge');
+            if (edge.length > 0) edge.addClass('collision-hop-edge');
           }
+          updateClaimChipPositions();
         }, delay);
       });
     }
 
-    // 4. Resolution & Handoff Path Fading (fade to --signal, then --clear on verify)
-    if (activeEvent?.phase === 'HANDOFF' || activeEvent?.phase === 'RESOLUTION') {
+    // 5. Resolution: Path fades to --signal at BLOCKED/HANDOFF, then --clear when merged
+    if (
+      activeEvent?.phase === 'HANDOFF' ||
+      activeEvent?.phase === 'RESOLUTION' ||
+      activeEvent?.phase === 'BLOCKED'
+    ) {
       const pastCollision = events.map(getCollision).find(Boolean);
       if (pastCollision && pastCollision.path_nodes) {
         pastCollision.path_nodes.forEach((nid, idx) => {
           const node = cy.getElementById(nid);
-          if (node) node.addClass('resolved-signal-node');
+          if (node.length > 0) node.addClass('resolved-signal-node');
           if (idx < pastCollision.path_nodes.length - 1) {
             const nextId = pastCollision.path_nodes[idx + 1];
             const edge = cy.edges(
               `[source = "${nid}"][target = "${nextId}"], [source = "${nextId}"][target = "${nid}"]`
             );
-            if (edge) edge.addClass('resolved-signal-edge');
+            if (edge.length > 0) edge.addClass('resolved-signal-edge');
           }
         });
       }
@@ -489,18 +681,20 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
       if (pastCollision && pastCollision.path_nodes) {
         pastCollision.path_nodes.forEach((nid, idx) => {
           const node = cy.getElementById(nid);
-          if (node) node.addClass('resolved-clear-node');
+          if (node.length > 0) node.addClass('resolved-clear-node');
           if (idx < pastCollision.path_nodes.length - 1) {
             const nextId = pastCollision.path_nodes[idx + 1];
             const edge = cy.edges(
               `[source = "${nid}"][target = "${nextId}"], [source = "${nextId}"][target = "${nid}"]`
             );
-            if (edge) edge.addClass('resolved-clear-edge');
+            if (edge.length > 0) edge.addClass('resolved-clear-edge');
           }
         });
       }
     }
-  }, [activeEvent, events]);
+
+    updateClaimChipPositions();
+  }, [activeEvent, events, updateClaimChipPositions]);
 
   // Handle User Node Selection & 2-Hop Callers Highlighting
   useEffect(() => {
@@ -526,21 +720,49 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
   }, [selectedNodeId]);
 
   const fitGraph = useCallback(() => {
-    cyRef.current?.fit(undefined, 40);
-  }, []);
+    if (cyRef.current) {
+      const visible = cyRef.current.nodes().not('.hidden-node');
+      cyRef.current.fit(visible.length > 0 ? visible : undefined, 60);
+      updateClaimChipPositions();
+    }
+  }, [updateClaimChipPositions]);
 
   const zoomIn = useCallback(() => {
-    cyRef.current?.zoom((cyRef.current?.zoom() || 1) * 1.25);
-  }, []);
+    if (cyRef.current) {
+      cyRef.current.zoom(cyRef.current.zoom() * 1.25);
+      updateClaimChipPositions();
+    }
+  }, [updateClaimChipPositions]);
 
   const zoomOut = useCallback(() => {
-    cyRef.current?.zoom((cyRef.current?.zoom() || 1) * 0.8);
-  }, []);
+    if (cyRef.current) {
+      cyRef.current.zoom(cyRef.current.zoom() * 0.8);
+      updateClaimChipPositions();
+    }
+  }, [updateClaimChipPositions]);
 
   return (
     <div className="relative w-full h-full bg-[var(--bg-0)] overflow-hidden select-none">
       {/* Cytoscape Container */}
       <div ref={containerRef} className="w-full h-full" />
+
+      {/* HTML Overlay for Persistent Claim Chips */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden z-20">
+        {claimChips.map((chip) => (
+          <div
+            key={chip.nodeId}
+            className="absolute transition-all duration-200 -translate-x-1/2 -translate-y-full px-2 py-0.5 rounded-[4px] font-mono text-[13px] font-bold border shadow-lg bg-[var(--bg-1)] whitespace-nowrap"
+            style={{
+              left: chip.x,
+              top: chip.y,
+              borderColor: chip.color,
+              color: chip.color
+            }}
+          >
+            {chip.chipLabel}
+          </div>
+        ))}
+      </div>
 
       {/* Hop Counter Badge during Collision */}
       {hopCountBadge !== null && (
@@ -573,8 +795,38 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
         </div>
       </div>
 
-      {/* Canvas Fit & Zoom Controls Bottom-Right */}
-      <div className="absolute bottom-4 right-4 z-10 flex items-center gap-1 p-1 rounded-[6px] border border-[var(--line)] bg-[var(--bg-1)] shadow-sm">
+      {/* Canvas Controls Bottom-Right: Toggles & Zoom */}
+      <div className="absolute bottom-4 right-4 z-10 flex items-center gap-1 p-1 rounded-[6px] border border-[var(--line)] bg-[var(--bg-1)] shadow-sm font-mono text-[13px]">
+        {/* Toggle Show All Labels */}
+        <button
+          onClick={() => setShowAllLabels(!showAllLabels)}
+          className={`flex items-center gap-1 px-2 py-1 rounded-[4px] transition-colors cursor-pointer ${
+            showAllLabels
+              ? 'bg-[var(--accent)] text-[var(--bg-0)] font-bold'
+              : 'text-[var(--text-dim)] hover:text-[var(--text)] hover:bg-[var(--bg-2)]'
+          }`}
+          title="Toggle Show All Labels (defaults to Top 8 risk nodes)"
+        >
+          <Tag className="w-3.5 h-3.5" />
+          <span>All labels</span>
+        </button>
+
+        {/* Toggle Tested By */}
+        <button
+          onClick={() => setShowTestedBy(!showTestedBy)}
+          className={`flex items-center gap-1 px-2 py-1 rounded-[4px] transition-colors cursor-pointer ${
+            showTestedBy
+              ? 'bg-[var(--accent)] text-[var(--bg-0)] font-bold'
+              : 'text-[var(--text-dim)] hover:text-[var(--text)] hover:bg-[var(--bg-2)]'
+          }`}
+          title="Toggle display of TESTED_BY dependency edges"
+        >
+          <Eye className="w-3.5 h-3.5" />
+          <span>Tests</span>
+        </button>
+
+        <div className="w-[1px] h-4 bg-[var(--line)] mx-1" />
+
         <button
           onClick={zoomIn}
           className="p-1.5 rounded-[4px] hover:bg-[var(--bg-2)] text-[var(--text-dim)] hover:text-[var(--text)] transition-colors cursor-pointer"
@@ -594,7 +846,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
         <button
           onClick={fitGraph}
           className="p-1.5 rounded-[4px] hover:bg-[var(--bg-2)] text-[var(--text-dim)] hover:text-[var(--text)] transition-colors cursor-pointer"
-          title="Fit View"
+          title="Fit View (60px padding)"
           aria-label="Fit view"
         >
           <Maximize2 className="w-4 h-4" />

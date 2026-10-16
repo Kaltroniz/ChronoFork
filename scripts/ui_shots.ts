@@ -3,8 +3,13 @@ import * as path from 'path';
 import * as fs from 'fs';
 
 const OUT_DIR = path.resolve(__dirname, '../docs/screens');
+const VIDEO_TEMP_DIR = path.resolve(OUT_DIR, 'video_temp');
+
 if (!fs.existsSync(OUT_DIR)) {
   fs.mkdirSync(OUT_DIR, { recursive: true });
+}
+if (!fs.existsSync(VIDEO_TEMP_DIR)) {
+  fs.mkdirSync(VIDEO_TEMP_DIR, { recursive: true });
 }
 
 async function verifyMinimumFontSize(page: any, shotName: string) {
@@ -49,18 +54,22 @@ async function verifyMinimumFontSize(page: any, shotName: string) {
 }
 
 async function main() {
-  console.log('Launching Playwright Chromium at 1920x1080...');
+  console.log('Launching Playwright Chromium at 1920x1080 with video recording...');
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({
     viewport: { width: 1920, height: 1080 },
-    deviceScaleFactor: 1
+    deviceScaleFactor: 1,
+    recordVideo: {
+      dir: VIDEO_TEMP_DIR,
+      size: { width: 1920, height: 1080 }
+    }
   });
 
   const page = await context.newPage();
 
   try {
     console.log('Navigating to http://localhost:5173 ...');
-    await page.goto('http://localhost:5173', { waitUntil: 'networkidle', timeout: 15000 });
+    await page.goto('http://localhost:5173', { waitUntil: 'networkidle', timeout: 20000 });
     await page.waitForTimeout(1000);
 
     // 01-idle.png
@@ -76,19 +85,25 @@ async function main() {
 
     // 02-claims.png
     console.log('Capturing 02-claims.png ...');
-    await page.waitForTimeout(800);
+    await page.waitForTimeout(1000);
     await verifyMinimumFontSize(page, '02-claims');
     await page.screenshot({ path: path.join(OUT_DIR, '02-claims.png') });
 
     // Wait for collision hero to appear
     console.log('Waiting for collision detection and HeroSplit ...');
-    await page.waitForSelector('div[role="alert"]', { timeout: 10000 });
-    await page.waitForTimeout(600);
+    await page.waitForSelector('div[role="alert"]', { timeout: 12000 });
+    await page.waitForTimeout(800);
 
     // 03-collision-hero.png
     console.log('Capturing 03-collision-hero.png ...');
     await verifyMinimumFontSize(page, '03-collision-hero');
     await page.screenshot({ path: path.join(OUT_DIR, '03-collision-hero.png') });
+
+    // 09-focus-view-4hop.png: Focus view with 4-hop chain
+    console.log('Capturing 09-focus-view-4hop.png ...');
+    await page.waitForTimeout(1000);
+    await verifyMinimumFontSize(page, '09-focus-view-4hop');
+    await page.screenshot({ path: path.join(OUT_DIR, '09-focus-view-4hop.png') });
 
     // Wait for git merge comparison event
     console.log('Waiting for GIT_COMPARISON event ...');
@@ -97,7 +112,7 @@ async function main() {
     // Ensure Verdict tab is open
     const verdictTab = page.locator('button:has-text("Verdict")');
     await verdictTab.click();
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(600);
 
     // 04-git-vs-chronofork.png
     console.log('Capturing 04-git-vs-chronofork.png ...');
@@ -116,16 +131,16 @@ async function main() {
     // Wait for verification completion
     await page.waitForTimeout(3000);
 
-    // Click Receipt tab and approve merge
+    // Click Merge receipt tab and approve merge
     console.log('Capturing 08-receipt.png ...');
-    const receiptTab = page.locator('button:has-text("Receipt")');
+    const receiptTab = page.locator('button:has-text("Merge receipt")');
     await receiptTab.click();
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(600);
 
     const approveBtn = page.locator('button:has-text("Approve Merge")');
     if (await approveBtn.isVisible()) {
       await approveBtn.click();
-      await page.waitForTimeout(400);
+      await page.waitForTimeout(500);
     }
     await verifyMinimumFontSize(page, '08-receipt');
     await page.screenshot({ path: path.join(OUT_DIR, '08-receipt.png') });
@@ -154,13 +169,34 @@ async function main() {
 
     // 07-zero-path-proof.png
     console.log('Capturing 07-zero-path-proof.png ...');
-    await page.waitForSelector('div[role="status"]', { timeout: 10000 });
-    await page.waitForTimeout(500);
+    await page.waitForSelector('div[role="status"]', { timeout: 12000 });
+    await page.waitForTimeout(600);
     await verifyMinimumFontSize(page, '07-zero-path-proof');
     await page.screenshot({ path: path.join(OUT_DIR, '07-zero-path-proof.png') });
 
-    console.log('\nAll 8 screenshots successfully captured and verified against font-size >= 13px!');
+    // Keep recording for smooth 20s scenario experience
+    await page.waitForTimeout(2000);
+
+    console.log('\nAll screenshots successfully captured and verified against font-size >= 13px!');
   } finally {
+    const videoObj = page.video();
+    await page.close();
+
+    // Finalize video file and copy to docs/screens/scenario1.webm
+    if (videoObj) {
+      try {
+        const videoPath = await videoObj.path();
+        const targetPath = path.join(OUT_DIR, 'scenario1.webm');
+        if (videoPath && fs.existsSync(videoPath)) {
+          fs.copyFileSync(videoPath, targetPath);
+          console.log(`Video recorded successfully to: ${targetPath}`);
+        }
+      } catch (vErr) {
+        console.warn('Could not copy recorded video:', vErr);
+      }
+    }
+
+    await context.close();
     await browser.close();
   }
 }

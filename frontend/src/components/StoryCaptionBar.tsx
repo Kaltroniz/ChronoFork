@@ -28,13 +28,15 @@ export const StoryCaptionBar: React.FC<StoryCaptionBarProps> = ({
 }) => {
   if (!isStoryActive && !activeEvent) return null;
 
-  // Determine current chapter tick based on scenario and phase
+  // Determine current chapter tick based on event's chapter field or scenario and phase
   let currentChapter = 1;
-  if (currentScenario === 1) {
+  if (typeof (activeEvent as any)?.chapter === 'number') {
+    currentChapter = (activeEvent as any).chapter;
+  } else if (currentScenario === 1) {
     if (activeEvent?.phase === 'GIT_COMPARISON') {
       currentChapter = 2;
     } else if (
-      ['RESOLUTION', 'CODE_GEN', 'HANDOFF', 'VERIFICATION', 'MEMORY_UPDATE'].includes(
+      ['RESOLUTION', 'CODE_GEN', 'HANDOFF', 'VERIFICATION', 'MEMORY_UPDATE', 'BLOCKED'].includes(
         activeEvent?.phase || ''
       )
     ) {

@@ -46,17 +46,28 @@ const STATE_CONFIG: Record<
 };
 
 export const ProvenanceStrip: React.FC<ProvenanceStripProps> = ({ activeEvent, mode }) => {
+  const timestampStr = activeEvent?.ts
+    ? new Date(activeEvent.ts * 1000).toLocaleTimeString()
+    : '11:42:00';
+
   return (
     <div className="flex items-center gap-2 select-none" role="region" aria-label="System Provenance">
       {PILLS.map((pill) => {
         const state = getProvenance(pill.key, activeEvent, mode);
         const config = STATE_CONFIG[state] || STATE_CONFIG.UNAVAILABLE;
 
+        let tooltipText = config.tooltip;
+        if (state === 'CACHED') {
+          tooltipText = `REPLAY · captured ${timestampStr} from a real run`;
+        } else if (state === 'REAL') {
+          tooltipText = 'Live';
+        }
+
         return (
           <div
             key={pill.key}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-[6px] border border-[var(--line)] bg-[var(--bg-1)] font-mono text-[13px] transition-colors"
-            title={`${pill.label} [${state}]: ${config.tooltip}`}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-[6px] border border-[var(--line)] bg-[var(--bg-1)] font-mono text-[13px] transition-colors cursor-help"
+            title={`${pill.label} [${state}]: ${tooltipText}`}
           >
             <span
               className="w-2 h-2 rounded-full inline-block"

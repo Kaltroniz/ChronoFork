@@ -12,7 +12,8 @@ const highlightCypher = (cypher: string): React.ReactNode => {
   if (!cypher) return null;
 
   // Regex tokens for Cypher
-  const tokenRegex = /('(?:\\'|[^'])*'|"(?:\\"|[^"])*")|(\$[a-zA-Z0-9_]+)|(:[a-zA-Z0-9_]+)|(\b(?:MATCH|OPTIONAL|WHERE|RETURN|WITH|MERGE|SET|DELETE|REMOVE|CALL|YIELD|ORDER BY|BY|DESC|ASC|DISTINCT|AS|IN|AND|OR|NOT|COUNT|COLLECT|LENGTH|NODES|RELATIONSHIPS|COALESCE|TIMESTAMP|SHORTESTPATH)\b)/gi;
+  const tokenRegex =
+    /('(?:\\'|[^'])*'|"(?:\\"|[^"])*")|(\$[a-zA-Z0-9_]+)|(:[a-zA-Z0-9_]+)|(\b(?:MATCH|OPTIONAL|WHERE|RETURN|WITH|MERGE|SET|DELETE|REMOVE|CALL|YIELD|ORDER BY|BY|DESC|ASC|DISTINCT|AS|IN|AND|OR|NOT|COUNT|COLLECT|LENGTH|NODES|RELATIONSHIPS|COALESCE|TIMESTAMP|SHORTESTPATH)\b)/gi;
 
   const elements: React.ReactNode[] = [];
   let lastIndex = 0;
@@ -93,12 +94,32 @@ export const QueryInspector: React.FC<QueryInspectorProps> = ({ activeEvent }) =
 
   return (
     <div className="flex-1 flex flex-col bg-[var(--bg-1)] border-t border-[var(--line)] overflow-hidden select-none">
-      {/* Header */}
-      <div className="h-10 px-4 bg-[var(--bg-0)] border-b border-[var(--line)] flex items-center justify-between">
+      {/* Row 1: Graph key · duration (1 decimal) · rows as non-wrapping chips */}
+      <div className="px-3 py-1.5 bg-[var(--bg-0)] border-b border-[var(--line)] flex items-center gap-2 overflow-x-auto whitespace-nowrap text-[13px] font-mono shrink-0">
+        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[4px] bg-[var(--bg-2)] border border-[var(--line)] text-[var(--accent)] shrink-0 font-medium">
+          <Database className="w-3.5 h-3.5 text-[var(--accent)]" />
+          <span>{trace?.graph || 'graph:taskflow'}</span>
+        </span>
+        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[4px] bg-[var(--bg-2)] border border-[var(--line)] text-[var(--signal)] shrink-0 font-medium">
+          <Clock className="w-3.5 h-3.5 text-[var(--signal)]" />
+          <span>{trace?.duration_ms !== undefined ? `${trace.duration_ms.toFixed(1)}ms` : '— ms'}</span>
+        </span>
+        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[4px] bg-[var(--bg-2)] border border-[var(--line)] text-[var(--clear)] shrink-0 font-medium">
+          <List className="w-3.5 h-3.5 text-[var(--clear)]" />
+          <span>
+            {trace?.row_count !== undefined
+              ? `${trace.row_count} rows`
+              : `${trace?.rows?.length ?? 0} rows`}
+          </span>
+        </span>
+      </div>
+
+      {/* Row 2: Tabs (left) & Action Icon Buttons with tooltips (right) */}
+      <div className="h-[40px] px-3 bg-[var(--bg-1)] border-b border-[var(--line)] flex items-center justify-between shrink-0">
         <div className="flex items-center gap-1 font-mono text-[13px]">
           <button
             onClick={() => setActiveTab('query')}
-            className={`px-3 py-1 rounded-[6px] transition-colors cursor-pointer ${
+            className={`px-2.5 py-1 rounded-[6px] transition-colors cursor-pointer ${
               activeTab === 'query'
                 ? 'bg-[var(--bg-2)] text-[var(--accent)] font-semibold border border-[var(--line)]'
                 : 'text-[var(--text-dim)] hover:text-[var(--text)]'
@@ -108,7 +129,7 @@ export const QueryInspector: React.FC<QueryInspectorProps> = ({ activeEvent }) =
           </button>
           <button
             onClick={() => setActiveTab('params')}
-            className={`px-3 py-1 rounded-[6px] transition-colors cursor-pointer ${
+            className={`px-2.5 py-1 rounded-[6px] transition-colors cursor-pointer ${
               activeTab === 'params'
                 ? 'bg-[var(--bg-2)] text-[var(--accent)] font-semibold border border-[var(--line)]'
                 : 'text-[var(--text-dim)] hover:text-[var(--text)]'
@@ -118,7 +139,7 @@ export const QueryInspector: React.FC<QueryInspectorProps> = ({ activeEvent }) =
           </button>
           <button
             onClick={() => setActiveTab('rows')}
-            className={`px-3 py-1 rounded-[6px] transition-colors cursor-pointer ${
+            className={`px-2.5 py-1 rounded-[6px] transition-colors cursor-pointer ${
               activeTab === 'rows'
                 ? 'bg-[var(--bg-2)] text-[var(--accent)] font-semibold border border-[var(--line)]'
                 : 'text-[var(--text-dim)] hover:text-[var(--text)]'
@@ -128,24 +149,29 @@ export const QueryInspector: React.FC<QueryInspectorProps> = ({ activeEvent }) =
           </button>
         </div>
 
-        <div className="flex items-center gap-2">
+        {/* Icon Action Buttons Right with Tooltips */}
+        <div className="flex items-center gap-1.5 shrink-0">
           {trace?.cypher && (
             <>
               <button
                 onClick={handleCopyQuery}
-                className="flex items-center gap-1 px-2 py-1 rounded-[6px] text-[13px] font-mono border border-[var(--line)] bg-[var(--bg-2)] text-[var(--text-dim)] hover:text-[var(--text)] transition-colors cursor-pointer"
-                title="Copy openCypher query"
+                className="p-1.5 rounded-[6px] text-[13px] font-mono border border-[var(--line)] bg-[var(--bg-2)] text-[var(--text-dim)] hover:text-[var(--text)] transition-colors cursor-pointer"
+                title={copied ? 'Copied query to clipboard' : 'Copy openCypher query'}
+                aria-label="Copy query"
               >
-                {copied ? <Check className="w-3.5 h-3.5 text-[var(--clear)]" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>{copied ? 'Copied' : 'Copy'}</span>
+                {copied ? (
+                  <Check className="w-4 h-4 text-[var(--clear)]" />
+                ) : (
+                  <Copy className="w-4 h-4" />
+                )}
               </button>
               <button
                 onClick={handleOpenBrowser}
-                className="flex items-center gap-1 px-2 py-1 rounded-[6px] text-[13px] font-mono border border-[var(--line)] bg-[var(--bg-2)] text-[var(--text-dim)] hover:text-[var(--text)] transition-colors cursor-pointer"
-                title="Copies query and opens FalkorDB Browser at localhost:3000"
+                className="p-1.5 rounded-[6px] text-[13px] font-mono border border-[var(--line)] bg-[var(--bg-2)] text-[var(--text-dim)] hover:text-[var(--text)] transition-colors cursor-pointer"
+                title="Open in FalkorDB Browser (localhost:3000)"
+                aria-label="Open in FalkorDB Browser"
               >
-                <ExternalLink className="w-3.5 h-3.5" />
-                <span>FalkorDB Browser</span>
+                <ExternalLink className="w-4 h-4" />
               </button>
             </>
           )}
@@ -153,44 +179,15 @@ export const QueryInspector: React.FC<QueryInspectorProps> = ({ activeEvent }) =
           {collision && (
             <button
               onClick={() => setShowExplanation(!showExplanation)}
-              className="flex items-center gap-1 px-2 py-1 rounded-[6px] text-[13px] font-mono border border-[var(--line)] bg-[var(--bg-2)] text-[var(--signal)] hover:text-[var(--text)] transition-colors cursor-pointer"
-              title="Explain this decision"
+              className="p-1.5 rounded-[6px] text-[13px] font-mono border border-[var(--line)] bg-[var(--bg-2)] text-[var(--signal)] hover:text-[var(--text)] transition-colors cursor-pointer"
+              title="Explain collision decision"
+              aria-label="Explain collision"
             >
-              <HelpCircle className="w-3.5 h-3.5" />
-              <span>Explain</span>
+              <HelpCircle className="w-4 h-4" />
             </button>
           )}
         </div>
       </div>
-
-      {/* Trace Metadata Bar */}
-      {trace ? (
-        <div className="px-4 py-2 bg-[var(--bg-0)] border-b border-[var(--line)] flex items-center gap-4 text-[13px] font-mono">
-          <div className="flex items-center gap-1.5 text-[var(--text-dim)]">
-            <Database className="w-3.5 h-3.5 text-[var(--accent)]" />
-            <span>Graph:</span>
-            <span className="text-[var(--text)] font-semibold">{trace.graph || '—'}</span>
-          </div>
-          <div className="flex items-center gap-1.5 text-[var(--text-dim)]">
-            <Clock className="w-3.5 h-3.5 text-[var(--signal)]" />
-            <span>Duration:</span>
-            <span className="text-[var(--text)] font-semibold">
-              {trace.duration_ms !== undefined ? `${trace.duration_ms.toFixed(2)} ms` : '—'}
-            </span>
-          </div>
-          <div className="flex items-center gap-1.5 text-[var(--text-dim)]">
-            <List className="w-3.5 h-3.5 text-[var(--clear)]" />
-            <span>Rows:</span>
-            <span className="text-[var(--text)] font-semibold">
-              {trace.row_count !== undefined ? trace.row_count : (trace.rows?.length ?? 0)}
-            </span>
-          </div>
-        </div>
-      ) : (
-        <div className="px-4 py-2 bg-[var(--bg-0)] border-b border-[var(--line)] text-[13px] font-mono text-[var(--text-faint)]">
-          no query for this step
-        </div>
-      )}
 
       {/* Explanation Modal / Dropdown */}
       {showExplanation && collision && (
@@ -213,7 +210,8 @@ export const QueryInspector: React.FC<QueryInspectorProps> = ({ activeEvent }) =
             )}
           </div>
           <p className="text-[var(--text-dim)] leading-relaxed">
-            {collision.reason || 'Transitive dependency chain detected between concurrently claimed symbols.'}
+            {collision.reason ||
+              'Transitive dependency chain detected between concurrently claimed symbols.'}
           </p>
         </div>
       )}
@@ -257,7 +255,10 @@ export const QueryInspector: React.FC<QueryInspectorProps> = ({ activeEvent }) =
                       <tr key={rIdx} className="hover:bg-[var(--bg-2)] transition-colors">
                         {Array.isArray(row) ? (
                           row.map((cell, cIdx) => (
-                            <td key={cIdx} className="py-1.5 pr-4 text-[var(--text)] whitespace-nowrap">
+                            <td
+                              key={cIdx}
+                              className="py-1.5 pr-4 text-[var(--text)] whitespace-nowrap"
+                            >
                               {typeof cell === 'object' ? JSON.stringify(cell) : String(cell)}
                             </td>
                           ))

@@ -52,13 +52,16 @@ export const VerifiedText: React.FC<VerifiedTextProps> = ({ text, graphData, onS
     return set;
   }, [graphData]);
 
-  // Regex looking for dotted symbol names, e.g. taskflow.config.load_config or module.func
-  // or filenames like config.py
+  // Dotted qualname shape: identifiers separated by dots, not matching file extensions
+  // File names ending in .py, .md, .json, .yml, .txt or paths render as plain mono text
   const tokens = React.useMemo(() => {
-    const regex = /([a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)+(?:\.py)?|[a-zA-Z_][a-zA-Z0-9_]*\.py)/g;
-    const parts: Array<{ type: 'text' | 'symbol'; value: string }> = [];
+    // Match either file names/paths or dotted qualnames
+    const regex = /([a-zA-Z0-9_\-\/\\]+\.(?:py|md|json|yml|yaml|txt)|[a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)+)/g;
+    const parts: Array<{ type: 'text' | 'file' | 'symbol'; value: string }> = [];
     let lastIndex = 0;
     let match: RegExpExecArray | null;
+
+    const fileExtRegex = /\.(?:py|md|json|yml|yaml|txt)$/i;
 
     while ((match = regex.exec(text)) !== null) {
       if (match.index > lastIndex) {
@@ -67,10 +70,19 @@ export const VerifiedText: React.FC<VerifiedTextProps> = ({ text, graphData, onS
           value: text.substring(lastIndex, match.index)
         });
       }
-      parts.push({
-        type: 'symbol',
-        value: match[0]
-      });
+
+      const val = match[0];
+      if (fileExtRegex.test(val) || val.includes('/') || val.includes('\\')) {
+        parts.push({
+          type: 'file',
+          value: val
+        });
+      } else {
+        parts.push({
+          type: 'symbol',
+          value: val
+        });
+      }
       lastIndex = regex.lastIndex;
     }
 
@@ -87,15 +99,30 @@ export const VerifiedText: React.FC<VerifiedTextProps> = ({ text, graphData, onS
   return (
     <span>
       {tokens.map((part, idx) => {
+        if (part.type === 'file') {
+          return (
+            <span key={idx} className="font-mono text-[13px] text-[var(--text-dim)]">
+              {part.value}
+            </span>
+          );
+        }
         if (part.type === 'symbol') {
           const isVerified = knownNodes.has(part.value);
+          if (isVerified) {
+            return (
+              <SymbolChip
+                key={idx}
+                qualname={part.value}
+                isVerified={true}
+                onSelectNode={onSelectNode}
+              />
+            );
+          }
+          // If not in graph, render as plain text or unknown chip if dotted qualname
           return (
-            <SymbolChip
-              key={idx}
-              qualname={part.value}
-              isVerified={isVerified}
-              onSelectNode={onSelectNode}
-            />
+            <span key={idx} className="font-mono text-[13px] text-[var(--text-dim)]">
+              {part.value}
+            </span>
           );
         }
         return <span key={idx}>{part.value}</span>;

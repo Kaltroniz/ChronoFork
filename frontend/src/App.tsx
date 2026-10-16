@@ -43,6 +43,7 @@ export const App: React.FC = () => {
   const [backendHealthy, setBackendHealthy] = useState<boolean>(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isDevFixture, setIsDevFixture] = useState<boolean>(false);
+  const [memoryWasReset, setMemoryWasReset] = useState<boolean>(false);
 
   // Refs
   const eventSourceRef = useRef<EventSource | null>(null);
@@ -119,6 +120,7 @@ export const App: React.FC = () => {
       await fetch(`/memory/${selectedRepo}/reset`, { method: 'POST' });
       await fetchMemoryData(selectedRepo);
       await fetchGraphData(selectedRepo);
+      setMemoryWasReset(true);
     } catch (err) {
       console.warn('Error resetting memory:', err);
     }
@@ -252,8 +254,15 @@ export const App: React.FC = () => {
     };
   }, [isRunning, isPaused, events.length, speedMs, isStoryActive, storyStage, isDevFixture, startScenario]);
 
-  // Story Mode Trigger
-  const handlePlayStory = () => {
+  // Story Mode Trigger: Starts by resetting memory so confidence is identical every time
+  const handlePlayStory = async () => {
+    try {
+      await fetch(`/memory/${selectedRepo}/reset`, { method: 'POST' });
+      await fetchMemoryData(selectedRepo);
+      setMemoryWasReset(true);
+    } catch (err) {
+      console.warn('Memory reset failed:', err);
+    }
     setIsStoryActive(true);
     setStoryStage(1);
     startScenario(1);
@@ -288,8 +297,9 @@ export const App: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [events.length, currentScenario, startScenario]);
 
-  // Current active event
+  // Current active event and events strictly up to current index
   const activeEvent = events[currentIndex] || null;
+  const currentEvents = events.slice(0, currentIndex + 1);
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-[var(--bg-0)] text-[var(--text)] font-sans select-none">
@@ -344,6 +354,7 @@ export const App: React.FC = () => {
           memoryEnabled={memoryEnabled}
           onToggleMemory={() => setMemoryEnabled(!memoryEnabled)}
           isDevFixture={isDevFixture}
+          memoryWasReset={memoryWasReset}
         />
 
         {/* CENTER COLUMN: Graph Canvas + Overlays + ResultStrip */}
@@ -353,7 +364,7 @@ export const App: React.FC = () => {
             <GraphCanvas
               graphData={graphData}
               activeEvent={activeEvent}
-              events={events}
+              events={currentEvents}
               selectedNodeId={selectedNodeId}
               onSelectNode={(nodeId) => setSelectedNodeId(nodeId)}
             />
@@ -361,7 +372,7 @@ export const App: React.FC = () => {
             {/* Overlays: HeroSplit (top-center on collision) */}
             <HeroSplit
               activeEvent={activeEvent}
-              events={events}
+              events={currentEvents}
               graphData={graphData}
               onSelectNode={(nodeId) => setSelectedNodeId(nodeId)}
               onDismiss={() => setHeroDismissed(true)}
@@ -371,6 +382,7 @@ export const App: React.FC = () => {
             {/* Overlays: ZeroPathProof (top-center on safe parallel) */}
             <ZeroPathProof
               activeEvent={activeEvent}
+              events={currentEvents}
               onDismiss={() => setZeroProofDismissed(true)}
               dismissed={zeroProofDismissed}
             />
@@ -385,10 +397,10 @@ export const App: React.FC = () => {
             />
           </div>
 
-          {/* BOTTOM RESULT STRIP (240px, collapsible) */}
+          {/* BOTTOM RESULT STRIP (280px fixed height, 44px collapsed header) */}
           <ResultStrip
             activeEvent={activeEvent}
-            events={events}
+            events={currentEvents}
             memoryData={memoryData}
             graphData={graphData}
             mode={mode}
@@ -399,8 +411,10 @@ export const App: React.FC = () => {
             onResetMemory={async () => {
               await fetch(`/memory/${selectedRepo}/reset`, { method: 'POST' });
               fetchMemoryData(selectedRepo);
+              setMemoryWasReset(true);
             }}
             onSelectNode={(nodeId) => setSelectedNodeId(nodeId)}
+            currentScenario={currentScenario}
           />
         </div>
 
