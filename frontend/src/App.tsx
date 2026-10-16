@@ -1,37 +1,78 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { ControlPanel } from './components/ControlPanel';
-import { GraphViewer } from './components/GraphViewer';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { TopBar } from './components/TopBar';
+import { LeftRail } from './components/LeftRail';
+import { GraphCanvas } from './components/GraphCanvas';
+import { HeroSplit } from './components/HeroSplit';
+import { ZeroPathProof } from './components/ZeroPathProof';
+import { StoryCaptionBar } from './components/StoryCaptionBar';
+import { ResultStrip } from './components/ResultStrip';
+import { RightSplitter } from './components/RightSplitter';
 import { AgentTimeline } from './components/AgentTimeline';
-import { CypherInspector } from './components/CypherInspector';
-import { BottomDrawer } from './components/BottomDrawer';
+import { QueryInspector } from './components/QueryInspector';
 import { GraphData, SwarmEvent, MemoryData } from './types';
+import { normalizeEvent } from './adapters/events';
+import { AlertCircle, RefreshCw } from 'lucide-react';
 
 export const App: React.FC = () => {
+  // Navigation & Mode State
   const [selectedRepo, setSelectedRepo] = useState<string>('taskflow');
   const [currentScenario, setCurrentScenario] = useState<number>(1);
   const [mode, setMode] = useState<'replay' | 'live'>('replay');
   const [speedMs, setSpeedMs] = useState<number>(500);
   const [memoryEnabled, setMemoryEnabled] = useState<boolean>(true);
 
+  // Data State
   const [graphData, setGraphData] = useState<GraphData | null>(null);
   const [memoryData, setMemoryData] = useState<MemoryData | null>(null);
-
   const [events, setEvents] = useState<SwarmEvent[]>([]);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+
+  // Playback & Story State
   const [isRunning, setIsRunning] = useState<boolean>(false);
   const [isPaused, setIsPaused] = useState<boolean>(false);
-  const [bottomDrawerExpanded, setBottomDrawerExpanded] = useState<boolean>(true);
+  const [isStoryActive, setIsStoryActive] = useState<boolean>(false);
+  const [storyStage, setStoryStage] = useState<number>(1); // 1 -> 2 -> 3
+  const [heroDismissed, setHeroDismissed] = useState<boolean>(false);
+  const [zeroProofDismissed, setZeroProofDismissed] = useState<boolean>(false);
 
+  // UI Drawer State
+  const [resultStripExpanded, setResultStripExpanded] = useState<boolean>(true);
+
+  // Health & Error State
+  const [backendHealthy, setBackendHealthy] = useState<boolean>(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isDevFixture, setIsDevFixture] = useState<boolean>(false);
+
+  // Refs
   const eventSourceRef = useRef<EventSource | null>(null);
   const timerRef = useRef<any>(null);
 
-  // 1. Fetch Graph & Memory Data on Repo Change
-  useEffect(() => {
-    fetchGraphData(selectedRepo);
-    fetchMemoryData(selectedRepo);
-  }, [selectedRepo]);
+  // 1. Initial Health Check & Data Fetching
+  const checkBackendHealth = useCallback(async () => {
+    try {
+      const res = await fetch('/health', { signal: AbortSignal.timeout(3000) });
+      if (res.ok) {
+        setBackendHealthy(true);
+        setErrorMessage(null);
+        return true;
+      } else {
+        setBackendHealthy(false);
+        return false;
+      }
+    } catch {
+      setBackendHealthy(false);
+      return false;
+    }
+  }, []);
 
-  const fetchGraphData = async (repo: string) => {
+  useEffect(() => {
+    checkBackendHealth();
+    const interval = setInterval(checkBackendHealth, 5000);
+    return () => clearInterval(interval);
+  }, [checkBackendHealth]);
+
+  const fetchGraphData = useCallback(async (repo: string) => {
     try {
       const res = await fetch(`/graph/repo:${repo}`);
       if (res.ok) {
@@ -39,11 +80,11 @@ export const App: React.FC = () => {
         setGraphData(data);
       }
     } catch (err) {
-      console.error('Error fetching graph data:', err);
+      console.warn('Could not fetch graph data:', err);
     }
-  };
+  }, []);
 
-  const fetchMemoryData = async (repo: string) => {
+  const fetchMemoryData = useCallback(async (repo: string) => {
     try {
       const res = await fetch(`/memory/${repo}`);
       if (res.ok) {
@@ -51,87 +92,126 @@ export const App: React.FC = () => {
         setMemoryData(data);
       }
     } catch (err) {
-      console.error('Error fetching memory data:', err);
+      console.warn('Could not fetch memory data:', err);
     }
-  };
+  }, []);
 
-  const handleResetMemory = async () => {
-    try {
-      const res = await fetch(`/memory/${selectedRepo}/reset`, { method: 'POST' });
-      if (res.ok) {
-        fetchMemoryData(selectedRepo);
-      }
-    } catch (err) {
-      console.error('Error resetting memory:', err);
-    }
-  };
+  useEffect(() => {
+    fetchGraphData(selectedRepo);
+    fetchMemoryData(selectedRepo);
+  }, [selectedRepo, fetchGraphData, fetchMemoryData]);
 
-  // 2. Start Scenario Execution
-  const startScenario = async (scId: number) => {
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
-    }
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-    }
+  // Reset Demo handler
+  const handleResetDemo = async () => {
+    if (eventSourceRef.current) eventSourceRef.current.close();
+    if (timerRef.current) clearInterval(timerRef.current);
 
     setEvents([]);
     setCurrentIndex(0);
-    setIsRunning(true);
+    setIsRunning(false);
     setIsPaused(false);
-    setCurrentScenario(scId);
-
-    const targetRepo = scId === 4 ? 'analytics' : 'taskflow';
-    if (targetRepo !== selectedRepo) {
-      setSelectedRepo(targetRepo);
-    }
+    setIsStoryActive(false);
+    setHeroDismissed(false);
+    setZeroProofDismissed(false);
+    setSelectedNodeId(null);
 
     try {
-      const runRes = await fetch('/runs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          repo: targetRepo,
-          scenario: scId,
-          mode: mode,
-          memory_enabled: memoryEnabled
-        }),
-      });
-
-      const { run_id } = await runRes.json();
-
-      // Connect SSE Stream
-      const es = new EventSource(`/runs/${run_id}/events?delay_ms=0`);
-      eventSourceRef.current = es;
-
-      const receivedEvents: SwarmEvent[] = [];
-
-      es.onmessage = (e) => {
-        try {
-          const payload = JSON.parse(e.data);
-          if (payload.type === 'RUN_COMPLETE') {
-            es.close();
-            fetchMemoryData(targetRepo);
-            return;
-          }
-
-          receivedEvents.push(payload);
-          setEvents([...receivedEvents]);
-        } catch (err) {
-          console.error('SSE parse error:', err);
-        }
-      };
-
-      es.onerror = () => {
-        es.close();
-      };
+      await fetch(`/memory/${selectedRepo}/reset`, { method: 'POST' });
+      await fetchMemoryData(selectedRepo);
+      await fetchGraphData(selectedRepo);
     } catch (err) {
-      console.error('Error starting scenario:', err);
-      setIsRunning(false);
+      console.warn('Error resetting memory:', err);
     }
   };
 
-  // 3. Playback Pacing Loop
+  // 2. Scenario Runner
+  const startScenario = useCallback(
+    async (scId: number, autoPlay: boolean = true) => {
+      if (eventSourceRef.current) eventSourceRef.current.close();
+      if (timerRef.current) clearInterval(timerRef.current);
+
+      setEvents([]);
+      setCurrentIndex(0);
+      setIsRunning(true);
+      setIsPaused(!autoPlay);
+      setCurrentScenario(scId);
+      setHeroDismissed(false);
+      setZeroProofDismissed(false);
+
+      const targetRepo = scId === 4 ? 'analytics' : 'taskflow';
+      if (targetRepo !== selectedRepo) {
+        setSelectedRepo(targetRepo);
+      }
+
+      try {
+        const runRes = await fetch('/runs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            repo: targetRepo,
+            scenario: scId,
+            mode: mode,
+            memory_enabled: scId === 1 ? false : memoryEnabled
+          })
+        });
+
+        if (!runRes.ok) {
+          throw new Error(`Failed to start run: status ${runRes.status}`);
+        }
+
+        const runData = await runRes.json();
+        const run_id = runData.run_id;
+
+        // Connect SSE Stream
+        const es = new EventSource(`/runs/${run_id}/events?delay_ms=0`);
+        eventSourceRef.current = es;
+
+        const receivedEvents: SwarmEvent[] = [];
+
+        es.onmessage = (e) => {
+          try {
+            const raw = JSON.parse(e.data);
+            if (raw.type === 'RUN_COMPLETE') {
+              es.close();
+              fetchMemoryData(targetRepo);
+              return;
+            }
+
+            const normalized = normalizeEvent(raw);
+            receivedEvents.push(normalized);
+            setEvents([...receivedEvents]);
+          } catch (err) {
+            console.error('SSE parse error:', err);
+          }
+        };
+
+        es.onerror = () => {
+          es.close();
+        };
+      } catch (err) {
+        console.error('Error starting scenario:', err);
+        setErrorMessage('Failed to start scenario execution. Ensure backend is running.');
+        setIsRunning(false);
+
+        // Fallback to dev fixture if in dev
+        if (import.meta.env.DEV && scId === 1) {
+          try {
+            const fixtureModule = await import('./fixtures/scenario_1.json');
+            const fixtureEvents = (fixtureModule.default || fixtureModule).map(normalizeEvent);
+            setEvents(fixtureEvents);
+            setIsDevFixture(true);
+            setIsRunning(true);
+            setIsPaused(false);
+          } catch (fErr) {
+            console.warn('Dev fixture not loaded:', fErr);
+          }
+        }
+      }
+    },
+    [selectedRepo, mode, memoryEnabled, fetchMemoryData]
+  );
+
+  // 3. Playback Pacing Loop & Story Mode Auto-Advance
   useEffect(() => {
     if (!isRunning || isPaused) {
       if (timerRef.current) clearInterval(timerRef.current);
@@ -143,8 +223,23 @@ export const App: React.FC = () => {
         if (prev < events.length - 1) {
           return prev + 1;
         } else {
-          if (eventSourceRef.current?.readyState === EventSource.CLOSED) {
-            setIsRunning(false);
+          // Finished current event stream
+          if (eventSourceRef.current?.readyState === EventSource.CLOSED || isDevFixture) {
+            // If in Story Mode, auto-advance to next chapter
+            if (isStoryActive) {
+              if (storyStage === 1) {
+                setStoryStage(2);
+                setTimeout(() => startScenario(2), 1200);
+              } else if (storyStage === 2) {
+                setStoryStage(3);
+                setTimeout(() => startScenario(3), 1200);
+              } else {
+                setIsStoryActive(false);
+                setIsRunning(false);
+              }
+            } else {
+              setIsRunning(false);
+            }
             clearInterval(timerRef.current);
           }
           return prev;
@@ -155,97 +250,194 @@ export const App: React.FC = () => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [isRunning, isPaused, events.length, speedMs]);
+  }, [isRunning, isPaused, events.length, speedMs, isStoryActive, storyStage, isDevFixture, startScenario]);
 
+  // Story Mode Trigger
+  const handlePlayStory = () => {
+    setIsStoryActive(true);
+    setStoryStage(1);
+    startScenario(1);
+  };
+
+  // Keyboard Shortcuts Listener
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't intercept when user is typing in an input
+      if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) {
+        return;
+      }
+
+      if (e.code === 'Space') {
+        e.preventDefault();
+        setIsPaused((p) => !p);
+      } else if (e.code === 'ArrowRight') {
+        e.preventDefault();
+        setCurrentIndex((prev) => Math.min(prev + 1, events.length - 1));
+      } else if (e.key === 'r' || e.key === 'R') {
+        e.preventDefault();
+        startScenario(currentScenario);
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        setIsStoryActive(false);
+        setHeroDismissed(true);
+        setZeroProofDismissed(true);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [events.length, currentScenario, startScenario]);
+
+  // Current active event
   const activeEvent = events[currentIndex] || null;
-  const activeCollision = activeEvent?.collision || null;
-
-  const handleTogglePlay = () => {
-    if (!isRunning) {
-      startScenario(currentScenario);
-    } else {
-      setIsPaused(!isPaused);
-    }
-  };
-
-  const handleStepForward = () => {
-    if (currentIndex < events.length - 1) {
-      setCurrentIndex(currentIndex + 1);
-    }
-  };
-
-  const handleReset = () => {
-    if (eventSourceRef.current) eventSourceRef.current.close();
-    if (timerRef.current) clearInterval(timerRef.current);
-    setEvents([]);
-    setCurrentIndex(0);
-    setIsRunning(false);
-    setIsPaused(false);
-  };
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#0b0f19] text-slate-100 font-sans">
-      {/* LEFT: Task & Run Control Panel */}
-      <ControlPanel
-        currentScenario={currentScenario}
-        onSelectScenario={(scId) => {
-          setCurrentScenario(scId);
-          startScenario(scId);
-        }}
-        selectedRepo={selectedRepo}
-        onSelectRepo={(repo) => setSelectedRepo(repo)}
-        isRunning={isRunning}
-        isPaused={isPaused}
-        onTogglePlay={handleTogglePlay}
-        onStepForward={handleStepForward}
-        onReset={handleReset}
-        speedMs={speedMs}
-        onChangeSpeed={setSpeedMs}
+    <div className="flex flex-col h-screen w-screen overflow-hidden bg-[var(--bg-0)] text-[var(--text)] font-sans select-none">
+      {/* Backend Unreachable Banner */}
+      {!backendHealthy && (
+        <div className="bg-[var(--signal)] text-[var(--bg-0)] font-mono text-[13px] font-bold py-1 px-4 flex items-center justify-between z-50">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4" />
+            <span>Backend unreachable — retrying connection to http://127.0.0.1:8000</span>
+          </div>
+          <button
+            onClick={() => checkBackendHealth()}
+            className="flex items-center gap-1 hover:underline cursor-pointer"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>Retry now</span>
+          </button>
+        </div>
+      )}
+
+      {/* TOP BAR (52px) */}
+      <TopBar
+        activeEvent={activeEvent}
         mode={mode}
         onToggleMode={setMode}
-        memoryEnabled={memoryEnabled}
-        onToggleMemory={() => setMemoryEnabled(!memoryEnabled)}
-        onResetMemory={handleResetMemory}
+        onResetDemo={handleResetDemo}
       />
 
-      {/* CENTER & BOTTOM: Code Graph & Drawers */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden">
-        {/* CENTER: Graph Viewer */}
-        <div className="flex-1 relative overflow-hidden">
-          <GraphViewer
-            graphData={graphData}
+      {/* MAIN WORKSPACE BODY */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* LEFT RAIL (280px) */}
+        <LeftRail
+          currentScenario={currentScenario}
+          onSelectScenario={(scId) => {
+            setIsStoryActive(false);
+            startScenario(scId);
+          }}
+          isRunning={isRunning}
+          isPaused={isPaused}
+          isStoryActive={isStoryActive}
+          onPlayStory={handlePlayStory}
+          onTogglePlay={() => {
+            if (!isRunning) startScenario(currentScenario);
+            else setIsPaused(!isPaused);
+          }}
+          onStepForward={() => {
+            setCurrentIndex((prev) => Math.min(prev + 1, events.length - 1));
+          }}
+          onReset={() => startScenario(currentScenario)}
+          speedMs={speedMs}
+          onChangeSpeed={setSpeedMs}
+          memoryEnabled={memoryEnabled}
+          onToggleMemory={() => setMemoryEnabled(!memoryEnabled)}
+          isDevFixture={isDevFixture}
+        />
+
+        {/* CENTER COLUMN: Graph Canvas + Overlays + ResultStrip */}
+        <div className="flex-1 flex flex-col h-full overflow-hidden relative">
+          {/* GRAPH CANVAS (Dominant) */}
+          <div className="flex-1 relative overflow-hidden">
+            <GraphCanvas
+              graphData={graphData}
+              activeEvent={activeEvent}
+              events={events}
+              selectedNodeId={selectedNodeId}
+              onSelectNode={(nodeId) => setSelectedNodeId(nodeId)}
+            />
+
+            {/* Overlays: HeroSplit (top-center on collision) */}
+            <HeroSplit
+              activeEvent={activeEvent}
+              events={events}
+              graphData={graphData}
+              onSelectNode={(nodeId) => setSelectedNodeId(nodeId)}
+              onDismiss={() => setHeroDismissed(true)}
+              dismissed={heroDismissed}
+            />
+
+            {/* Overlays: ZeroPathProof (top-center on safe parallel) */}
+            <ZeroPathProof
+              activeEvent={activeEvent}
+              onDismiss={() => setZeroProofDismissed(true)}
+              dismissed={zeroProofDismissed}
+            />
+
+            {/* Story Caption & 5-Chapter Bar (bottom-center) */}
+            <StoryCaptionBar
+              activeEvent={activeEvent}
+              currentScenario={currentScenario}
+              graphData={graphData}
+              isStoryActive={isStoryActive}
+              onSelectNode={(nodeId) => setSelectedNodeId(nodeId)}
+            />
+          </div>
+
+          {/* BOTTOM RESULT STRIP (240px, collapsible) */}
+          <ResultStrip
             activeEvent={activeEvent}
-            activeCollision={activeCollision}
-            onSelectNode={(nodeId) => {
-              console.log('Selected node:', nodeId);
+            events={events}
+            memoryData={memoryData}
+            graphData={graphData}
+            mode={mode}
+            memoryEnabled={memoryEnabled}
+            isExpanded={resultStripExpanded}
+            onToggleExpand={() => setResultStripExpanded(!resultStripExpanded)}
+            onToggleMemory={() => setMemoryEnabled(!memoryEnabled)}
+            onResetMemory={async () => {
+              await fetch(`/memory/${selectedRepo}/reset`, { method: 'POST' });
+              fetchMemoryData(selectedRepo);
             }}
+            onSelectNode={(nodeId) => setSelectedNodeId(nodeId)}
           />
         </div>
 
-        {/* BOTTOM: Drawer (Verifier, Fork Blast Radius & Memory) */}
-        <BottomDrawer
-          memoryData={memoryData}
-          activeEvent={activeEvent}
-          events={events}
-          isExpanded={bottomDrawerExpanded}
-          onToggleExpand={() => setBottomDrawerExpanded(!bottomDrawerExpanded)}
-          onResetMemory={handleResetMemory}
+        {/* RIGHT COLUMN: Resizable Splitter with AgentTimeline + QueryInspector (420px) */}
+        <RightSplitter
+          defaultTopRatio={0.55}
+          topComponent={
+            <AgentTimeline
+              events={events.slice(0, currentIndex + 1)}
+              selectedIndex={currentIndex}
+              graphData={graphData}
+              onSelectEvent={(idx) => {
+                setIsPaused(true);
+                setCurrentIndex(idx);
+                setHeroDismissed(false);
+                setZeroProofDismissed(false);
+              }}
+              onSelectNode={(nodeId) => setSelectedNodeId(nodeId)}
+            />
+          }
+          bottomComponent={<QueryInspector activeEvent={activeEvent} />}
         />
       </div>
 
-      {/* RIGHT: Agent Timeline & Cypher Inspector */}
-      <div className="w-96 h-full flex flex-col border-l border-[#1f293d] bg-[#111827]">
-        <AgentTimeline
-          events={events.slice(0, currentIndex + 1)}
-          selectedIndex={currentIndex}
-          onSelectEvent={(idx) => {
-            setIsPaused(true);
-            setCurrentIndex(idx);
-          }}
-        />
-
-        <CypherInspector activeEvent={activeEvent} />
-      </div>
+      {/* Error Toast Bottom-Right */}
+      {errorMessage && (
+        <div className="fixed bottom-4 right-4 z-50 p-4 rounded-[8px] border border-[var(--breach)] bg-[var(--bg-1)] shadow-xl flex items-center gap-3 font-mono text-[13px] text-[var(--text)]">
+          <AlertCircle className="w-5 h-5 text-[var(--breach)] shrink-0" />
+          <span>{errorMessage}</span>
+          <button
+            onClick={() => setErrorMessage(null)}
+            className="ml-2 px-2 py-1 rounded bg-[var(--bg-2)] hover:bg-[var(--line)] text-[var(--text-dim)]"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
     </div>
   );
 };

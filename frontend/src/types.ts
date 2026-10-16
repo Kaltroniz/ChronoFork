@@ -29,6 +29,7 @@ export interface CypherTrace {
   row_count: number;
   rows: any[][];
   header: string[];
+  tool?: string;
 }
 
 export interface SwarmEvent {

@@ -15,6 +15,25 @@ ChronoFork compiles code into a live AST symbol graph in FalkorDB, detects multi
 
 ---
 
+## 🖥️ What It Looks Like
+
+| **1. Clean Workspace & AST Graph** | **2. Git Blind Spot vs 4-Hop Collision** |
+|:---:|:---:|
+| ![Clean Workspace](docs/screens/01-idle.png) | ![Collision Hero](docs/screens/03-collision-hero.png) |
+| *1080p instrument console showing AST symbol graph, telemetry panels, and status chips* | *HeroSplit card showing Git merged cleanly with 0 line conflicts while ChronoFork caught the 4-hop chain* |
+
+| **3. Verdict: Naive Git Failure vs ChronoFork Pass** | **4. Callee-First Serialization & Handoff** |
+|:---:|:---:|
+| ![Verdict](docs/screens/04-git-vs-chronofork.png) | ![Resolution Handoff](docs/screens/05-resolution-handoff.png) |
+| *ResultStrip Verdict displaying 5 FAILED / 7 PASSED under naive Git vs 12 PASSED in ChronoFork* | *GraphCanvas animating sequential hop rings, camera fit, and A1 → A2 dependency handoff* |
+
+| **5. Episodic Memory Recall Contrast** | **6. Zero-Path Parallel Safety Proof** |
+|:---:|:---:|
+| ![Memory Run Compare](docs/screens/06-memory-run-compare.png) | ![Zero Path Proof](docs/screens/07-zero-path-proof.png) |
+| *Memory tab contrasting Run 1 cold start collision against Run 2 rule-adapted zero collisions* | *ZeroPathProof card proving disjoint parallel execution safety across 4 call hops* |
+
+---
+
 ## 🏆 Hackathon Tracks Declared
 
 ChronoFork is submitted to **Graph Hacks (FalkorDB)** under both tracks:
