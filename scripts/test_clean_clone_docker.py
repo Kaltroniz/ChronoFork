@@ -180,10 +180,10 @@ capture().catch((err) => {{
             shutil.rmtree(temp_dir, ignore_errors=True)
             log("   Clean clone containers stopped and temp directory removed.", f_out)
 
-            # Restart our local development standalone container
+            # Restart our local development container
             log("\n6. Restoring local dev FalkorDB container...", f_out)
-            run_cmd("docker start chronofork-falkordb")
-            log("   chronofork-falkordb started.", f_out)
+            run_cmd("docker compose up -d falkordb", cwd=WORKSPACE_ROOT)
+            log("   FalkorDB started.", f_out)
 
 
 if __name__ == "__main__":
