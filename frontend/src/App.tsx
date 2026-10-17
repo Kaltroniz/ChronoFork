@@ -334,14 +334,10 @@ export const App: React.FC = () => {
   const activeEvent = events[currentIndex] || null;
   const currentEvents = events.slice(0, currentIndex + 1);
 
-  // Derive memory presence strictly from actual rule and episode counts
-  const hasMemoryItems = Boolean(
-    (memoryData && (
-      (memoryData.rules && memoryData.rules.length > 0) ||
-      (memoryData.episodes && memoryData.episodes.length > 0)
-    )) ||
-    events.some((e) => Boolean(e.memory_write) || e.phase === 'MEMORY_UPDATE')
-  );
+  // Derive memory presence strictly from actual rule and episode counts (> 0)
+  const ruleCount = memoryData?.rules?.length || 0;
+  const episodeCount = memoryData?.episodes?.length || 0;
+  const hasMemoryItems = (ruleCount + episodeCount) > 0;
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-[var(--bg-0)] text-[var(--text)] font-sans select-none">

@@ -50,17 +50,31 @@ const STATE_CONFIG: Record<
   }
 };
 
+function formatProvenanceTimestamp(isoOrDate: string | Date): string {
+  const d = typeof isoOrDate === 'string' ? new Date(isoOrDate) : isoOrDate;
+  if (isNaN(d.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const year = d.getFullYear();
+  const month = pad(d.getMonth() + 1);
+  const day = pad(d.getDate());
+  const hours = pad(d.getHours());
+  const minutes = pad(d.getMinutes());
+  const seconds = pad(d.getSeconds());
+
+  let tz = '';
+  try {
+    const tzPart = new Intl.DateTimeFormat(undefined, { timeZoneName: 'short' })
+      .formatToParts(d)
+      .find((p) => p.type === 'timeZoneName');
+    if (tzPart) tz = tzPart.value;
+  } catch {}
+
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}${tz ? ' ' + tz : ''}`;
+}
+
 export const ProvenanceStrip: React.FC<ProvenanceStripProps> = ({ activeEvent, mode }) => {
   const timestampStr = activeEvent?.ts
-    ? new Date(activeEvent.ts * 1000).toLocaleString(undefined, {
-        year: 'numeric',
-        month: 'numeric',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        timeZoneName: 'short'
-      })
+    ? formatProvenanceTimestamp(new Date(activeEvent.ts * 1000))
     : '—';
 
   const visiblePills = PILLS.filter((pill) => {
@@ -78,17 +92,13 @@ export const ProvenanceStrip: React.FC<ProvenanceStripProps> = ({ activeEvent, m
 
         const capturedIso = typeof raw === 'object' && raw?.captured_at ? raw.captured_at : null;
         const capturedDate = capturedIso
-          ? new Date(capturedIso).toLocaleTimeString(undefined, {
-              hour: '2-digit',
-              minute: '2-digit',
-              second: '2-digit'
-            })
-          : '';
+          ? formatProvenanceTimestamp(capturedIso)
+          : (activeEvent?.ts ? formatProvenanceTimestamp(new Date(activeEvent.ts * 1000)) : '');
 
         const badgeText = mode === 'replay' ? `CACHED · ${capturedDate || 'run'}` : 'REAL';
         const tooltipText = mode === 'replay'
-          ? `REPLAY · captured ${capturedIso || timestampStr} from a real execution`
-          : 'Live Execution';
+          ? `REPLAY · captured ${capturedDate || capturedIso || timestampStr} from a real execution`
+          : `Live Execution · ${capturedDate || timestampStr}`;
 
         return (
           <div

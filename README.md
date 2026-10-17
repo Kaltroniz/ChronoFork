@@ -55,6 +55,15 @@ ChronoFork treats data integrity with complete transparency:
 
 ## 🚀 Quickstart
 
+> [!WARNING]
+> **Deployment Security (`DEMO_MODE`)**:
+> `docker-compose.yml` defaults to **`DEMO_MODE=true`** (`DEMO_MODE=${DEMO_MODE:-true}`) for safe public and shared hosting.
+> In live mode (`DEMO_MODE=false`), the backend executes real subprocess Git commands and real `pytest` in temporary workspaces. For any public deployment, `DEMO_MODE` **MUST remain `true`** to restrict execution to verified cached replays and prevent untrusted subprocess execution.
+> To enable live Git/pytest execution locally:
+> ```bash
+> DEMO_MODE=false docker compose up --build -d
+> ```
+
 ### Option A: Complete Docker Compose Deployment (Recommended)
 Runs containerized FalkorDB, FastAPI backend with auto-seed, and production Nginx frontend:
 ```bash

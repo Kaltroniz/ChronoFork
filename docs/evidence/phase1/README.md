@@ -52,7 +52,7 @@ frontend/src/components/GraphCanvas.tsx:1294: target: 'taskflow.worker.execute_j
 ```
 
 ### Amendment 3: Reset $\to$ Run S1 $\to$ Label State Sequence
-Observed output from [`reset_run_s1_sequence_stdout.txt`](docs/evidence/phase1/reset_run_s1_sequence_stdout.txt):
+Observed output from [`reset_run_s1_sequence_stdout.txt`](file:///Users/souhardya/ChronoFork/docs/evidence/phase1/reset_run_s1_sequence_stdout.txt):
 ```text
 Step 1 (Reset): {"status":"SUCCESS","message":"Memory graph mem:taskflow has been reset."}
 Memory count immediately after reset: rules=0, episodes=0
@@ -65,26 +65,26 @@ UI State now: memoryWasReset=False -> "Memory state: carried over from previous 
 ```
 
 ### Amendment 5 & 8: Zero-Path and Scenario 2 Card Text
-- In [`ZeroPathProof.tsx`](frontend/src/components/ZeroPathProof.tsx):
+- In [`ZeroPathProof.tsx`](file:///Users/souhardya/ChronoFork/frontend/src/components/ZeroPathProof.tsx):
   - Scenario 2 card text: `"memory changed A1's claim to BODY_EDIT; the breaking-intent query returned 0 rows"`.
   - Intent-filtered query card footer: `"no breaking-intent claim reaches another claim · Parallel execution authorized"`.
   - Removed all occurrences of `"Disjoint subgraphs confirmed"` when evaluating intent-filtered queries.
 
 ### Amendment 7: Provenance & LLM Badges
-- In [`frontend/src/adapters/events.ts`](frontend/src/adapters/events.ts) and [`frontend/src/components/ProvenanceStrip.tsx`](frontend/src/components/ProvenanceStrip.tsx):
+- In [`frontend/src/adapters/events.ts`](file:///Users/souhardya/ChronoFork/frontend/src/adapters/events.ts) and [`frontend/src/components/ProvenanceStrip.tsx`](file:///Users/souhardya/ChronoFork/frontend/src/components/ProvenanceStrip.tsx):
   - Provenance state strictly derived from `event.provenance[category]`. If absent, renders `"UNLABELLED"`.
   - LLM badge pill is conditionally filtered out unless `activeEvent?.provenance?.llm` is explicitly defined.
   - Receipt card capture time formatted with date, time, and timezone via `toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'medium', timeZoneName: 'short' })`.
 
 ### Items 5 & 6: Labels & Edge Styling
-- In [`GraphCanvas.tsx`](frontend/src/components/GraphCanvas.tsx):
+- In [`GraphCanvas.tsx`](file:///Users/souhardya/ChronoFork/frontend/src/components/GraphCanvas.tsx):
   - Compound module label font size constrained to `15px` bold (within min 13px, max 16px constraint).
   - Non-chain edges set to `0.12` opacity during run.
   - Handoff edge renders above labels with visible `"HANDED OFF"` text.
   - Scenario 3 legend adds explicit swatches for A2 neighborhood (`#E0A458`) and A3 neighborhood (`#4FB286`).
 
 ### Item 7: Verdict Placeholders
-- In [`ResultStrip.tsx`](frontend/src/components/ResultStrip.tsx):
+- In [`ResultStrip.tsx`](file:///Users/souhardya/ChronoFork/frontend/src/components/ResultStrip.tsx):
   - Before test data is available, renders neutral `"PENDING"`.
   - For Scenarios 2 and 3 in the Git column, renders `"Not run in this scenario"`.
   - Removed all instances of `'— FAILED'` and `'— PASSED'` from empty column states.
@@ -105,7 +105,7 @@ UI State now: memoryWasReset=False -> "Memory state: carried over from previous 
 
 ## 3. Playwright State-Assertion Code (Item 12 Preview)
 
-Per Amendment 2, screenshot and video captures are deferred to run after Phase 2 regenerates replays. Below is the state assertion test suite embedded in [`scripts/ui_shots.ts`](scripts/ui_shots.ts):
+Per Amendment 2, screenshot and video captures are deferred to run after Phase 2 regenerates replays. Below is the state assertion test suite embedded in [`scripts/ui_shots.ts`](file:///Users/souhardya/ChronoFork/scripts/ui_shots.ts):
 
 ```typescript
 // 02 Two claim chips with intents
