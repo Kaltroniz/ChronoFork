@@ -1,0 +1,218 @@
+============================================================
+PHASE 5-LITE: CLEAN CLONE DOCKER COMPOSE DEPLOYMENT TEST
+============================================================
+
+1. Cloning local branch SS1 into temporary directory: /var/folders/t1/55jvjq_10y3dd248l0clr20r0000gn/T/chronofork_clone_0k68u_d9...
+   Repository cloned successfully.
+
+2. Building and starting Docker Compose services (`docker compose up --build -d`)...
+   Docker compose stdout:
+#1 [internal] load local bake definitions
+#1 reading from stdin 1.25kB done
+#1 DONE 0.0s
+
+#2 [frontend internal] load build definition from Dockerfile
+#2 transferring dockerfile: 454B done
+#2 DONE 0.0s
+
+#3 [backend internal] load build definition from Dockerfile
+#3 transferring dockerfile: 561B done
+#3 DONE 0.0s
+
+#4 [backend internal] load metadata for docker.io/library/python:3.11-slim
+#4 ...
+
+#5 [frontend internal] load metadata for docker.io/library/nginx:alpine
+#5 DONE 1.9s
+
+#4 [backend internal] load metadata for docker.io/library/python:3.11-slim
+#4 DONE 1.9s
+
+#6 [frontend internal] load metadata for docker.io/library/node:20-alpine
+#6 DONE 1.9s
+
+#7 [frontend internal] load .dockerignore
+#7 transferring context: 2B done
+#7 DONE 0.0s
+
+#8 [backend internal] load .dockerignore
+#8 transferring context: 2B done
+#8 DONE 0.0s
+
+#9 [frontend internal] load build context
+#9 transferring context: 320.00kB done
+#9 DONE 0.0s
+
+#10 [frontend stage-1 1/3] FROM docker.io/library/nginx:alpine@sha256:892bb2152464f0c5d8972593a5f5afaf8054552580b699d95f8ff4af08c2d33d
+#10 resolve docker.io/library/nginx:alpine@sha256:892bb2152464f0c5d8972593a5f5afaf8054552580b699d95f8ff4af08c2d33d 0.0s done
+#10 DONE 0.0s
+
+#11 [frontend builder 1/6] FROM docker.io/library/node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293
+#11 resolve docker.io/library/node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293 0.0s done
+#11 DONE 0.0s
+
+#12 [frontend builder 3/6] COPY package*.json ./
+#12 CACHED
+
+#13 [frontend builder 2/6] WORKDIR /app
+#13 CACHED
+
+#14 [frontend builder 4/6] RUN npm install
+#14 CACHED
+
+#15 [backend 1/8] FROM docker.io/library/python:3.11-slim@sha256:e88e9763f943ec1834f992a4b51e0f24500486803e8bc534e5767af9ea65f6ce
+#15 resolve docker.io/library/python:3.11-slim@sha256:e88e9763f943ec1834f992a4b51e0f24500486803e8bc534e5767af9ea65f6ce 0.0s done
+#15 DONE 0.0s
+
+#16 [backend internal] load build context
+#16 transferring context: 224.89kB done
+#16 DONE 0.0s
+
+#17 [backend 6/8] COPY backend/ /app/backend/
+#17 CACHED
+
+#18 [backend 3/8] RUN apt-get update && apt-get install -y --no-install-recommends     curl     git     && rm -rf /var/lib/apt/lists/*
+#18 CACHED
+
+#19 [backend 4/8] COPY backend/requirements.txt /app/requirements.txt
+#19 CACHED
+
+#20 [backend 2/8] WORKDIR /app
+#20 CACHED
+
+#21 [backend 5/8] RUN pip install --no-cache-dir -r /app/requirements.txt
+#21 CACHED
+
+#22 [backend 7/8] COPY demo_repo/ /app/demo_repo/
+#22 CACHED
+
+#23 [backend 8/8] COPY replays/ /app/replays/
+#23 CACHED
+
+#24 [frontend builder 5/6] COPY . .
+#24 DONE 0.0s
+
+#25 [backend] exporting to image
+#25 exporting layers done
+#25 exporting manifest sha256:eee47360725f44a04c628c3d31f82d5363d844e65346432193870d3af775c3ea
+#25 exporting manifest sha256:eee47360725f44a04c628c3d31f82d5363d844e65346432193870d3af775c3ea done
+#25 exporting config sha256:dd8be7080182dad189842629674100fcd0483675b69efcee9aa76065147114b7 done
+#25 exporting attestation manifest sha256:5251135e9df9278d8da2486bf5ae1ce16bde6913ce8931f8e471a0830c7c8f17 done
+#25 exporting manifest list sha256:55e5ceeb0b210be8e0cdc785b6c0e6cd98fb0743bf88ecc16b8d7c2c4681314c done
+#25 naming to docker.io/library/chronofork_clone_0k68u_d9-backend:latest done
+#25 unpacking to docker.io/library/chronofork_clone_0k68u_d9-backend:latest done
+#25 DONE 0.0s
+
+#26 [backend] resolving provenance for metadata file
+#26 DONE 0.0s
+
+#27 [frontend builder 6/6] RUN npm run build
+#27 0.155 
+#27 0.155 > frontend@0.0.0 build
+#27 0.155 > tsc && vite build
+#27 0.155 
+#27 1.346 vite v5.4.21 building for production...
+#27 1.435 transforming...
+#27 2.959 ✓ 1953 modules transformed.
+#27 3.149 rendering chunks...
+#27 3.155 computing gzip size...
+#27 3.168 dist/index.html                   0.95 kB │ gzip:   0.53 kB
+#27 3.168 dist/assets/index-DBEV69rq.css   26.61 kB │ gzip:   5.76 kB
+#27 3.168 dist/assets/index-EGW0RW_m.js   826.43 kB │ gzip: 255.72 kB
+#27 3.168 
+#27 3.168 (!) Some chunks are larger than 500 kB after minification. Consider:
+#27 3.168 - Using dynamic import() to code-split the application
+#27 3.168 - Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+#27 3.168 - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+#27 3.168 ✓ built in 1.75s
+#27 DONE 3.2s
+
+#10 [frontend stage-1 1/3] FROM docker.io/library/nginx:alpine@sha256:892bb2152464f0c5d8972593a5f5afaf8054552580b699d95f8ff4af08c2d33d
+#10 CACHED
+
+#28 [frontend stage-1 2/3] COPY --from=builder /app/dist /usr/share/nginx/html
+#28 DONE 0.0s
+
+#29 [frontend stage-1 3/3] COPY nginx.conf /etc/nginx/conf.d/default.conf
+#29 DONE 0.0s
+
+#30 [frontend] exporting to image
+#30 exporting layers 0.0s done
+#30 exporting manifest sha256:98ab6332d76c768fb9915582fe8c824d6a2f1c066a6cc633a9573fea2e885781 done
+#30 exporting config sha256:8eb4bff32cc6b98f33204576d966826933ad8111d219eccccfcdc67e1340ff94 done
+#30 exporting attestation manifest sha256:1482a9c60d4e62f6e41f1394240510c849fc0012d8da77167901a05424779dd1 done
+#30 exporting manifest list sha256:8af75e97cccd3371184601d8ed1c44d8b910754dd974f2c2beebc244bc83e562 done
+#30 naming to docker.io/library/chronofork_clone_0k68u_d9-frontend:latest done
+#30 unpacking to docker.io/library/chronofork_clone_0k68u_d9-frontend:latest 0.0s done
+#30 DONE 0.1s
+
+#31 [frontend] resolving provenance for metadata file
+#31 DONE 0.0s
+   Docker compose stderr:
+Image chronofork_clone_0k68u_d9-backend Building 
+ Image chronofork_clone_0k68u_d9-frontend Building 
+ Image chronofork_clone_0k68u_d9-backend Built 
+ Image chronofork_clone_0k68u_d9-frontend Built 
+ Network chronofork_clone_0k68u_d9_default Creating 
+ Network chronofork_clone_0k68u_d9_default Created 
+ Container chronofork_clone_0k68u_d9-falkordb-1 Creating 
+ Container chronofork_clone_0k68u_d9-falkordb-1 Created 
+ Container chronofork_clone_0k68u_d9-backend-1 Creating 
+ Container chronofork_clone_0k68u_d9-backend-1 Created 
+ Container chronofork_clone_0k68u_d9-frontend-1 Creating 
+ Container chronofork_clone_0k68u_d9-frontend-1 Created 
+ Container chronofork_clone_0k68u_d9-falkordb-1 Starting 
+ Container chronofork_clone_0k68u_d9-falkordb-1 Started 
+ Container chronofork_clone_0k68u_d9-falkordb-1 Waiting 
+ Container chronofork_clone_0k68u_d9-falkordb-1 Healthy 
+ Container chronofork_clone_0k68u_d9-backend-1 Starting 
+ Container chronofork_clone_0k68u_d9-backend-1 Started 
+ Container chronofork_clone_0k68u_d9-frontend-1 Starting 
+ Container chronofork_clone_0k68u_d9-frontend-1 Started
+
+3. Waiting for services to become healthy (up to 30s)...
+   Backend & FalkorDB healthy after 2s!
+
+--- A. CONTAINER STATUS ---
+NAME                                   IMAGE                                COMMAND                  SERVICE    CREATED         STATUS                   PORTS
+chronofork_clone_0k68u_d9-backend-1    chronofork_clone_0k68u_d9-backend    "uvicorn backend.app…"   backend    6 seconds ago   Up 2 seconds             0.0.0.0:8000->8000/tcp, [::]:8000->8000/tcp
+chronofork_clone_0k68u_d9-falkordb-1   falkordb/falkordb:latest             "/var/lib/falkordb/b…"   falkordb   6 seconds ago   Up 5 seconds (healthy)   0.0.0.0:3000->3000/tcp, [::]:3000->3000/tcp, 0.0.0.0:6379->6379/tcp, [::]:6379->6379/tcp
+chronofork_clone_0k68u_d9-frontend-1   chronofork_clone_0k68u_d9-frontend   "/docker-entrypoint.…"   frontend   5 seconds ago   Up 2 seconds             0.0.0.0:5173->5173/tcp, [::]:5173->5173/tcp
+
+--- B. GET /health ---
+{"status":"healthy","falkordb_connected":true,"active_graphs":["repo:taskflow","repo:analytics"]}
+
+--- C. GET /graph/taskflow NODE COUNT ---
+Graph 'taskflow' Node Count: 69 nodes, Edge Count: 109 edges
+
+--- D. REPLAY SCENARIO 1 VIA POST /runs ---
+POST /runs response: {"run_id":"run_1792233306955","status":"REPLAY_CACHED","scenario":1,"mode":"replay","cached":true,"events_count":14}
+Replay Run ID: run_1792233306955, Event Count: 14
+Final Pytest Verification: Passed = 12, Failed = 0, ExitCode = 0
+
+--- E. FRONTEND HTTP STATUS ---
+HTTP/1.1 200 OK
+Server: nginx/1.31.7
+Date: Sat, 17 Oct 2026 10:35:06 GMT
+Content-Type: text/html
+Content-Length: 947
+Last-Modified: Sat, 17 Oct 2026 10:35:00 GMT
+Connection: keep-alive
+ETag: "6ad34f54-3b3"
+Accept-Ranges: bytes
+
+--- F. PLAYWRIGHT CLEAN-CLONE UI SCREENSHOT ---
+Playwright Output:
+Navigating to http://localhost:5173...
+DOM memory label on first load: ABSENT (null)
+Clicking Play the Story button...
+Waiting for animation and story playback (3.5s)...
+Saved screenshot to: /Users/souhardya/ChronoFork/docs/screens/clean-clone-story.png
+
+Clean clone screenshot confirmed at: /Users/souhardya/ChronoFork/docs/screens/clean-clone-story.png
+
+5. Tearing down clean-clone Docker Compose containers...
+   Clean clone containers stopped and temp directory removed.
+
+6. Restoring local dev FalkorDB container...
+   FalkorDB started.
