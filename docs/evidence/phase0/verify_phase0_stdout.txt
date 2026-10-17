@@ -1,0 +1,66 @@
+Phase 0 Live Experiment Starting on FalkorDB...
+10-node toy graph created in 4.43ms. Nodes: 10.0, Relationships: 9.0
+
+--- TEST 1: graph.copy ---
+Cloned graph created in 105.46ms. Graphs list: ['verify_toy', 'verify_toy_clone']
+Cloned graph node count: 10
+
+--- TEST 1b: copy when dest already exists ---
+Result: Copy to existing target failed with error: ResponseError: destination key already exists
+
+--- TEST 2: algo.pageRank ---
+PageRank with ('Symbol', 'CALLS') executed in 3.84ms. Results:
+  Node E: PageRank score = 0.225993
+  Node D: PageRank score = 0.218103
+  Node C: PageRank score = 0.168242
+  Node B: PageRank score = 0.092348
+  Node H: PageRank score = 0.075096
+  Node F: PageRank score = 0.057845
+  Node A: PageRank score = 0.040593
+  Node G: PageRank score = 0.040593
+  Node I: PageRank score = 0.040593
+  Node J: PageRank score = 0.040593
+PageRank with no args failed: ResponseError: Procedure `algo.pageRank` requires 2 arguments, got 0
+
+--- TEST 3: algo.betweenness ---
+Betweenness with map syntax executed in 2.21ms. Results:
+  Node C: Betweenness score = 16.000000
+  Node B: Betweenness score = 9.000000
+  Node D: Betweenness score = 9.000000
+  Node F: Betweenness score = 3.000000
+  Node A: Betweenness score = 0.000000
+  Node E: Betweenness score = 0.000000
+  Node G: Betweenness score = 0.000000
+  Node H: Betweenness score = 0.000000
+  Node I: Betweenness score = 0.000000
+  Node J: Betweenness score = 0.000000
+
+--- TEST 4: Cypher shortestPath ---
+shortestPath in WITH clause executed in 2.02ms:
+  Path: ['A', 'B', 'C', 'D', 'E'], Hops: 4
+shortestPath in RETURN clause executed in 3.95ms:
+  Path object: <(0)-[0]->(1)-[1]->(2)-[2]->(3)-[3]->(4)>, nodes count: 5
+
+--- TEST 4b: Variable-length path (1..4 hops) ---
+Variable length path (1..4) executed in 1.41ms. Total paths found: 8:
+  A -> B via ['A', 'B'] (hops: 1)
+  A -> F via ['A', 'F'] (hops: 1)
+  A -> C via ['A', 'F', 'C'] (hops: 2)
+  A -> C via ['A', 'B', 'C'] (hops: 2)
+  A -> D via ['A', 'F', 'C', 'D'] (hops: 3)
+  A -> D via ['A', 'B', 'C', 'D'] (hops: 3)
+  A -> E via ['A', 'F', 'C', 'D', 'E'] (hops: 4)
+  A -> E via ['A', 'B', 'C', 'D', 'E'] (hops: 4)
+
+--- TEST 4c: algo.SPpaths ---
+algo.SPpaths executed in 0.93ms:
+  Path: ['A', 'B', 'C', 'D', 'E'], Length: 4
+
+--- TEST 5: Listing and Deleting Graphs ---
+Graphs before delete: ['verify_toy', 'verify_toy_clone']
+Graphs after clone_g.delete(): ['verify_toy']
+Graphs after g.delete(): []
+
+Phase 0 verification tests completed.
+redis_info: {'redis_version': '8.10.2', 'os': 'Linux 6.12.76-linuxkit aarch64', 'arch_bits': 64}
+modules: [{'name': 'vectorset', 'ver': 1, 'path': '', 'args': []}, {'name': 'graph', 'ver': 42201, 'path': '/var/lib/falkordb/bin/falkordb.so', 'args': ['MAX_QUEUED_QUERIES', '25', 'TIMEOUT', '1000', 'RESULTSET_SIZE', '10000']}]

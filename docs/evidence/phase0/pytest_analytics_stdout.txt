@@ -1,0 +1,11 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.11.17, pytest-9.1.1, pluggy-1.7.0 -- /Users/souhardya/ChronoFork/.venv/bin/python3.11
+cachedir: .pytest_cache
+rootdir: /Users/souhardya/ChronoFork
+plugins: anyio-4.15.1
+collecting ... collected 2 items
+
+demo_repo/analytics/tests/test_analytics.py::test_collect PASSED         [ 50%]
+demo_repo/analytics/tests/test_analytics.py::test_aggregate PASSED       [100%]
+
+============================== 2 passed in 0.00s ===============================
