@@ -76,7 +76,7 @@ export const ZeroPathProof: React.FC<ZeroPathProofProps> = ({
         <ShieldCheck className="w-4 h-4 text-[var(--clear)] shrink-0" />
         <span className="font-bold">ZERO COLLISIONS · memory-guided</span>
         <span className="text-[var(--text-dim)] font-sans text-[13px]">
-          Constraint prevented breaking changes before code was written
+          memory changed A1's claim to BODY_EDIT; the breaking-intent query returned 0 rows
         </span>
       </div>
     );
@@ -161,7 +161,7 @@ export const ZeroPathProof: React.FC<ZeroPathProofProps> = ({
           )}
 
           <div className="pt-2 text-[13px] font-mono text-[var(--clear)]">
-            Disjoint subgraphs confirmed · Parallel execution authorized
+            no breaking-intent claim reaches another claim · Parallel execution authorized
           </div>
         </div>
       </div>

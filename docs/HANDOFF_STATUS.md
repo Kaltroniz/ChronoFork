@@ -18,7 +18,7 @@
 | [`memory.py`](file:///Users/souhardya/ChronoFork/backend/app/memory.py) | Episodic and procedural memory management in `mem:<repo>`, managing `:Episode` and `:ProceduralRule` nodes with heuristic confidence clamping `[0.10, 0.99]`. |
 | [`scenario_runner.py`](file:///Users/souhardya/ChronoFork/backend/app/scenario_runner.py) | Deterministic and live orchestrator for Scenarios 1–4, driving isolated git merge experiments, coder patch applications, and verifier pytest runs. |
 | [`mcp_tools.py`](file:///Users/souhardya/ChronoFork/backend/app/mcp_tools.py) | FastMCP tool server and in-process interface exposing 7 native tools (`get_impact`, `rank_risk`, `claim_symbols`, `detect_collisions`, `recall_memory`, `fork_graph`, `record_episode`). |
-| [`event_stream.py`](file:///Users/souhardya/ChronoFork/backend/app/event_stream.py) | In-memory SSE event bus with zero-drop buffering and replay pacing via `delay_ms`. |
+| [`event_stream.py`](file:///Users/souhardya/ChronoFork/backend/app/event_stream.py) | In-memory SSE event bus with index-buffered replay and pacing via `delay_ms`. |
 | [`falkor_client.py`](file:///Users/souhardya/ChronoFork/backend/app/falkor_client.py) | Redis/FalkorDB connection management, query execution timing, and graph lifecycle operations. |
 | [`agents/coder.py`](file:///Users/souhardya/ChronoFork/backend/app/agents/coder.py) | Real workspace isolation (`WorkspaceManager`), automated pytest runner (`Verifier`), and the naive git merge experiment sandbox (`run_naive_git_merge_experiment`). |
 | [`agents/llm.py`](file:///Users/souhardya/ChronoFork/backend/app/agents/llm.py) | LLM patch generator supporting Gemini API with deterministic fallback. |
@@ -30,7 +30,7 @@
 | [`components/GraphCanvas.tsx`](file:///Users/souhardya/ChronoFork/frontend/src/components/GraphCanvas.tsx) | Cytoscape.js interactive canvas rendering code AST, compound module clusters, agent claim rings, collision chains, and handoffs. |
 | [`components/HeroSplit.tsx`](file:///Users/souhardya/ChronoFork/frontend/src/components/HeroSplit.tsx) | Comparison card contrasting Naive Git 0-conflict clean merge vs ChronoFork 4-hop transitive collision detection. |
 | [`components/ResultStrip.tsx`](file:///Users/souhardya/ChronoFork/frontend/src/components/ResultStrip.tsx) | Bottom telemetry drawer with tabs for Verdict, Fork Diff, Memory Drawer, and Merge Receipt. |
-| [`components/ZeroPathProof.tsx`](file:///Users/souhardya/ChronoFork/frontend/src/components/ZeroPathProof.tsx) | Mathematical proof card showing zero-path disjoint graph execution in Scenario 3. |
+| [`components/ZeroPathProof.tsx`](file:///Users/souhardya/ChronoFork/frontend/src/components/ZeroPathProof.tsx) | Zero-path proof card showing graph traversal results between claimed symbols. |
 | [`components/QueryInspector.tsx`](file:///Users/souhardya/ChronoFork/frontend/src/components/QueryInspector.tsx) | Live Cypher query inspector displaying exact Cypher text, parameters, and query execution times. |
 | [`components/AgentTimeline.tsx`](file:///Users/souhardya/ChronoFork/frontend/src/components/AgentTimeline.tsx) | Chronological swarm event timeline with phase indicators and tool call chips. |
 | [`components/ProvenanceStrip.tsx`](file:///Users/souhardya/ChronoFork/frontend/src/components/ProvenanceStrip.tsx) | Data provenance indicators (`GRAPH`, `GIT`, `PYTEST`, `LLM` as REAL vs CACHED). |
@@ -165,22 +165,47 @@
 1. **Hardcoded WSL path in `scripts/test_migration_sandbox.py`**:
    Line 4 contains `/mnt/c/Users/Acer/OneDrive/Documents/hackathons/New folder/demo_repo/taskflow`, crashing on non-WSL environments.
 2. **ResultStrip Verdict Placeholder Bug**:
-   In `frontend/src/components/ResultStrip.tsx` lines 332 and 403, when `!gitOccurred` and `!verificationOccurred`, the UI hardcodes `— PASSED` in the Git column and `— FAILED` in the ChronoFork column before any pytest event has arrived.
+   FIXED in Phase 1 (`frontend/src/components/ResultStrip.tsx`). Empty state now renders neutral `PENDING`, and `Not run in this scenario` for Scenarios 2 & 3.
 3. **GraphCanvas Fallback Symbol Hardcoding**:
-   `frontend/src/components/GraphCanvas.tsx` lines 132, 144, 902, 988, 989, 1277-1294 fall back to hardcoded strings (`taskflow.config.load_config`, `taskflow.worker.execute_job`, `taskflow.reports.generator.generate_summary`).
+   FIXED in Phase 1 (`frontend/src/components/GraphCanvas.tsx`). All 9 hard-coded fallback occurrences removed; renders nothing when event claims are missing.
 4. **Permanent `memoryWasReset` in Frontend**:
-   `setMemoryWasReset(false)` is never called in `App.tsx`, preventing the "carried over" label from reappearing after Scenario 1 writes a new memory episode.
+   FIXED in Phase 1 (`frontend/src/App.tsx`). `setMemoryWasReset(false)` fires on `MEMORY_UPDATE` and memory writes, restoring the "carried over" label.
 5. **Coder `pytest_cmd` Search Path**:
    `coder.py` line 41 checks `/opt/venv/bin/pytest` and falls back to `pytest`. If `pytest` is not in the system `PATH`, it fails with 0 passed / 1 failed.
 
-### Unverified Claims Found in Docs/README
-1. **"Bayesian" Confidence**:
-   `backend/app/memory.py` calls it "Dynamic Bayesian/heuristic confidence", but the update equation is a linear step (`+0.10` / `-0.20`) clamped to `[0.10, 0.99]`. It is a heuristic, not Bayesian probability inference.
-2. **"LLM CACHED" Badge**:
-   `frontend/src/adapters/events.ts` line 423 unconditionally marks `LLM: CACHED` in replay mode, even for deterministic patches where no LLM was used.
-3. **Blog Post Latencies without Graph Sizes**:
-   `docs/blog-post.md` claims `1.8 ms`, `1.45 ms`, `36.1 ms` without specifying graph size, whereas live verification measured `105.46 ms` for `graph.copy` on the 10-node graph and `3.84 ms` for `algo.pageRank`.
-4. **"Microsecond" Speculative Graph Branching**:
-   `docs/blog-post.md` section header claims "Microsecond Speculative Graph Branching (`36.1 ms`)"—36 ms is milliseconds, not microseconds.
-5. **Zero-Collision Attribution in Scenario 2 & 3**:
-   The Cypher query filters by `c1.intent IN ['SIGNATURE_CHANGE', 'DELETE']`. When both agents claim `BODY_EDIT`, the query returns 0 rows due to the intent filter alone, regardless of graph connectivity. Calling it "disjoint subgraphs confirmed" in Scenario 2 is inaccurate (a 4-hop physical path exists).
+---
+
+## 6. Phase 1 Frontend Corrections Findings
+
+### Done (with Evidence Path: `docs/evidence/phase1/`)
+- **Single Source of Truth (`replays/`)**:
+  - Deleted duplicate fixture file `frontend/src/fixtures/scenario_1.json` (Commit `a6de138`).
+  - Removed dev fallback in `frontend/src/App.tsx`; the console strictly consumes backend SSE streams from `replays/`.
+- **Zero Hard-Coded Results**:
+  - `git grep` verified 0 hits for `12 PASSED`, `5 FAILED`, `1.39`, and `taskflow.` fallback strings across `frontend/src/`.
+- **GraphCanvas.tsx Fallback Strings Removed**:
+  - All 9 fallback occurrences removed. If a node/claim is missing, it renders nothing.
+  - Compound module label font size constrained to 15px (within 13px - 16px constraint).
+  - Explicit legend swatches added for A2 (`#E0A458`) and A3 (`#4FB286`) in Scenario 3.
+- **Verdict & ZeroPath Proof Placeholders Fixed**:
+  - Before test data arrives, displays neutral `PENDING`.
+  - For Scenarios 2 and 3 in the Git column, displays `Not run in this scenario`.
+  - ChronoFork column never displays `FAILED` beside a SAFE card.
+  - Scenario 2 card text updated to: `"memory changed A1's claim to BODY_EDIT; the breaking-intent query returned 0 rows"`.
+  - Intent-filtered query card footer updated to: `"no breaking-intent claim reaches another claim · Parallel execution authorized"`.
+- **Provenance & Badges**:
+  - Derived strictly from `event.provenance`. If missing, renders `UNLABELLED`.
+  - LLM badge hidden unless `activeEvent.provenance.llm` is defined.
+  - Receipt capture timestamp formatted with date and timezone via `toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'medium', timeZoneName: 'short' })`.
+- **Memory Reset State Progression**:
+  - Verified live sequence `Reset -> Run S1 -> Label State` (`docs/evidence/phase1/reset_run_s1_sequence_stdout.txt`).
+- **Playwright State-Assertion Code Embedded**:
+  - Embedded in `scripts/ui_shots.ts` (screenshot and video generation deferred to after Phase 2 per Amendment 2).
+
+### Partial
+- Replays regeneration and provenance field injection will be performed in Phase 2.
+
+### Not Done (Reserved for Phase 2+)
+- Live LLM execution integration and path-existence Cypher query (Phase 2).
+- Detection benchmark suite (Phase 3).
+

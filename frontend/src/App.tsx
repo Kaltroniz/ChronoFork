@@ -194,6 +194,11 @@ export const App: React.FC = () => {
             const normalized = normalizeEvent(raw);
             receivedEvents.push(normalized);
             setEvents([...receivedEvents]);
+
+            if (normalized.phase === 'MEMORY_UPDATE' || normalized.phase === 'MEMORY_PERSISTENCE' || normalized.memory_write) {
+              setMemoryWasReset(false);
+              fetchMemoryData(targetRepo);
+            }
           } catch (err) {
             console.error('SSE parse error:', err);
           }
@@ -206,20 +211,6 @@ export const App: React.FC = () => {
         console.error('Error starting scenario:', err);
         setErrorMessage('Failed to start scenario execution. Ensure backend is running.');
         setIsRunning(false);
-
-        // Fallback to dev fixture if in dev
-        if (import.meta.env.DEV && scId === 1) {
-          try {
-            const fixtureModule = await import('./fixtures/scenario_1.json');
-            const fixtureEvents = (fixtureModule.default || fixtureModule).map(normalizeEvent);
-            setEvents(fixtureEvents);
-            setIsDevFixture(true);
-            setIsRunning(true);
-            setIsPaused(false);
-          } catch (fErr) {
-            console.warn('Dev fixture not loaded:', fErr);
-          }
-        }
       }
     },
     [selectedRepo, mode, memoryEnabled, fetchMemoryData]

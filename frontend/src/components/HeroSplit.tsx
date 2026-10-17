@@ -84,7 +84,7 @@ export const HeroSplit: React.FC<HeroSplitProps> = ({
 
   return (
     <div
-      className="absolute top-4 left-6 z-30 w-[780px] max-w-[94%] max-h-[230px] overflow-hidden cf-floating-card p-3.5 transition-opacity duration-200 shadow-2xl select-none"
+      className="absolute top-4 left-6 z-30 w-[780px] max-w-[94%] max-h-[380px] overflow-y-auto cf-scrollbar cf-floating-card p-3.5 transition-opacity duration-200 shadow-2xl select-none"
       role="alert"
       aria-label="Collision Detection Split View"
     >

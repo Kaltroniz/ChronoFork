@@ -193,7 +193,11 @@ export const ResultStrip: React.FC<ResultStripProps> = ({
   };
 
   const captureTime = activeEvent?.ts
-    ? new Date(activeEvent.ts * 1000).toLocaleTimeString()
+    ? new Date(activeEvent.ts * 1000).toLocaleString(undefined, {
+        dateStyle: 'short',
+        timeStyle: 'medium',
+        timeZoneName: 'short'
+      })
     : '—';
 
   return (
@@ -312,32 +316,35 @@ export const ResultStrip: React.FC<ResultStripProps> = ({
                       </div>
 
                       <div className="my-2">
-                        {gitOccurred ? (
+                        {currentScenario === 2 || currentScenario === 3 ? (
+                          <div className="text-[14px] text-[var(--text-dim)] font-mono py-2">
+                            Not run in this scenario
+                          </div>
+                        ) : gitOccurred && gitData?.pytestFailed !== undefined ? (
                           <>
                             <div className="text-tally text-[var(--breach)]">
-                              {gitData?.pytestFailed !== undefined
-                                ? `${gitData.pytestFailed} FAILED`
-                                : '— FAILED'}
+                              {gitData.pytestFailed} FAILED
                             </div>
                             <div className="text-[16px] text-[var(--text-dim)] font-bold mt-1">
-                              {gitData?.pytestPassed !== undefined
+                              {gitData.pytestPassed !== undefined
                                 ? `${gitData.pytestPassed} PASSED`
-                                : '— PASSED'}
+                                : ''}
                             </div>
                           </>
                         ) : (
-                          <>
-                            <div className="text-tally text-[var(--text-dim)]">—</div>
-                            <div className="text-[16px] text-[var(--text-faint)] font-bold mt-1">
-                              — PASSED
-                            </div>
-                          </>
+                          <div className="text-tally text-[var(--text-dim)] font-mono">
+                            PENDING
+                          </div>
                         )}
                       </div>
                     </div>
 
                     <div className="border-t border-[var(--line)] pt-2 text-[var(--text-dim)] text-[13px] font-sans">
-                      {gitOccurred ? (
+                      {currentScenario === 2 || currentScenario === 3 ? (
+                        <div className="text-[var(--text-faint)] text-[13px]">
+                          Baseline comparison not applicable for this scenario.
+                        </div>
+                      ) : gitOccurred ? (
                         <>
                           {gitData?.durationSeconds !== undefined
                             ? `Pytest duration: ${gitData.durationSeconds.toFixed(2)}s`
@@ -383,26 +390,23 @@ export const ResultStrip: React.FC<ResultStripProps> = ({
                       </div>
 
                       <div className="my-2">
-                        {verificationOccurred ? (
+                        {verificationOccurred && verifierData?.passedCount !== undefined ? (
                           <>
                             <div className="text-tally text-[var(--clear)]">
-                              {verifierData?.passedCount !== undefined
-                                ? `${verifierData.passedCount} PASSED`
-                                : '— PASSED'}
+                              {verifierData.passedCount} PASSED
                             </div>
                             <div className="text-[16px] text-[var(--text-dim)] font-bold mt-1">
-                              {verifierData?.failedCount !== undefined
-                                ? `${verifierData.failedCount} FAILED`
-                                : '— FAILED'}
+                              {verifierData.failedCount ? `${verifierData.failedCount} FAILED` : '0 FAILED'}
                             </div>
                           </>
+                        ) : currentScenario === 3 ? (
+                          <div className="text-[14px] text-[var(--clear)] font-mono py-2 font-semibold">
+                            SAFE · PARALLEL OK
+                          </div>
                         ) : (
-                          <>
-                            <div className="text-tally text-[var(--text-dim)]">—</div>
-                            <div className="text-[16px] text-[var(--text-faint)] font-bold mt-1">
-                              — FAILED
-                            </div>
-                          </>
+                          <div className="text-tally text-[var(--text-dim)] font-mono">
+                            PENDING
+                          </div>
                         )}
                       </div>
                     </div>

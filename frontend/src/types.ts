@@ -48,6 +48,14 @@ export interface SwarmEvent {
   scores?: Record<string, any>;
   collision?: CollisionInfo | null;
   memory_write?: MemoryWrite | null;
+  provenance?: {
+    graph?: "REAL" | "CACHED" | "SIMULATED";
+    git?: "REAL" | "CACHED" | "SIMULATED";
+    pytest?: "REAL" | "CACHED" | "SIMULATED";
+    llm?: "REAL" | "CACHED" | "SIMULATED";
+    capture_time?: string;
+    timezone?: string;
+  };
   message: string;
 }
 

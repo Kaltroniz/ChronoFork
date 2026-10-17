@@ -1,6 +1,6 @@
 import { SwarmEvent, CollisionInfo, MemoryWrite, CypherTrace } from '../types';
 
-export type ProvenanceState = 'REAL' | 'CACHED' | 'SIMULATED' | 'UNAVAILABLE';
+export type ProvenanceState = 'REAL' | 'CACHED' | 'SIMULATED' | 'UNAVAILABLE' | 'UNLABELLED';
 
 export interface NormalizedGitData {
   status?: string;
@@ -98,6 +98,7 @@ export function normalizeEvent(raw: any): SwarmEvent {
     scores: raw.scores || undefined,
     collision: raw.collision || undefined,
     memory_write: raw.memory_write || undefined,
+    provenance: raw.provenance || undefined,
     message: String(raw.message || '')
   };
 }
@@ -412,28 +413,22 @@ export function getAgentInitials(agentOrId: string | AgentIdentity): string {
 }
 
 /**
- * Returns provenance state for a given category
+ * Returns provenance state for a given category strictly from event.provenance.
+ * If absent, returns UNLABELLED.
  */
 export function getProvenance(
   category: 'GRAPH' | 'GIT' | 'PYTEST' | 'LLM',
   e?: SwarmEvent | null,
-  runMode: 'replay' | 'live' = 'replay'
+  _runMode: 'replay' | 'live' = 'replay'
 ): ProvenanceState {
-  if (runMode === 'replay') {
-    return 'CACHED';
+  if (!e?.provenance) {
+    return 'UNLABELLED';
   }
 
-  // Live execution mode
-  switch (category) {
-    case 'GRAPH':
-      return e?.trace ? 'REAL' : 'REAL';
-    case 'GIT':
-      return e?.phase === 'GIT_COMPARISON' ? 'REAL' : 'REAL';
-    case 'PYTEST':
-      return e?.phase === 'VERIFICATION' || e?.tool === 'run_pytest' ? 'REAL' : 'REAL';
-    case 'LLM':
-      return 'REAL';
-    default:
-      return 'UNAVAILABLE';
+  const key = category.toLowerCase() as 'graph' | 'git' | 'pytest' | 'llm';
+  const val = e.provenance[key];
+  if (val === 'REAL' || val === 'CACHED' || val === 'SIMULATED') {
+    return val;
   }
+  return 'UNLABELLED';
 }

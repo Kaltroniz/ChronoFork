@@ -42,17 +42,33 @@ const STATE_CONFIG: Record<
     dotColor: 'var(--text-faint)',
     textColor: 'var(--text-faint)',
     tooltip: 'Component telemetry unavailable or not invoked during this execution step.'
+  },
+  UNLABELLED: {
+    dotColor: 'var(--text-faint)',
+    textColor: 'var(--text-dim)',
+    tooltip: 'No provenance telemetry recorded on this event.'
   }
 };
 
 export const ProvenanceStrip: React.FC<ProvenanceStripProps> = ({ activeEvent, mode }) => {
   const timestampStr = activeEvent?.ts
-    ? new Date(activeEvent.ts * 1000).toLocaleTimeString()
-    : '11:42:00';
+    ? new Date(activeEvent.ts * 1000).toLocaleString(undefined, {
+        dateStyle: 'short',
+        timeStyle: 'medium',
+        timeZoneName: 'short'
+      })
+    : '—';
+
+  const visiblePills = PILLS.filter((pill) => {
+    if (pill.key === 'LLM') {
+      return Boolean(activeEvent?.provenance?.llm);
+    }
+    return true;
+  });
 
   return (
     <div className="flex items-center gap-2 select-none" role="region" aria-label="System Provenance">
-      {PILLS.map((pill) => {
+      {visiblePills.map((pill) => {
         const state = getProvenance(pill.key, activeEvent, mode);
         const config = STATE_CONFIG[state] || STATE_CONFIG.UNAVAILABLE;
 

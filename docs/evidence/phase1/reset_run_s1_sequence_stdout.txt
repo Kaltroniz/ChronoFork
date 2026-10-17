@@ -1,0 +1,9 @@
+=== TESTING SEQUENCE: Reset -> Run S1 -> Verify Memory Episode & Label State ===
+Step 1 (Reset): {"status":"SUCCESS","message":"Memory graph mem:taskflow has been reset."}
+Memory count immediately after reset: rules=0, episodes=0
+UI State: memoryWasReset=True -> "carried over" label is HIDDEN
+Step 2 (Execute S1 Live): run_id=run_1792222194642, status=LIVE_EXECUTED
+Events streamed: 15, Memory write events: 1
+Memory count after S1 run: rules=1, episodes=1
+UI State Transition: MEMORY_UPDATE event received -> setMemoryWasReset(false) fired!
+UI State now: memoryWasReset=False -> "Memory state: carried over from previous runs" label is VISIBLE!

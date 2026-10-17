@@ -126,28 +126,18 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
         }
       } else if (e.phase === 'MEMORY_ADAPTATION') {
         // Scenario 2: Memory-adapted claims
-        // A1 adapts intent on load_config to BODY_EDIT
-        map.set('A1', {
-          agentId: 'A1',
-          nodeId: (e.node_ids && e.node_ids[0]) || 'taskflow.config.load_config',
-          agent: 'agent-claim-a1',
-          initials: 'A1',
-          color: getAgentColor('A1'),
-          intent: 'BODY_EDIT',
-          chipLabel: 'A1 · BODY_EDIT',
-          agentName: 'ConfigCoder'
-        });
-
-        if (!map.has('A2')) {
-          map.set('A2', {
-            agentId: 'A2',
-            nodeId: 'taskflow.worker.execute_job',
-            agent: 'agent-claim-a2',
-            initials: 'A2',
-            color: getAgentColor('A2'),
+        // A1 adapts intent on claimed symbol to BODY_EDIT
+        const nodeId = (e.node_ids && e.node_ids[0]);
+        if (nodeId) {
+          map.set('A1', {
+            agentId: 'A1',
+            nodeId,
+            agent: 'agent-claim-a1',
+            initials: 'A1',
+            color: getAgentColor('A1'),
             intent: 'BODY_EDIT',
-            chipLabel: 'A2 · BODY_EDIT',
-            agentName: 'WorkerCoder'
+            chipLabel: 'A1 · BODY_EDIT',
+            agentName: 'ConfigCoder'
           });
         }
       }
@@ -272,7 +262,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
             'transition-duration': 0.3
           }
         },
-        // Compound Module Container: 18px bold label
+        // Compound Module Container: 15px bold label (max 16px constraint)
         {
           selector: 'node:parent',
           style: {
@@ -282,7 +272,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
             'border-color': '#2E3846',
             'border-style': 'dashed',
             'label': 'data(name)',
-            'font-size': 18,
+            'font-size': 15,
             'font-weight': 'bold',
             'font-family': 'Inter, system-ui, sans-serif',
             'color': '#A6AFBD',
@@ -899,23 +889,25 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
       const forkEvent = eventsUpToNow.find((e) => e.phase === 'FORK_SIMULATION');
       if (forkEvent && currentScenario === 1) {
         const a1Claim = claims.find((c) => c.agentId === 'A1');
-        const startNodeId = a1Claim?.nodeId || 'taskflow.config.load_config';
-        const startNode = cy.getElementById(startNodeId);
-        if (startNode.length > 0) {
-          const revChain: string[] = [startNodeId];
-          let curr: any = startNode;
-          for (let hop = 0; hop < 4; hop++) {
-            const callers = curr.incomers('edge[type = "CALLS"]').sources();
-            if (callers.length === 0) break;
-            const next: any = callers[0];
-            revChain.unshift(next.id());
-            curr = next;
+        const startNodeId = a1Claim?.nodeId;
+        if (startNodeId) {
+          const startNode = cy.getElementById(startNodeId);
+          if (startNode.length > 0) {
+            const revChain: string[] = [startNodeId];
+            let curr: any = startNode;
+            for (let hop = 0; hop < 4; hop++) {
+              const callers = curr.incomers('edge[type = "CALLS"]').sources();
+              if (callers.length === 0) break;
+              const next: any = callers[0];
+              revChain.unshift(next.id());
+              curr = next;
+            }
+            chainNodeIds = revChain;
+          } else {
+            chainNodeIds = [startNodeId];
           }
-          chainNodeIds = revChain;
-        } else {
-          chainNodeIds = [startNodeId];
+          isBlastRadius = true;
         }
-        isBlastRadius = true;
       }
     }
 
@@ -985,8 +977,8 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
           return res;
         };
 
-        const neighA2 = get4HopNeighborhood(a2Claim?.nodeId || 'taskflow.worker.execute_job');
-        const neighA3 = get4HopNeighborhood(a3Claim?.nodeId || 'taskflow.reports.generator.generate_summary');
+        const neighA2 = a2Claim?.nodeId ? get4HopNeighborhood(a2Claim.nodeId) : new Set<string>();
+        const neighA3 = a3Claim?.nodeId ? get4HopNeighborhood(a3Claim.nodeId) : new Set<string>();
 
         neighA2.forEach((id) => visibleIds.add(id));
         neighA3.forEach((id) => visibleIds.add(id));
@@ -1274,33 +1266,39 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
 
     // HANDOFF animated arrow & DOM overlay position
     if (activeEvent?.phase === 'HANDOFF') {
-      const a1Node = cy.getElementById('taskflow.config.load_config');
-      const a2Node = cy.getElementById('taskflow.worker.execute_job');
-      if (a1Node.length > 0 && a2Node.length > 0) {
-        const p1 = a1Node.renderedPosition();
-        const p2 = a2Node.renderedPosition();
-        setHandoffPos({
-          x: (p1.x + p2.x) / 2,
-          y: (p1.y + p2.y) / 2 - 45
-        });
-      }
-      let handoffEdge = cy.getElementById('handoff-edge');
-      if (handoffEdge.length === 0) {
-        handoffEdge = cy.add({
-          group: 'edges',
-          data: {
-            id: 'handoff-edge',
-            source: 'taskflow.config.load_config',
-            target: 'taskflow.worker.execute_job',
-            label: 'HANDED OFF'
-          },
-          classes: 'handoff-animated-edge'
-        });
-        handoffEdge.style({ opacity: 0 });
-        handoffEdge.animate(
-          { style: { opacity: 1 } },
-          { duration: prefersReducedMotion.current ? 0 : 400 }
-        );
+      const a1Claim = claims.find((c) => c.agentId === 'A1');
+      const a2Claim = claims.find((c) => c.agentId === 'A2');
+      const a1NodeId = a1Claim?.nodeId;
+      const a2NodeId = a2Claim?.nodeId;
+      if (a1NodeId && a2NodeId) {
+        const a1Node = cy.getElementById(a1NodeId);
+        const a2Node = cy.getElementById(a2NodeId);
+        if (a1Node.length > 0 && a2Node.length > 0) {
+          const p1 = a1Node.renderedPosition();
+          const p2 = a2Node.renderedPosition();
+          setHandoffPos({
+            x: (p1.x + p2.x) / 2,
+            y: (p1.y + p2.y) / 2 - 45
+          });
+          let handoffEdge = cy.getElementById('handoff-edge');
+          if (handoffEdge.length === 0) {
+            handoffEdge = cy.add({
+              group: 'edges',
+              data: {
+                id: 'handoff-edge',
+                source: a1NodeId,
+                target: a2NodeId,
+                label: 'HANDED OFF'
+              },
+              classes: 'handoff-animated-edge'
+            });
+            handoffEdge.style({ opacity: 0 });
+            handoffEdge.animate(
+              { style: { opacity: 1 } },
+              { duration: prefersReducedMotion.current ? 0 : 400 }
+            );
+          }
+        }
       }
     } else {
       setHandoffPos(null);
@@ -1427,6 +1425,21 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
           <span className="w-4 h-0.5 border-t border-dashed border-[var(--text-dim)] opacity-80" />
           <span>TESTED_BY</span>
         </div>
+
+        {/* Scenario 3: Explicit legend entries for A2 and A3 distinct neighborhood colors */}
+        {currentScenario === 3 && (
+          <>
+            <div className="w-[1px] h-3 bg-[var(--line)]" />
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#E0A458] border border-[var(--line)]" />
+              <span className="text-[var(--text)] font-semibold">A2 Neighborhood</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#4FB286] border border-[var(--line)]" />
+              <span className="text-[var(--text)] font-semibold">A3 Neighborhood</span>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Canvas Controls Bottom-Right: Toggles & Zoom */}
