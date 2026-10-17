@@ -51,6 +51,9 @@ def main():
         log("PHASE 5-LITE: CLEAN CLONE DOCKER COMPOSE DEPLOYMENT TEST", f_out)
         log("============================================================\n", f_out)
 
+        # Ensure no host containers are occupying ports
+        run_cmd("docker compose down -v", cwd=WORKSPACE_ROOT)
+
         temp_dir = tempfile.mkdtemp(prefix="chronofork_clone_")
         log(f"1. Cloning local branch SS1 into temporary directory: {temp_dir}...", f_out)
         clone_cmd = f"git clone --branch SS1 file://{WORKSPACE_ROOT} {temp_dir}"
