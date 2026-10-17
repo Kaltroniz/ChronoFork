@@ -1,0 +1,6 @@
+=== docs/screens/scenario1.webm ===
+17.800000
+=== docs/screens/scenario2.webm ===
+13.520000
+=== docs/screens/scenario3.webm ===
+13.560000

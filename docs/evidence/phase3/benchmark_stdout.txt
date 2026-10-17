@@ -1,0 +1,105 @@
+============================================================
+CHRONOFORK DETECTION BENCHMARK SUITE
+Random Seed: 2026
+Ground Truth: STRICT RUNTIME EXECUTION (pytest in scratch workspace)
+Skipping external public repo: To guarantee reproducible execution within local environment.
+============================================================
+
+Total Seeded Cases Generated: 42 (Target: >= 40)
+Running evaluation...
+
+Case 01 [direct_call           ]: GT=COLLISION | Git=MISSED   | CF=DETECTED (1.48ms)
+Case 02 [direct_call           ]: GT=COLLISION | Git=MISSED   | CF=DETECTED (1.12ms)
+Case 03 [direct_call           ]: GT=COLLISION | Git=MISSED   | CF=DETECTED (0.58ms)
+Case 04 [direct_call           ]: GT=COLLISION | Git=MISSED   | CF=DETECTED (1.22ms)
+Case 05 [two_hops              ]: GT=COLLISION | Git=MISSED   | CF=DETECTED (1.23ms)
+Case 06 [two_hops              ]: GT=COLLISION | Git=MISSED   | CF=DETECTED (1.68ms)
+Case 07 [two_hops              ]: GT=COLLISION | Git=MISSED   | CF=DETECTED (1.10ms)
+Case 08 [two_hops              ]: GT=COLLISION | Git=MISSED   | CF=DETECTED (1.62ms)
+Case 09 [three_hops            ]: GT=COLLISION | Git=MISSED   | CF=DETECTED (1.67ms)
+Case 10 [three_hops            ]: GT=COLLISION | Git=MISSED   | CF=DETECTED (2.14ms)
+Case 11 [three_hops            ]: GT=COLLISION | Git=MISSED   | CF=DETECTED (1.38ms)
+Case 12 [three_hops            ]: GT=COLLISION | Git=MISSED   | CF=DETECTED (1.54ms)
+Case 13 [four_hops             ]: GT=COLLISION | Git=MISSED   | CF=DETECTED (1.51ms)
+Case 14 [four_hops             ]: GT=COLLISION | Git=MISSED   | CF=DETECTED (0.56ms)
+Case 15 [four_hops             ]: GT=COLLISION | Git=MISSED   | CF=DETECTED (1.75ms)
+Case 16 [four_hops             ]: GT=COLLISION | Git=MISSED   | CF=DETECTED (1.71ms)
+Case 17 [self_method           ]: GT=COLLISION | Git=MISSED   | CF=MISSED   (1.19ms)
+Case 18 [self_method           ]: GT=COLLISION | Git=MISSED   | CF=MISSED   (0.89ms)
+Case 19 [self_method           ]: GT=COLLISION | Git=MISSED   | CF=MISSED   (1.49ms)
+Case 20 [self_method           ]: GT=COLLISION | Git=MISSED   | CF=MISSED   (1.23ms)
+Case 21 [getattr_call          ]: GT=COLLISION | Git=MISSED   | CF=MISSED   (1.30ms)
+Case 22 [getattr_call          ]: GT=COLLISION | Git=MISSED   | CF=MISSED   (1.26ms)
+Case 23 [getattr_call          ]: GT=COLLISION | Git=MISSED   | CF=MISSED   (1.41ms)
+Case 24 [getattr_call          ]: GT=COLLISION | Git=MISSED   | CF=MISSED   (1.24ms)
+Case 25 [alias_call            ]: GT=COLLISION | Git=MISSED   | CF=MISSED   (1.60ms)
+Case 26 [alias_call            ]: GT=COLLISION | Git=MISSED   | CF=MISSED   (1.33ms)
+Case 27 [alias_call            ]: GT=COLLISION | Git=MISSED   | CF=MISSED   (1.47ms)
+Case 28 [alias_call            ]: GT=COLLISION | Git=MISSED   | CF=MISSED   (1.30ms)
+Case 29 [dict_dispatch         ]: GT=COLLISION | Git=MISSED   | CF=MISSED   (1.44ms)
+Case 30 [dict_dispatch         ]: GT=COLLISION | Git=MISSED   | CF=MISSED   (1.44ms)
+Case 31 [dict_dispatch         ]: GT=COLLISION | Git=MISSED   | CF=MISSED   (1.45ms)
+Case 32 [dict_dispatch         ]: GT=COLLISION | Git=MISSED   | CF=MISSED   (1.19ms)
+Case 33 [import_inside_function]: GT=COLLISION | Git=MISSED   | CF=DETECTED (1.35ms)
+Case 34 [import_inside_function]: GT=COLLISION | Git=MISSED   | CF=DETECTED (0.55ms)
+Case 35 [import_inside_function]: GT=COLLISION | Git=MISSED   | CF=DETECTED (1.68ms)
+Case 36 [import_inside_function]: GT=COLLISION | Git=MISSED   | CF=DETECTED (1.70ms)
+Case 37 [unrelated_pairs       ]: GT=SAFE      | Git=MISSED   | CF=MISSED   (1.49ms)
+Case 38 [unrelated_pairs       ]: GT=SAFE      | Git=MISSED   | CF=MISSED   (1.41ms)
+Case 39 [unrelated_pairs       ]: GT=SAFE      | Git=MISSED   | CF=MISSED   (1.60ms)
+Case 40 [unrelated_pairs       ]: GT=SAFE      | Git=MISSED   | CF=MISSED   (1.46ms)
+Case 41 [direct_call           ]: GT=COLLISION | Git=MISSED   | CF=DETECTED (1.48ms)
+Case 42 [four_hops             ]: GT=COLLISION | Git=MISSED   | CF=DETECTED (1.60ms)
+
+============================================================
+BENCHMARK EVALUATION SUMMARY
+============================================================
+Total Cases: 42
+Ground Truth Positives (Real Collisions): 38
+Ground Truth Negatives (Safe Non-Colliding): 4
+
+| Detector | TP | FP | FN | TN | Precision | Recall |
+|---|---|---|---|---|---|---|
+| Git Merge + Tests | 0 | 0 | 38 | 4 | 0.0% | 0.0% |
+| ChronoFork (FalkorDB) | 22 | 0 | 16 | 4 | 100.0% | 57.9% |
+
+Detection Latency (ChronoFork Query):
+  Min:    0.55 ms
+  Median: 1.44 ms
+  Max:    2.14 ms
+
+Per-Pattern Breakdown (ChronoFork):
+| Pattern | Total | GT Collisions | CF Detected | CF Recall | Status |
+|---|---|---|---|---|---|
+| direct_call            | 5     | 5             | 5           | 100%      | DETECTED |
+| two_hops               | 4     | 4             | 4           | 100%      | DETECTED |
+| three_hops             | 4     | 4             | 4           | 100%      | DETECTED |
+| four_hops              | 5     | 5             | 5           | 100%      | DETECTED |
+| self_method            | 4     | 4             | 0           | 0%        | BLIND SPOT |
+| getattr_call           | 4     | 4             | 0           | 0%        | BLIND SPOT |
+| alias_call             | 4     | 4             | 0           | 0%        | BLIND SPOT |
+| dict_dispatch          | 4     | 4             | 0           | 0%        | BLIND SPOT |
+| import_inside_function | 4     | 4             | 4           | 100%      | DETECTED |
+| unrelated_pairs        | 4     | 0             | 0           | N/A       | DETECTED |
+
+ChronoFork Blind Spots & Misses (16 total):
+  - Case 17 [self_method]: Call chain traversal did not bridge AST nodes.
+  - Case 18 [self_method]: Call chain traversal did not bridge AST nodes.
+  - Case 19 [self_method]: Call chain traversal did not bridge AST nodes.
+  - Case 20 [self_method]: Call chain traversal did not bridge AST nodes.
+  - Case 21 [getattr_call]: Dynamic string lookup via getattr() cannot be resolved by static AST without runtime dataflow.
+  - Case 22 [getattr_call]: Dynamic string lookup via getattr() cannot be resolved by static AST without runtime dataflow.
+  - Case 23 [getattr_call]: Dynamic string lookup via getattr() cannot be resolved by static AST without runtime dataflow.
+  - Case 24 [getattr_call]: Dynamic string lookup via getattr() cannot be resolved by static AST without runtime dataflow.
+  - Case 25 [alias_call]: Variable aliasing (local_alias = func) not tracked across module scope.
+  - Case 26 [alias_call]: Variable aliasing (local_alias = func) not tracked across module scope.
+  - Case 27 [alias_call]: Variable aliasing (local_alias = func) not tracked across module scope.
+  - Case 28 [alias_call]: Variable aliasing (local_alias = func) not tracked across module scope.
+  - Case 29 [dict_dispatch]: Dynamic dictionary dispatch table lookup cannot be resolved by static AST.
+  - Case 30 [dict_dispatch]: Dynamic dictionary dispatch table lookup cannot be resolved by static AST.
+  - Case 31 [dict_dispatch]: Dynamic dictionary dispatch table lookup cannot be resolved by static AST.
+  - Case 32 [dict_dispatch]: Dynamic dictionary dispatch table lookup cannot be resolved by static AST.
+
+Raw CSV saved: /Users/souhardya/ChronoFork/docs/evidence/phase3/benchmark_results.csv
+Raw JSON saved: /Users/souhardya/ChronoFork/docs/evidence/phase3/benchmark_results.json
+============================================================

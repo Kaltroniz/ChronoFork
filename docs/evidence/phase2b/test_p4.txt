@@ -1,0 +1,26 @@
+=== P4 Acceptance Test Starting ===
+
+--- Testing FastMCP Tools in-process ---
+FastMCP get_impact: SUCCESS (7 callers, 5 tests)
+FastMCP rank_risk: SUCCESS (load_config risk = 0.825)
+FastMCP recall_memory: SUCCESS (1 rules recalled)
+
+--- Testing FastAPI Endpoints ---
+GET /health: 200 OK
+GET /graph/repo:taskflow: 200 OK (69 nodes, 109 edges in Cytoscape format)
+
+--- Testing POST /runs & SSE Event Buffer Replay ---
+POST /runs: 200 OK (run_id: test_p4_run)
+GET /runs/test_p4_run/events: received 14 buffered events starting from index 0!
+PASSED: Every emitted event strictly conforms to prompt specification!
+PASSED: Collision correctly streamed (4 hops): Agent agent_1 claims taskflow.config.load_config (SIGNATURE_CHANGE, risk=0.8250)...
+GET /memory/taskflow: 200 OK (1 rules, 1 episodes for Memory Drawer)
+
+>>> P4 ACCEPTANCE TEST PASSED SUCCESSFULLY! Full run works in replay with zero API key! <<<
+
+STDERR:
+HTTP Request: GET http://testserver/health "HTTP/1.1 200 OK"
+HTTP Request: GET http://testserver/graph/repo:taskflow "HTTP/1.1 200 OK"
+HTTP Request: POST http://testserver/runs "HTTP/1.1 200 OK"
+HTTP Request: GET http://testserver/runs/test_p4_run/events?delay_ms=0 "HTTP/1.1 200 OK"
+HTTP Request: GET http://testserver/memory/taskflow "HTTP/1.1 200 OK"

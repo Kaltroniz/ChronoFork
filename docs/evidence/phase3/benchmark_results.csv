@@ -1,0 +1,43 @@
+case_id,pattern,f_qualname,g_qualname,ground_truth_positive,git_detected,chronofork_detected,hops_detected,query_latency_ms,nodes_count,calls_count,miss_reason
+1,direct_call,pkg.callee.target_func_1,pkg.caller.caller_func_1,True,False,True,1,1.48,8,1,
+2,direct_call,pkg.callee.target_func_2,pkg.caller.caller_func_2,True,False,True,1,1.12,8,1,
+3,direct_call,pkg.callee.target_func_3,pkg.caller.caller_func_3,True,False,True,1,0.58,8,1,
+4,direct_call,pkg.callee.target_func_4,pkg.caller.caller_func_4,True,False,True,1,1.22,8,1,
+5,two_hops,pkg.callee.target_func_5,pkg.caller.caller_func_5,True,False,True,2,1.23,9,2,
+6,two_hops,pkg.callee.target_func_6,pkg.caller.caller_func_6,True,False,True,2,1.68,9,2,
+7,two_hops,pkg.callee.target_func_7,pkg.caller.caller_func_7,True,False,True,2,1.1,9,2,
+8,two_hops,pkg.callee.target_func_8,pkg.caller.caller_func_8,True,False,True,2,1.62,9,2,
+9,three_hops,pkg.callee.target_func_9,pkg.caller.caller_func_9,True,False,True,3,1.67,10,3,
+10,three_hops,pkg.callee.target_func_10,pkg.caller.caller_func_10,True,False,True,3,2.14,10,3,
+11,three_hops,pkg.callee.target_func_11,pkg.caller.caller_func_11,True,False,True,3,1.38,10,3,
+12,three_hops,pkg.callee.target_func_12,pkg.caller.caller_func_12,True,False,True,3,1.54,10,3,
+13,four_hops,pkg.callee.target_func_13,pkg.caller.caller_func_13,True,False,True,4,1.51,11,4,
+14,four_hops,pkg.callee.target_func_14,pkg.caller.caller_func_14,True,False,True,4,0.56,11,4,
+15,four_hops,pkg.callee.target_func_15,pkg.caller.caller_func_15,True,False,True,4,1.75,11,4,
+16,four_hops,pkg.callee.target_func_16,pkg.caller.caller_func_16,True,False,True,4,1.71,11,4,
+17,self_method,pkg.callee.ServiceWorker.target_func_17,pkg.caller.caller_func_17,True,False,False,0,1.19,9,1,Call chain traversal did not bridge AST nodes.
+18,self_method,pkg.callee.ServiceWorker.target_func_18,pkg.caller.caller_func_18,True,False,False,0,0.89,9,1,Call chain traversal did not bridge AST nodes.
+19,self_method,pkg.callee.ServiceWorker.target_func_19,pkg.caller.caller_func_19,True,False,False,0,1.49,9,1,Call chain traversal did not bridge AST nodes.
+20,self_method,pkg.callee.ServiceWorker.target_func_20,pkg.caller.caller_func_20,True,False,False,0,1.23,9,1,Call chain traversal did not bridge AST nodes.
+21,getattr_call,pkg.callee.target_func_21,pkg.caller.caller_func_21,True,False,False,0,1.3,8,0,Dynamic string lookup via getattr() cannot be resolved by static AST without runtime dataflow.
+22,getattr_call,pkg.callee.target_func_22,pkg.caller.caller_func_22,True,False,False,0,1.26,8,0,Dynamic string lookup via getattr() cannot be resolved by static AST without runtime dataflow.
+23,getattr_call,pkg.callee.target_func_23,pkg.caller.caller_func_23,True,False,False,0,1.41,8,0,Dynamic string lookup via getattr() cannot be resolved by static AST without runtime dataflow.
+24,getattr_call,pkg.callee.target_func_24,pkg.caller.caller_func_24,True,False,False,0,1.24,8,0,Dynamic string lookup via getattr() cannot be resolved by static AST without runtime dataflow.
+25,alias_call,pkg.callee.target_func_25,pkg.caller.caller_func_25,True,False,False,0,1.6,8,0,Variable aliasing (local_alias = func) not tracked across module scope.
+26,alias_call,pkg.callee.target_func_26,pkg.caller.caller_func_26,True,False,False,0,1.33,8,0,Variable aliasing (local_alias = func) not tracked across module scope.
+27,alias_call,pkg.callee.target_func_27,pkg.caller.caller_func_27,True,False,False,0,1.47,8,0,Variable aliasing (local_alias = func) not tracked across module scope.
+28,alias_call,pkg.callee.target_func_28,pkg.caller.caller_func_28,True,False,False,0,1.3,8,0,Variable aliasing (local_alias = func) not tracked across module scope.
+29,dict_dispatch,pkg.callee.target_func_29,pkg.caller.caller_func_29,True,False,False,0,1.44,8,0,Dynamic dictionary dispatch table lookup cannot be resolved by static AST.
+30,dict_dispatch,pkg.callee.target_func_30,pkg.caller.caller_func_30,True,False,False,0,1.44,8,0,Dynamic dictionary dispatch table lookup cannot be resolved by static AST.
+31,dict_dispatch,pkg.callee.target_func_31,pkg.caller.caller_func_31,True,False,False,0,1.45,8,0,Dynamic dictionary dispatch table lookup cannot be resolved by static AST.
+32,dict_dispatch,pkg.callee.target_func_32,pkg.caller.caller_func_32,True,False,False,0,1.19,8,0,Dynamic dictionary dispatch table lookup cannot be resolved by static AST.
+33,import_inside_function,pkg.callee.target_func_33,pkg.caller.caller_func_33,True,False,True,1,1.35,8,1,
+34,import_inside_function,pkg.callee.target_func_34,pkg.caller.caller_func_34,True,False,True,1,0.55,8,1,
+35,import_inside_function,pkg.callee.target_func_35,pkg.caller.caller_func_35,True,False,True,1,1.68,8,1,
+36,import_inside_function,pkg.callee.target_func_36,pkg.caller.caller_func_36,True,False,True,1,1.7,8,1,
+37,unrelated_pairs,pkg.callee.target_func_37,pkg.caller.caller_func_37,False,False,False,0,1.49,8,0,
+38,unrelated_pairs,pkg.callee.target_func_38,pkg.caller.caller_func_38,False,False,False,0,1.41,8,0,
+39,unrelated_pairs,pkg.callee.target_func_39,pkg.caller.caller_func_39,False,False,False,0,1.6,8,0,
+40,unrelated_pairs,pkg.callee.target_func_40,pkg.caller.caller_func_40,False,False,False,0,1.46,8,0,
+41,direct_call,pkg.callee.target_func_41,pkg.caller.caller_func_41,True,False,True,1,1.48,8,1,
+42,four_hops,pkg.callee.target_func_42,pkg.caller.caller_func_42,True,False,True,4,1.6,11,4,

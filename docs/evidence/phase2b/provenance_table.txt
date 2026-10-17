@@ -1,0 +1,16 @@
+| Index | Phase / Tool | Provenance Keys | captured_at values | Cache Status in Replay |
+|---|---|---|---|---|
+| 0 | PLANNING: decompose_task | [] | {} | N/A |
+| 1 | RECALL: recall_memory | ['graph'] | {'graph': '2026-10-17T08:46:05.489148+00:00'} | CACHED |
+| 2 | CLAIM: claim_symbols | ['graph'] | {'graph': '2026-10-17T08:46:05.490150+00:00'} | CACHED |
+| 3 | FORK_SIMULATION: fork_graph | ['graph'] | {'graph': '2026-10-17T08:46:05.604428+00:00'} | CACHED |
+| 4 | CLAIM: claim_symbols | ['graph'] | {'graph': '2026-10-17T08:46:05.605403+00:00'} | CACHED |
+| 5 | COLLISION_DETECTION: detect_collisions | ['graph'] | {'graph': '2026-10-17T08:46:05.618518+00:00'} | CACHED |
+| 6 | GIT_COMPARISON: git_merge | ['git', 'pytest'] | {'git': '2026-10-17T08:46:06.005892+00:00', 'pytest': '2026-10-17T08:46:06.005892+00:00'} | CACHED |
+| 7 | RESOLUTION: apply_policy | ['graph'] | {'graph': '2026-10-17T08:46:06.009395+00:00'} | CACHED |
+| 8 | IMPACT_ANALYSIS: get_impact | ['graph'] | {'graph': '2026-10-17T08:46:06.012402+00:00'} | CACHED |
+| 9 | CODE_GEN: generate_patch | ['pytest'] | {'pytest': '2026-10-17T08:46:06.142732+00:00'} | CACHED |
+| 10 | HANDOFF: record_handoff | ['graph'] | {'graph': '2026-10-17T08:46:06.146318+00:00'} | CACHED |
+| 11 | CODE_GEN: generate_patch | ['pytest'] | {'pytest': '2026-10-17T08:46:06.279223+00:00'} | CACHED |
+| 12 | VERIFICATION: run_pytest | ['pytest'] | {'pytest': '2026-10-17T08:46:06.279252+00:00'} | CACHED |
+| 13 | MEMORY_UPDATE: record_episode | ['graph'] | {'graph': '2026-10-17T08:46:06.288507+00:00'} | CACHED |

@@ -1,0 +1,5 @@
+Replay Mode Response: {'run_id': 'run_1792226726154', 'status': 'REPLAY_CACHED', 'scenario': 1, 'mode': 'replay', 'cached': True, 'events_count': 14}
+Replay Latency: 8.0ms (Instant!)
+Streamed 15 event lines from cache successfully!
+
+Item 4 Status: VERIFIED & PASSING!

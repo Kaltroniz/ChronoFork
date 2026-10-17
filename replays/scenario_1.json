@@ -1,7 +1,7 @@
 [
   {
     "index": 0,
-    "ts": 1792225308.6563342,
+    "ts": 1792226879.59032,
     "run_id": "replay_gen_sc1",
     "agent": "Planner",
     "phase": "PLANNING",
@@ -23,7 +23,7 @@
   },
   {
     "index": 1,
-    "ts": 1792225308.763856,
+    "ts": 1792226879.688961,
     "run_id": "replay_gen_sc1",
     "agent": "ConfigCoder",
     "phase": "RECALL",
@@ -31,13 +31,13 @@
     "cypher": "MATCH (s:Symbol)<-[:INVOLVED]-(r:ProceduralRule)\n    WHERE s.qualname IN $qnames\n    RETURN DISTINCT r.id AS id, r.rule AS rule, r.advice AS advice, r.confidence AS confidence, r.samples AS samples, s.qualname AS trigger_symbol, r.recommended_intent AS recommended_intent\n    ORDER BY r.confidence DESC",
     "params": {
       "qnames": [
-        "taskflow.config.load_config",
-        "tests.test_config.test_load_config_default",
-        "taskflow.database.get_connection",
-        "taskflow.auth.validate_token",
-        "taskflow.config.get_default_config",
-        "tests.test_config.test_get_default_config",
         "taskflow.config.compute_config_signature",
+        "taskflow.auth.validate_token",
+        "tests.test_config.test_load_config_default",
+        "taskflow.config.get_default_config",
+        "taskflow.database.get_connection",
+        "taskflow.config.load_config",
+        "tests.test_config.test_get_default_config",
         "tests.test_config.test_compute_config_signature"
       ]
     },
@@ -46,17 +46,17 @@
       "cypher": "MATCH (s:Symbol)<-[:INVOLVED]-(r:ProceduralRule)\n    WHERE s.qualname IN $qnames\n    RETURN DISTINCT r.id AS id, r.rule AS rule, r.advice AS advice, r.confidence AS confidence, r.samples AS samples, s.qualname AS trigger_symbol, r.recommended_intent AS recommended_intent\n    ORDER BY r.confidence DESC",
       "params": {
         "qnames": [
-          "taskflow.config.load_config",
-          "tests.test_config.test_load_config_default",
-          "taskflow.database.get_connection",
-          "taskflow.auth.validate_token",
-          "taskflow.config.get_default_config",
-          "tests.test_config.test_get_default_config",
           "taskflow.config.compute_config_signature",
+          "taskflow.auth.validate_token",
+          "tests.test_config.test_load_config_default",
+          "taskflow.config.get_default_config",
+          "taskflow.database.get_connection",
+          "taskflow.config.load_config",
+          "tests.test_config.test_get_default_config",
           "tests.test_config.test_compute_config_signature"
         ]
       },
-      "duration_ms": 1.24,
+      "duration_ms": 1.08,
       "row_count": 0,
       "rows": [],
       "header": [
@@ -102,14 +102,14 @@
     "provenance": {
       "graph": {
         "source": "REAL",
-        "captured_at": "2026-10-17T08:21:48.763836+00:00"
+        "captured_at": "2026-10-17T08:47:59.688947+00:00"
       }
     },
     "message": "ConfigCoder queried mem:taskflow: 0 prior rules found. Proceeding with initial claim."
   },
   {
     "index": 2,
-    "ts": 1792225308.765126,
+    "ts": 1792226879.6903198,
     "run_id": "replay_gen_sc1",
     "agent": "ConfigCoder",
     "phase": "CLAIM",
@@ -130,7 +130,7 @@
         "intent": "SIGNATURE_CHANGE",
         "subtask": "Return ConfigObject instead of dict"
       },
-      "duration_ms": 1.25,
+      "duration_ms": 1.33,
       "row_count": 1,
       "rows": [
         [
@@ -178,14 +178,14 @@
     "provenance": {
       "graph": {
         "source": "REAL",
-        "captured_at": "2026-10-17T08:21:48.765123+00:00"
+        "captured_at": "2026-10-17T08:47:59.690316+00:00"
       }
     },
     "message": "ConfigCoder declared CLAIM on taskflow.config.load_config with intent SIGNATURE_CHANGE."
   },
   {
     "index": 3,
-    "ts": 1792225308.8864489,
+    "ts": 1792226879.806954,
     "run_id": "replay_gen_sc1",
     "agent": "ConfigCoder",
     "phase": "FORK_SIMULATION",
@@ -200,7 +200,7 @@
       "params": {
         "qname": "taskflow.config.load_config"
       },
-      "duration_ms": 1.38,
+      "duration_ms": 1.1,
       "row_count": 7,
       "rows": [
         [
@@ -332,14 +332,14 @@
     "provenance": {
       "graph": {
         "source": "REAL",
-        "captured_at": "2026-10-17T08:21:48.886425+00:00"
+        "captured_at": "2026-10-17T08:47:59.806931+00:00"
       }
     },
     "message": "Speculative fork simulation on fork:replay_gen_sc1:agent_1: Centrality risk = 0.8250. Blast radius: 7 callers affected across 4 modules."
   },
   {
     "index": 4,
-    "ts": 1792225308.887727,
+    "ts": 1792226879.807965,
     "run_id": "replay_gen_sc1",
     "agent": "WorkerCoder",
     "phase": "CLAIM",
@@ -360,7 +360,7 @@
         "intent": "BODY_EDIT",
         "subtask": "Add retry mechanism"
       },
-      "duration_ms": 1.22,
+      "duration_ms": 0.97,
       "row_count": 1,
       "rows": [
         [
@@ -408,14 +408,14 @@
     "provenance": {
       "graph": {
         "source": "REAL",
-        "captured_at": "2026-10-17T08:21:48.887712+00:00"
+        "captured_at": "2026-10-17T08:47:59.807951+00:00"
       }
     },
     "message": "WorkerCoder declared CLAIM on taskflow.worker.execute_job with intent BODY_EDIT in worker.py."
   },
   {
     "index": 5,
-    "ts": 1792225308.902493,
+    "ts": 1792226879.821728,
     "run_id": "replay_gen_sc1",
     "agent": "Coordinator",
     "phase": "COLLISION_DETECTION",
@@ -426,7 +426,7 @@
       "graph": "coord:replay_gen_sc1",
       "cypher": "MATCH (a1:Agent)-[c1:CLAIMS]->(s1:Symbol),\n          (a2:Agent)-[c2:CLAIMS]->(s2:Symbol)\n    WHERE a1.id <> a2.id\n      AND c1.intent IN ['SIGNATURE_CHANGE', 'DELETE']\n    MATCH path = (s2)-[:CALLS*1..4]->(s1)\n    RETURN a1.id AS a1, a2.id AS a2, s1.qualname AS s1_qname, s2.qualname AS s2_qname,\n           c1.intent AS intent1, c2.intent AS intent2,\n           [n in nodes(path) | n.qualname] AS path_nodes, length(path) AS hops",
       "params": {},
-      "duration_ms": 1.67,
+      "duration_ms": 1.8,
       "row_count": 1,
       "rows": [
         [
@@ -533,14 +533,14 @@
     "provenance": {
       "graph": {
         "source": "REAL",
-        "captured_at": "2026-10-17T08:21:48.902470+00:00"
+        "captured_at": "2026-10-17T08:47:59.821705+00:00"
       }
     },
     "message": "TRANSITIVE COLLISION DETECTED! FalkorDB uncovered a 4-hop call chain: taskflow.worker.execute_job -> taskflow.queue.dequeue_task -> taskflow.auth.validate_token -> taskflow.database.get_connection -> taskflow.config.load_config. Git diff shows 0 conflicts (different files: config.py vs worker.py). Runtime will crash because worker.execute_job transitively calls load_config!"
   },
   {
     "index": 6,
-    "ts": 1792225309.296792,
+    "ts": 1792226880.234269,
     "run_id": "replay_gen_sc1",
     "agent": "Coordinator",
     "phase": "GIT_COMPARISON",
@@ -558,9 +558,9 @@
       "pytest_failed": 5,
       "naive_pytest_passed": 7,
       "naive_pytest_failed": 5,
-      "duration_seconds": 0.17,
-      "pytest_duration": 0.17,
-      "pytest_output": "============================= test session starts ==============================\nplatform darwin -- Python 3.11.17, pytest-9.1.1, pluggy-1.7.0 -- /Users/souhardya/ChronoFork/.venv/bin/python\ncachedir: .pytest_cache\nrootdir: /private/var/folders/t1/55jvjq_10y3dd248l0clr20r0000gn/T/chronofork_naive_git_3falvie7\nplugins: anyio-4.15.1\ncollecting ... collected 12 items\n\ntests/test_auth.py::test_extract_claims PASSED                           [  8%]\ntests/test_auth.py::test_validate_token_valid FAILED                     [ 16%]\ntests/test_auth.py::test_validate_token_invalid FAILED                   [ 25%]\ntests/test_config.py::test_get_default_config PASSED                     [ 33%]\ntests/test_config.py::test_load_config_default FAILED                    [ 41%]\ntests/test_config.py::test_compute_config_signature PASSED               [ 50%]\ntests/test_reports.py::test_calculate_metrics_summary PASSED             [ 58%]\ntests/test_reports.py::test_generate_summary PASSED                      [ 66%]\ntests/test_reports.py::test_format_as_markdown PASSED                    [ 75%]\ntests/test_reports.py::test_schedule_report_generation PASSED            [ 83%]\ntests/test_worker.py::test_execu"
+      "duration_seconds": 0.2,
+      "pytest_duration": 0.2,
+      "pytest_output": "============================= test session starts ==============================\nplatform darwin -- Python 3.11.17, pytest-9.1.1, pluggy-1.7.0 -- /Users/souhardya/ChronoFork/.venv/bin/python\ncachedir: .pytest_cache\nrootdir: /private/var/folders/t1/55jvjq_10y3dd248l0clr20r0000gn/T/chronofork_naive_git__gfmbmfp\nplugins: anyio-4.15.1\ncollecting ... collected 12 items\n\ntests/test_auth.py::test_extract_claims PASSED                           [  8%]\ntests/test_auth.py::test_validate_token_valid FAILED                     [ 16%]\ntests/test_auth.py::test_validate_token_invalid FAILED                   [ 25%]\ntests/test_config.py::test_get_default_config PASSED                     [ 33%]\ntests/test_config.py::test_load_config_default FAILED                    [ 41%]\ntests/test_config.py::test_compute_config_signature PASSED               [ 50%]\ntests/test_reports.py::test_calculate_metrics_summary PASSED             [ 58%]\ntests/test_reports.py::test_generate_summary PASSED                      [ 66%]\ntests/test_reports.py::test_format_as_markdown PASSED                    [ 75%]\ntests/test_reports.py::test_schedule_report_generation PASSED            [ 83%]\ntests/test_worker.py::test_execu"
     },
     "node_ids": [],
     "edge_ids": [],
@@ -570,18 +570,18 @@
     "provenance": {
       "git": {
         "source": "REAL",
-        "captured_at": "2026-10-17T08:21:49.296757+00:00"
+        "captured_at": "2026-10-17T08:48:00.234237+00:00"
       },
       "pytest": {
         "source": "REAL",
-        "captured_at": "2026-10-17T08:21:49.296757+00:00"
+        "captured_at": "2026-10-17T08:48:00.234237+00:00"
       }
     },
     "message": "NAIVE GIT MERGE RUN: Git merged agent-1-config and agent-2-worker cleanly (0 conflicts, exit code 0). BUT running pytest fails! Pytest: 5 FAILED, 7 PASSED. Git catches line conflicts. ChronoFork catches the ones Git can't see!"
   },
   {
     "index": 7,
-    "ts": 1792225309.3007228,
+    "ts": 1792226880.2357938,
     "run_id": "replay_gen_sc1",
     "agent": "Coordinator",
     "phase": "RESOLUTION",
@@ -592,7 +592,7 @@
       "graph": "coord:replay_gen_sc1",
       "cypher": "MATCH (a:Agent)-[:CLAIMS]->(s:Symbol)\n    OPTIONAL MATCH path = (s)-[:CALLS*1..4]->(dep:Symbol)<-[:CLAIMS]-(other:Agent)\n    WHERE other.id <> a.id\n    RETURN a.id AS agent_id,\n           s.qualname AS symbol,\n           count(dep) AS outgoing_claimed_dependencies,\n           collect(DISTINCT dep.qualname) AS depends_on\n    ORDER BY outgoing_claimed_dependencies ASC",
       "params": {},
-      "duration_ms": 3.87,
+      "duration_ms": 1.43,
       "row_count": 2,
       "rows": [
         [
@@ -694,14 +694,14 @@
     "provenance": {
       "graph": {
         "source": "REAL",
-        "captured_at": "2026-10-17T08:21:49.300719+00:00"
+        "captured_at": "2026-10-17T08:48:00.235786+00:00"
       }
     },
     "message": "POLICY: SERIALIZE (load_config centrality risk = 0.8250 >= 0.50). FalkorDB wrote (:WorkerCoder)-[:BLOCKED_BY]->(:ConfigCoder). Callee-first merge order: 1. taskflow.config.load_config (Callee), 2. taskflow.worker.execute_job (Caller)."
   },
   {
     "index": 8,
-    "ts": 1792225309.303977,
+    "ts": 1792226880.236793,
     "run_id": "replay_gen_sc1",
     "agent": "ConfigCoder",
     "phase": "IMPACT_ANALYSIS",
@@ -716,7 +716,7 @@
       "params": {
         "target_qname": "taskflow.config.load_config"
       },
-      "duration_ms": 1.45,
+      "duration_ms": 0.41,
       "row_count": 5,
       "rows": [
         [
@@ -867,7 +867,7 @@
           "lineno": 16
         }
       ],
-      "query_time_ms": 3.21
+      "query_time_ms": 0.95
     },
     "node_ids": [
       "taskflow.config.load_config",
@@ -886,14 +886,14 @@
     "provenance": {
       "graph": {
         "source": "REAL",
-        "captured_at": "2026-10-17T08:21:49.303975+00:00"
+        "captured_at": "2026-10-17T08:48:00.236790+00:00"
       }
     },
     "message": "FalkorDB Graph Impact on taskflow.config.load_config: Found 7 callers (taskflow.database.get_connection, tests.test_config.test_load_config_default, taskflow.auth.validate_token, taskflow.queue.dequeue_task, tests.test_auth.test_validate_token_invalid, tests.test_auth.test_validate_token_valid, taskflow.worker.execute_job) and 5 test suites. ConfigCoder migrates callers to prevent runtime crashes."
   },
   {
     "index": 9,
-    "ts": 1792225309.436322,
+    "ts": 1792226880.3727481,
     "run_id": "replay_gen_sc1",
     "agent": "ConfigCoder",
     "phase": "CODE_GEN",
@@ -906,8 +906,8 @@
       "exit_code": 0,
       "passed_count": 12,
       "failed_count": 0,
-      "duration_seconds": 0.12,
-      "output": "============================= test session starts ==============================\nplatform darwin -- Python 3.11.17, pytest-9.1.1, pluggy-1.7.0 -- /Users/souhardya/ChronoFork/.venv/bin/python\ncachedir: .pytest_cache\nrootdir: /private/var/folders/t1/55jvjq_10y3dd248l0clr20r0000gn/T/chronofork_ws_hj538_g7/replay_gen_sc1_agent_1\nplugins: anyio-4.15.1\ncollecting ... collected 12 items\n\ntests/test_auth.py::test_extract_claims PASSED                           [  8%]\ntests/test_auth.py::test_validate_token_valid PASSED                     [ 16%]\ntests/test_auth.py::test_validate_token_invalid PASSED                   [ 25%]\ntests/test_config.py::test_get_default_config PASSED                     [ 33%]\ntests/test_config.py::test_load_config_default PASSED                    [ 41%]\ntests/test_config.py::test_compute_config_signature PASSED               [ 50%]\ntests/test_reports.py::test_calculate_metrics_summary PASSED             [ 58%]\ntests/test_reports.py::test_generate_summary PASSED                      [ 66%]\ntests/test_reports.py::test_format_as_markdown PASSED                    [ 75%]\ntests/test_reports.py::test_schedule_report_generation PASSED            [ 83%]\ntests/test_worker.py::test_execute_job_authorized PASSED                 [ 91%]\ntests/test_worker.py::test_execute_job_unauthorized PASSED               [100%]\n\n============================== 12 passed in 0.01s ==============================\n",
+      "duration_seconds": 0.13,
+      "output": "============================= test session starts ==============================\nplatform darwin -- Python 3.11.17, pytest-9.1.1, pluggy-1.7.0 -- /Users/souhardya/ChronoFork/.venv/bin/python\ncachedir: .pytest_cache\nrootdir: /private/var/folders/t1/55jvjq_10y3dd248l0clr20r0000gn/T/chronofork_ws_lo1ytkao/replay_gen_sc1_agent_1\nplugins: anyio-4.15.1\ncollecting ... collected 12 items\n\ntests/test_auth.py::test_extract_claims PASSED                           [  8%]\ntests/test_auth.py::test_validate_token_valid PASSED                     [ 16%]\ntests/test_auth.py::test_validate_token_invalid PASSED                   [ 25%]\ntests/test_config.py::test_get_default_config PASSED                     [ 33%]\ntests/test_config.py::test_load_config_default PASSED                    [ 41%]\ntests/test_config.py::test_compute_config_signature PASSED               [ 50%]\ntests/test_reports.py::test_calculate_metrics_summary PASSED             [ 58%]\ntests/test_reports.py::test_generate_summary PASSED                      [ 66%]\ntests/test_reports.py::test_format_as_markdown PASSED                    [ 75%]\ntests/test_reports.py::test_schedule_report_generation PASSED            [ 83%]\ntests/test_worker.py::test_execute_job_authorized PASSED                 [ 91%]\ntests/test_worker.py::test_execute_job_unauthorized PASSED               [100%]\n\n============================== 12 passed in 0.01s ==============================\n",
       "errors": ""
     },
     "node_ids": [
@@ -921,14 +921,14 @@
     "provenance": {
       "pytest": {
         "source": "REAL",
-        "captured_at": "2026-10-17T08:21:49.436296+00:00"
+        "captured_at": "2026-10-17T08:48:00.372719+00:00"
       }
     },
-    "message": "ConfigCoder migrated config.py and callers (database.py via deterministic). Real pytest in isolated workspace: 12 passed, 0 failed in 0.12s."
+    "message": "ConfigCoder migrated config.py and callers (database.py via deterministic). Real pytest in isolated workspace: 12 passed, 0 failed in 0.13s."
   },
   {
     "index": 10,
-    "ts": 1792225309.439538,
+    "ts": 1792226880.376232,
     "run_id": "replay_gen_sc1",
     "agent": "Coordinator",
     "phase": "HANDOFF",
@@ -947,7 +947,7 @@
         "to_agent": "agent_2",
         "reason": "ConfigObject contract and callers migrated"
       },
-      "duration_ms": 3.18,
+      "duration_ms": 3.46,
       "row_count": 0,
       "rows": [],
       "header": [],
@@ -962,14 +962,14 @@
     "provenance": {
       "graph": {
         "source": "REAL",
-        "captured_at": "2026-10-17T08:21:49.439536+00:00"
+        "captured_at": "2026-10-17T08:48:00.376229+00:00"
       }
     },
     "message": "Agent handoff: FalkorDB cleared BLOCKED_BY and wrote (:ConfigCoder)-[:HANDED_OFF_TO]->(:WorkerCoder). WorkerCoder unblocked!"
   },
   {
     "index": 11,
-    "ts": 1792225309.574569,
+    "ts": 1792226880.5097878,
     "run_id": "replay_gen_sc1",
     "agent": "WorkerCoder",
     "phase": "CODE_GEN",
@@ -983,7 +983,7 @@
       "passed_count": 12,
       "failed_count": 0,
       "duration_seconds": 0.13,
-      "output": "============================= test session starts ==============================\nplatform darwin -- Python 3.11.17, pytest-9.1.1, pluggy-1.7.0 -- /Users/souhardya/ChronoFork/.venv/bin/python\ncachedir: .pytest_cache\nrootdir: /private/var/folders/t1/55jvjq_10y3dd248l0clr20r0000gn/T/chronofork_ws_hj538_g7/replay_gen_sc1_agent_2\nplugins: anyio-4.15.1\ncollecting ... collected 12 items\n\ntests/test_auth.py::test_extract_claims PASSED                           [  8%]\ntests/test_auth.py::test_validate_token_valid PASSED                     [ 16%]\ntests/test_auth.py::test_validate_token_invalid PASSED                   [ 25%]\ntests/test_config.py::test_get_default_config PASSED                     [ 33%]\ntests/test_config.py::test_load_config_default PASSED                    [ 41%]\ntests/test_config.py::test_compute_config_signature PASSED               [ 50%]\ntests/test_reports.py::test_calculate_metrics_summary PASSED             [ 58%]\ntests/test_reports.py::test_generate_summary PASSED                      [ 66%]\ntests/test_reports.py::test_format_as_markdown PASSED                    [ 75%]\ntests/test_reports.py::test_schedule_report_generation PASSED            [ 83%]\ntests/test_worker.py::test_execute_job_authorized PASSED                 [ 91%]\ntests/test_worker.py::test_execute_job_unauthorized PASSED               [100%]\n\n============================== 12 passed in 0.01s ==============================\n",
+      "output": "============================= test session starts ==============================\nplatform darwin -- Python 3.11.17, pytest-9.1.1, pluggy-1.7.0 -- /Users/souhardya/ChronoFork/.venv/bin/python\ncachedir: .pytest_cache\nrootdir: /private/var/folders/t1/55jvjq_10y3dd248l0clr20r0000gn/T/chronofork_ws_lo1ytkao/replay_gen_sc1_agent_2\nplugins: anyio-4.15.1\ncollecting ... collected 12 items\n\ntests/test_auth.py::test_extract_claims PASSED                           [  8%]\ntests/test_auth.py::test_validate_token_valid PASSED                     [ 16%]\ntests/test_auth.py::test_validate_token_invalid PASSED                   [ 25%]\ntests/test_config.py::test_get_default_config PASSED                     [ 33%]\ntests/test_config.py::test_load_config_default PASSED                    [ 41%]\ntests/test_config.py::test_compute_config_signature PASSED               [ 50%]\ntests/test_reports.py::test_calculate_metrics_summary PASSED             [ 58%]\ntests/test_reports.py::test_generate_summary PASSED                      [ 66%]\ntests/test_reports.py::test_format_as_markdown PASSED                    [ 75%]\ntests/test_reports.py::test_schedule_report_generation PASSED            [ 83%]\ntests/test_worker.py::test_execute_job_authorized PASSED                 [ 91%]\ntests/test_worker.py::test_execute_job_unauthorized PASSED               [100%]\n\n============================== 12 passed in 0.01s ==============================\n",
       "errors": ""
     },
     "node_ids": [
@@ -996,14 +996,14 @@
     "provenance": {
       "pytest": {
         "source": "REAL",
-        "captured_at": "2026-10-17T08:21:49.574543+00:00"
+        "captured_at": "2026-10-17T08:48:00.509763+00:00"
       }
     },
     "message": "WorkerCoder patched worker.py against migrated contract. Real pytest: 12 passed, 0 failed in 0.13s."
   },
   {
     "index": 12,
-    "ts": 1792225309.574581,
+    "ts": 1792226880.5097978,
     "run_id": "replay_gen_sc1",
     "agent": "Verifier",
     "phase": "VERIFICATION",
@@ -1017,7 +1017,7 @@
       "passed_count": 12,
       "failed_count": 0,
       "duration_seconds": 0.13,
-      "output": "============================= test session starts ==============================\nplatform darwin -- Python 3.11.17, pytest-9.1.1, pluggy-1.7.0 -- /Users/souhardya/ChronoFork/.venv/bin/python\ncachedir: .pytest_cache\nrootdir: /private/var/folders/t1/55jvjq_10y3dd248l0clr20r0000gn/T/chronofork_ws_hj538_g7/replay_gen_sc1_agent_2\nplugins: anyio-4.15.1\ncollecting ... collected 12 items\n\ntests/test_auth.py::test_extract_claims PASSED                           [  8%]\ntests/test_auth.py::test_validate_token_valid PASSED                     [ 16%]\ntests/test_auth.py::test_validate_token_invalid PASSED                   [ 25%]\ntests/test_config.py::test_get_default_config PASSED                     [ 33%]\ntests/test_config.py::test_load_config_default PASSED                    [ 41%]\ntests/test_config.py::test_compute_config_signature PASSED               [ 50%]\ntests/test_reports.py::test_calculate_metrics_summary PASSED             [ 58%]\ntests/test_reports.py::test_generate_summary PASSED                      [ 66%]\ntests/test_reports.py::test_format_as_markdown PASSED                    [ 75%]\ntests/test_reports.py::test_schedule_report_generation PASSED            [ 83%]\ntests/test_worker.py::test_execute_job_authorized PASSED                 [ 91%]\ntests/test_worker.py::test_execute_job_unauthorized PASSED               [100%]\n\n============================== 12 passed in 0.01s ==============================\n",
+      "output": "============================= test session starts ==============================\nplatform darwin -- Python 3.11.17, pytest-9.1.1, pluggy-1.7.0 -- /Users/souhardya/ChronoFork/.venv/bin/python\ncachedir: .pytest_cache\nrootdir: /private/var/folders/t1/55jvjq_10y3dd248l0clr20r0000gn/T/chronofork_ws_lo1ytkao/replay_gen_sc1_agent_2\nplugins: anyio-4.15.1\ncollecting ... collected 12 items\n\ntests/test_auth.py::test_extract_claims PASSED                           [  8%]\ntests/test_auth.py::test_validate_token_valid PASSED                     [ 16%]\ntests/test_auth.py::test_validate_token_invalid PASSED                   [ 25%]\ntests/test_config.py::test_get_default_config PASSED                     [ 33%]\ntests/test_config.py::test_load_config_default PASSED                    [ 41%]\ntests/test_config.py::test_compute_config_signature PASSED               [ 50%]\ntests/test_reports.py::test_calculate_metrics_summary PASSED             [ 58%]\ntests/test_reports.py::test_generate_summary PASSED                      [ 66%]\ntests/test_reports.py::test_format_as_markdown PASSED                    [ 75%]\ntests/test_reports.py::test_schedule_report_generation PASSED            [ 83%]\ntests/test_worker.py::test_execute_job_authorized PASSED                 [ 91%]\ntests/test_worker.py::test_execute_job_unauthorized PASSED               [100%]\n\n============================== 12 passed in 0.01s ==============================\n",
       "errors": ""
     },
     "node_ids": [
@@ -1031,14 +1031,14 @@
     "provenance": {
       "pytest": {
         "source": "REAL",
-        "captured_at": "2026-10-17T08:21:49.574575+00:00"
+        "captured_at": "2026-10-17T08:48:00.509794+00:00"
       }
     },
     "message": "Verifier executed pytest on merged workspace: 12 passed in 0.13s. All 12 test suites passing!"
   },
   {
     "index": 13,
-    "ts": 1792225309.583476,
+    "ts": 1792226880.519548,
     "run_id": "replay_gen_sc1",
     "agent": "Coordinator",
     "phase": "MEMORY_UPDATE",
@@ -1055,7 +1055,7 @@
         "rule_id": "rule_cfg_worker_transitive",
         "qname": "taskflow.worker.execute_job"
       },
-      "duration_ms": 0.58,
+      "duration_ms": 0.52,
       "row_count": 0,
       "rows": [],
       "header": [],
@@ -1067,7 +1067,7 @@
     "scores": {},
     "collision": null,
     "memory_write": {
-      "episode_id": "ep_1792225309_3d2b5d",
+      "episode_id": "ep_1792226880_8d8f8b",
       "rule_id": "rule_cfg_worker_transitive",
       "confidence": 0.95,
       "rule_text": "load_config signature changes break transitive caller worker.execute_job (4 hops)"
@@ -1075,9 +1075,9 @@
     "provenance": {
       "graph": {
         "source": "REAL",
-        "captured_at": "2026-10-17T08:21:49.583469+00:00"
+        "captured_at": "2026-10-17T08:48:00.519544+00:00"
       }
     },
-    "message": "Memory updated in mem:taskflow! Recorded Episode ep_1792225309_3d2b5d. Rule confidence boosted to 95%. Next run will recall this!"
+    "message": "Memory updated in mem:taskflow! Recorded Episode ep_1792226880_8d8f8b. Rule confidence boosted to 95%. Next run will recall this!"
   }
 ]

@@ -1,0 +1,4 @@
+POST /repos status in DEMO_MODE: 403 (Repository upload and ingestion is disabled in Demo Mode.)
+POST /runs response in DEMO_MODE: {'run_id': 'run_1792226727330', 'status': 'REPLAY_CACHED', 'scenario': 1, 'mode': 'replay', 'cached': True, 'events_count': 14}
+
+Item 9 Status: VERIFIED & PASSING!

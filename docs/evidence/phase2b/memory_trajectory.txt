@@ -1,0 +1,13 @@
+=== MEMORY TRAJECTORY DEMONSTRATION ===
+1. Reset memory -> cold start
+   Cold start recall: 0 rules found
+
+2. Episode 1 Execution (Scenario 1)
+   Episode 1 recorded: ep_1792226872_59095f
+   Rule created with prior confidence: 0.85
+
+3. Verification passes for Run 1 -> update_rule_confidence (+0.10)
+   Confidence after Run 1 success: 0.95
+
+4. Verification passes for Run 2 (Scenario 2 with memory) -> update_rule_confidence (+0.10)
+   Confidence after Run 2 success: 0.99 (saturated at 0.99 max)

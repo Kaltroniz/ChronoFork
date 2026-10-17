@@ -1,0 +1,32 @@
+=== 503 ENDPOINT TESTS (FalkorDB Offline) ===
+
+--- POST /runs (live mode) ---
+HTTP/1.1 503 Service Unavailable
+date: Sat, 17 Oct 2026 08:50:01 GMT
+server: uvicorn
+content-length: 139
+content-type: application/json
+vary: Origin
+
+{"detail":"Live run execution failed (FalkorDB connection refused or offline): Error 61 connecting to 127.0.0.1:6379. Connection refused."}
+
+--- GET /graph/taskflow ---
+HTTP/1.1 503 Service Unavailable
+date: Sat, 17 Oct 2026 08:50:01 GMT
+server: uvicorn
+content-length: 111
+content-type: application/json
+vary: Origin
+
+{"detail":"FalkorDB connection refused or offline: Error 61 connecting to 127.0.0.1:6379. Connection refused."}
+
+--- GET /collisions/test_run ---
+HTTP/1.1 503 Service Unavailable
+date: Sat, 17 Oct 2026 08:50:01 GMT
+server: uvicorn
+content-length: 111
+content-type: application/json
+vary: Origin
+
+{"detail":"FalkorDB connection refused or offline: Error 61 connecting to 127.0.0.1:6379. Connection refused."}
+

@@ -1,0 +1,5 @@
+=== GREP AFTER CLEANUP: Fallback strings in GraphCanvas.tsx ===
+None found
+
+=== GREP AFTER CLEANUP: Hardcoded mock numbers/disjoint claims ===
+None found
