@@ -123,7 +123,7 @@ def main():
                 if pytest_events:
                     final_pytest = pytest_events[-1]
                     exec_data = final_pytest.get("execution_data", {})
-                    log(f"Final Pytest Verification: Passed = {exec_data.get('passed')}, Failed = {exec_data.get('failed')}, ExitCode = {exec_data.get('exit_code')}", f_out)
+                    log(f"Final Pytest Verification: Passed = {exec_data.get('passed_count')}, Failed = {exec_data.get('failed_count')}, ExitCode = {exec_data.get('exit_code')}", f_out)
             except Exception as e:
                 log(f"Error parsing replay data: {e}", f_out)
 
