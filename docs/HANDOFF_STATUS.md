@@ -10,29 +10,29 @@
 ### Backend (`backend/app/`)
 | File | Purpose |
 |---|---|
-| [`main.py`](file:///Users/souhardya/ChronoFork/backend/app/main.py) | FastAPI service exposing REST and SSE streaming endpoints (`/runs`, `/runs/{id}/events`, `/graph/{name}`, `/memory/{repo}`, `/repos`, `/health`). |
-| [`coordinator.py`](file:///Users/souhardya/ChronoFork/backend/app/coordinator.py) | Swarm coordination, openCypher multi-hop collision detection, topological callee-first merge ordering, handoffs, and speculative graph forking (`fork:<run_id>:<agent_id>`). |
-| [`algorithms.py`](file:///Users/souhardya/ChronoFork/backend/app/algorithms.py) | Native FalkorDB graph algorithms (`CALL algo.pageRank`, `CALL algo.betweenness`), unified risk scoring, and reverse-CALLS transitive impact analysis. |
-| [`parser.py`](file:///Users/souhardya/ChronoFork/backend/app/parser.py) | Python AST parser generating import-aware code graphs (`:Symbol:Module`, `:Symbol:Class`, `:Symbol:Function`, `:Symbol:Test`) and relationships (`DEFINES`, `IMPORTS`, `CALLS`, `TESTED_BY`). |
-| [`memory.py`](file:///Users/souhardya/ChronoFork/backend/app/memory.py) | Episodic and procedural memory management in `mem:<repo>`, managing `:Episode` and `:ProceduralRule` nodes with heuristic confidence clamping `[0.10, 0.99]`. |
-| [`scenario_runner.py`](file:///Users/souhardya/ChronoFork/backend/app/scenario_runner.py) | Orchestrator for Scenarios 1–4, driving isolated git merge experiments, coder patch applications, and verifier pytest runs. |
-| [`mcp_tools.py`](file:///Users/souhardya/ChronoFork/backend/app/mcp_tools.py) | FastMCP tool server and in-process interface exposing 7 native tools (`get_impact`, `rank_risk`, `claim_symbols`, `detect_collisions`, `recall_memory`, `fork_graph`, `record_episode`). |
-| [`event_stream.py`](file:///Users/souhardya/ChronoFork/backend/app/event_stream.py) | In-memory SSE event bus with index-buffered replay and pacing via `delay_ms`. |
-| [`falkor_client.py`](file:///Users/souhardya/ChronoFork/backend/app/falkor_client.py) | Redis/FalkorDB connection management, query execution timing, and graph lifecycle operations. |
-| [`agents/coder.py`](file:///Users/souhardya/ChronoFork/backend/app/agents/coder.py) | Real workspace isolation (`WorkspaceManager`), automated pytest runner (`Verifier`), and the naive git merge experiment sandbox (`run_naive_git_merge_experiment`). |
-| [`agents/llm.py`](file:///Users/souhardya/ChronoFork/backend/app/agents/llm.py) | LLM patch generator supporting Gemini API with deterministic fallback. |
+| [`main.py`](backend/app/main.py) | FastAPI service exposing REST and SSE streaming endpoints (`/runs`, `/runs/{id}/events`, `/graph/{name}`, `/memory/{repo}`, `/repos`, `/health`). |
+| [`coordinator.py`](backend/app/coordinator.py) | Swarm coordination, openCypher multi-hop collision detection, topological callee-first merge ordering, handoffs, and speculative graph forking (`fork:<run_id>:<agent_id>`). |
+| [`algorithms.py`](backend/app/algorithms.py) | Native FalkorDB graph algorithms (`CALL algo.pageRank`, `CALL algo.betweenness`), unified risk scoring, and reverse-CALLS transitive impact analysis. |
+| [`parser.py`](backend/app/parser.py) | Python AST parser generating import-aware code graphs (`:Symbol:Module`, `:Symbol:Class`, `:Symbol:Function`, `:Symbol:Test`) and relationships (`DEFINES`, `IMPORTS`, `CALLS`, `TESTED_BY`). |
+| [`memory.py`](backend/app/memory.py) | Episodic and procedural memory management in `mem:<repo>`, managing `:Episode` and `:ProceduralRule` nodes with heuristic confidence clamping `[0.10, 0.99]`. |
+| [`scenario_runner.py`](backend/app/scenario_runner.py) | Orchestrator for Scenarios 1–4, driving isolated git merge experiments, coder patch applications, and verifier pytest runs. |
+| [`mcp_tools.py`](backend/app/mcp_tools.py) | FastMCP tool server and in-process interface exposing 7 native tools (`get_impact`, `rank_risk`, `claim_symbols`, `detect_collisions`, `recall_memory`, `fork_graph`, `record_episode`). |
+| [`event_stream.py`](backend/app/event_stream.py) | In-memory SSE event bus with index-buffered replay and pacing via `delay_ms`. |
+| [`falkor_client.py`](backend/app/falkor_client.py) | Redis/FalkorDB connection management, query execution timing, and graph lifecycle operations. |
+| [`agents/coder.py`](backend/app/agents/coder.py) | Real workspace isolation (`WorkspaceManager`), automated pytest runner (`Verifier`), and the naive git merge experiment sandbox (`run_naive_git_merge_experiment`). |
+| [`agents/llm.py`](backend/app/agents/llm.py) | LLM patch generator supporting Gemini API with deterministic fallback. |
 
 ### Frontend (`frontend/src/`)
 | File | Purpose |
 |---|---|
-| [`App.tsx`](file:///Users/souhardya/ChronoFork/frontend/src/App.tsx) | Master console state, SSE stream listener, scenario switcher, playback pacing, and drawer controls. |
-| [`components/GraphCanvas.tsx`](file:///Users/souhardya/ChronoFork/frontend/src/components/GraphCanvas.tsx) | Cytoscape.js interactive canvas rendering code AST, compound module clusters, agent claim rings, collision chains, and handoffs. |
-| [`components/HeroSplit.tsx`](file:///Users/souhardya/ChronoFork/frontend/src/components/HeroSplit.tsx) | Comparison card contrasting Naive Git 0-conflict clean merge vs ChronoFork 4-hop transitive collision detection. |
-| [`components/ResultStrip.tsx`](file:///Users/souhardya/ChronoFork/frontend/src/components/ResultStrip.tsx) | Bottom telemetry drawer with tabs for Verdict, Fork Diff, Memory Drawer, and Merge Receipt. |
-| [`components/ZeroPathProof.tsx`](file:///Users/souhardya/ChronoFork/frontend/src/components/ZeroPathProof.tsx) | Zero-path proof card showing graph traversal results between claimed symbols. |
-| [`components/QueryInspector.tsx`](file:///Users/souhardya/ChronoFork/frontend/src/components/QueryInspector.tsx) | Live Cypher query inspector displaying exact Cypher text, parameters, and query execution times. |
-| [`components/AgentTimeline.tsx`](file:///Users/souhardya/ChronoFork/frontend/src/components/AgentTimeline.tsx) | Chronological swarm event timeline with phase indicators and tool call chips. |
-| [`components/ProvenanceStrip.tsx`](file:///Users/souhardya/ChronoFork/frontend/src/components/ProvenanceStrip.tsx) | Data provenance indicators (`GRAPH`, `GIT`, `PYTEST`, `LLM` as REAL vs CACHED). |
+| [`App.tsx`](frontend/src/App.tsx) | Master console state, SSE stream listener, scenario switcher, playback pacing, and drawer controls. |
+| [`components/GraphCanvas.tsx`](frontend/src/components/GraphCanvas.tsx) | Cytoscape.js interactive canvas rendering code AST, compound module clusters, agent claim rings, collision chains, and handoffs. |
+| [`components/HeroSplit.tsx`](frontend/src/components/HeroSplit.tsx) | Comparison card contrasting Naive Git 0-conflict clean merge vs ChronoFork 4-hop transitive collision detection. |
+| [`components/ResultStrip.tsx`](frontend/src/components/ResultStrip.tsx) | Bottom telemetry drawer with tabs for Verdict, Fork Diff, Memory Drawer, and Merge Receipt. |
+| [`components/ZeroPathProof.tsx`](frontend/src/components/ZeroPathProof.tsx) | Zero-path proof card showing graph traversal results between claimed symbols. |
+| [`components/QueryInspector.tsx`](frontend/src/components/QueryInspector.tsx) | Live Cypher query inspector displaying exact Cypher text, parameters, and query execution times. |
+| [`components/AgentTimeline.tsx`](frontend/src/components/AgentTimeline.tsx) | Chronological swarm event timeline with phase indicators and tool call chips. |
+| [`components/ProvenanceStrip.tsx`](frontend/src/components/ProvenanceStrip.tsx) | Data provenance indicators (`GRAPH`, `GIT`, `PYTEST`, `LLM` as REAL vs CACHED). |
 
 ---
 
@@ -112,42 +112,31 @@ docker compose up --build -d
 
 ---
 
-## 4. Current System Status
+## 4. Current System Status (Phase 6 Complete)
 
-### Core Engine & Coordinator
-- **Full Transitive Collision Detection**: Successfully traces multi-hop call chains (up to $k=4$ hops in FalkorDB via openCypher). Correctly reports call path `['taskflow.worker.execute_job', 'taskflow.queue.dequeue_task', 'taskflow.auth.validate_token', 'taskflow.database.get_connection', 'taskflow.config.load_config']`.
-- **Topological Merge Ordering**: Applies `SERIALIZE_CALLEE_FIRST` policy, allowing callee changes (Agent 1) to land before caller adaptations (Agent 2).
-- **Blast Radius & Speculative Forks**: Speculatively clones graphs into `fork:<run_id>:<agent_id>` and computes reverse-CALLS impact trees within $\le 4$ hops.
-- **Fail-Loudly Architecture**: When FalkorDB is offline or unreachable, backend returns HTTP `503 Service Unavailable` with explicit connection error details across `/runs`, `/graph/{name}`, and `/collisions/{run_id}`. No stale mock fallbacks are used. The frontend displays an error toast banner read directly from the response.
+### DONE (With Evidence Paths)
+- **Fix 1: Memory Carried Over DOM Reaction**: Label derived strictly from rule/episode count $>0$. Fresh load $\to$ absent (`null`); post-S1 run $\to$ `"Memory state: carried over from previous runs"`. Verified by Playwright in [`docs/evidence/phase6/fixes_1_and_2_stdout.txt`](docs/evidence/phase6/fixes_1_and_2_stdout.txt).
+- **Fix 2: Fail-Loudly Banner & Retake**: Error toast moved to `top-16 right-6 z-50` away from shortcuts. Screenshot captured with backend running and only FalkorDB stopped: [`docs/screens/live-fail-loudly.png`](docs/screens/live-fail-loudly.png). DOM text verified in [`docs/evidence/phase6/fixes_1_and_2_stdout.txt`](docs/evidence/phase6/fixes_1_and_2_stdout.txt).
+- **Fix 3: Benchmark Corrections**: Ground truth defined strictly by merged-tree pytest; (a2) 0% recall by construction; negatives split into intent rule ($N=4$) vs graph reachability ($N=16$); documented 4-hop bound, 8-11 vs 69 node graphs, and `self_method` AST linking limitation with edge target printed. Verified in [`docs/benchmark.md`](docs/benchmark.md).
+- **Fix 4: Absolute Link Sanitization**: All machine-local file URI links across docs/ and README.md converted to repo-relative links; verified 0 remaining occurrences.
+- **Fix 5: Docker Mode & Environment Audit**: Default `DEMO_MODE=false` in `docker-compose.yml`; verified backend container includes `git 2.47.3` and `pytest 9.1.1`; verified `GET /runs` returns 405 and `POST /runs` live mode returns 200 `LIVE_EXECUTED` in [`docs/evidence/phase6/fix5_docker_mode_outputs.txt`](docs/evidence/phase6/fix5_docker_mode_outputs.txt).
+- **README.md Overhaul**: Complete rewrite featuring tagline, 20s explanation, relative screenshot gallery, REAL vs CACHED data provenance, quickstart, graph model (Mermaid), verbatim Cypher queries, unified risk formula, measured numbers only, system limitations, track declarations, and AI disclosure in [`README.md`](README.md).
+- **Phase 6 Documentation Pack**:
+  - 1-page architecture document: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+  - 15 judge technical Q&A: [`docs/QA_PREP.md`](docs/QA_PREP.md)
+  - Story-led blog post with captured pytest output: [`docs/blog-post.md`](docs/blog-post.md)
+  - $\le 3$-minute UI video demo script: [`docs/demo-script.md`](docs/demo-script.md)
+  - Comprehensive Claims vs Evidence table: [`docs/evidence/phase6/claims_table.md`](docs/evidence/phase6/claims_table.md)
 
-### Provenance Tracking
-- **Granular Per-Source Stamps**: Every event tracks executing sources independently (`graph`, `git`, `pytest`, `llm`).
-- **Timestamp Definition**: `captured_at` represents the actual timestamp of that source's execution (event emission time).
-- **Replay vs Live Semantics**: In replay mode, the UI shows `CACHED` alongside the captured date for each source. In live runs, the UI displays `REAL`.
+### PARTIAL
+- **FastMCP Tools**: In-process tool wrappers and FastMCP server definitions exist in `backend/app/mcp_tools.py` with 7 native tools, but are not exposed as an independent standalone microservice in Docker Compose.
+- **LLM Agent Mode**: Scaffolded in `backend/app/agents/llm.py` with Gemini SDK interface, but demo execution uses deterministic scripted patches for benchmark stability.
 
-### Memory Graph & Rule Confidence
-- **Initial Confidence Prior**: Procedural rules are seeded with an initial confidence prior of `0.85` (chosen prior).
-- **Single Confidence Updater**: Managed exclusively by `backend/app/memory.py:update_rule_confidence`.
-- **Trajectory Dynamics**: On every successful rule-guided run, confidence rises by `+0.10` and saturates at `0.99`. On failure, confidence decreases by `-0.20`, clamped to a minimum of `0.10`.
-- **Adaptive Execution**: In Scenario 2 with memory enabled, recalled rules dynamically mutate agent intent from a breaking `SIGNATURE_CHANGE` to a backward-compatible `BODY_EDIT`, preventing collision.
-
-### Detection Benchmark (Phase 3 Corrections)
-- **Dataset**: $N = 58$ seeded cases (38 ground-truth collisions, 20 ground-truth safe cases).
-- **Ground Truth**: Strictly defined by merged-tree `pytest` runtime execution.
-- **Detector Comparison**:
-  - `(a1) Git text conflict`: $0\%$ recall (all edits in separate functions/files merge with 0 text conflicts).
-  - `(a2) Per-branch tests`: $0\%$ recall (cross-branch semantic collisions are invisible on isolated branches before landing).
-  - `(a3) Merged-tree tests`: $100\%$ recall, but known only **post-merge** after CI breaks and compute is wasted.
-  - `(b) ChronoFork`: Discovers collisions at **claim time** before code is written, achieving **100% precision** ($FP=0, TN=20$), **100% recall on static call chains (1–4 hops)**, with a median query latency of **1.37 ms**.
-- **Documented Blind Spots**: Dynamic metaprogramming patterns (`getattr`, `dict_dispatch`, `alias`, `self_method`) require runtime dataflow or type inference.
-
-### Docker & Deployment (Phase 5-lite)
-- **Production Build**: Multi-stage Docker build serving production frontend bundle statically via Nginx on port 5173, proxying API and SSE streaming to FastAPI backend on port 8000.
-- **Auto-Seed on Startup**: Automatically parses and ingests `taskflow` (69 nodes, 109 edges) and `analytics` repos into FalkorDB upon service start.
-- **Clean Clone Verified**: Validated via automated test [`scripts/test_clean_clone_docker.py`](file:///Users/souhardya/ChronoFork/scripts/test_clean_clone_docker.py) cloning `SS1` into an isolated temp directory, building containers, verifying `/health`, `/graph/taskflow`, Scenario 1 replay (`Passed = 12, Failed = 0, ExitCode = 0`), frontend HTTP status (`200 OK`), and capturing UI screenshot [`docs/screens/clean-clone-story.png`](file:///Users/souhardya/ChronoFork/docs/screens/clean-clone-story.png).
-- **CORS Restricted**: Controlled via `CORS_ORIGINS` environment variable, defaulting to explicit localhost and 127.0.0.1 ports with allowed methods `["GET", "POST", "OPTIONS"]`.
-
-### Explicitly Not Done (Scope Boundaries)
+### NOT DONE (Explicit Scope Boundaries)
 - **FalkorDB Cloud**: NOT DONE. The system runs against local/containerized FalkorDB instances. No remote cloud instance configuration was attempted.
-- **MCP Server in Deployment**: NOT DONE. In-process tool wrappers and FastMCP definitions exist in `backend/app/mcp_tools.py`, but a standalone deployed MCP service daemon is not configured in Docker.
-- **Live LLM Execution Mode**: NOT DONE. Scenario runner relies on verified deterministic scripted patches. Live Gemini API execution is scaffolded but not validated against production keys.
+- **Dynamic Metaprogramming Analysis**: NOT DONE. Static AST analysis cannot trace runtime dynamic reflection (`getattr`, dictionary dispatch tables, variable aliases).
+
+### KNOWN BUGS & LIMITATIONS
+- **Instance Method Linking (`self_method`)**: When code calls `worker = ServiceWorker(); worker.f()`, the AST visitor creates a `CALLS` edge from caller to the Class symbol (`pkg.callee.ServiceWorker`) instead of the method symbol (`ServiceWorker.f`) due to lack of type inference. Documented in [`docs/benchmark.md`](docs/benchmark.md) (1 false negative out of 20 ground-truth calls).
+- **4-Hop Traversal Boundary**: OpenCypher query uses `[:CALLS*1..4]`. Any dependency chains of length $k \ge 5$ are silent by query design.
+

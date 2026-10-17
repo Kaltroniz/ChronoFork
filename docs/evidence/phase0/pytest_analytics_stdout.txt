@@ -1,7 +1,7 @@
 ============================= test session starts ==============================
-platform darwin -- Python 3.11.17, pytest-9.1.1, pluggy-1.7.0 -- /Users/souhardya/ChronoFork/.venv/bin/python3.11
+platform darwin -- Python 3.11.17, pytest-9.1.1, pluggy-1.7.0 -- ./.venv/bin/python3.11
 cachedir: .pytest_cache
-rootdir: /Users/souhardya/ChronoFork
+rootdir: .
 plugins: anyio-4.15.1
 collecting ... collected 2 items
 

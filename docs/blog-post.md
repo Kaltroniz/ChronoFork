@@ -124,7 +124,7 @@ ChronoFork agents don't guess — they traverse connected graph structures at ev
 At run start, FalkorDB clones the repository into `coord:<run_id>`. Coordination entities (`:Run`, `:Agent`) attach directly to the AST code `:Symbol` nodes via `[:CLAIMS]` edges.
 
 When Agent 1 claims `load_config` and Agent 2 claims `worker.execute_job`, the Coordinator detects the 4-hop call path and evaluates the policy:
-- `load_config` Risk = $0.8542 \ge 0.50$ $\implies$ **Policy: SERIALIZE**.
+- `load_config` Risk = $0.8250 \ge 0.50$ $\implies$ **Policy: SERIALIZE**.
 - FalkorDB writes an explicit blocking edge:
   `(:WorkerCoder)-[:BLOCKED_BY]->(:ConfigCoder)`
 
@@ -192,10 +192,10 @@ tests/test_queue.py::test_dequeue_task_unauthorized PASSED               [ 75%]
 tests/test_queue.py::test_dequeue_task_authorized FAILED                 [ 83%]
 tests/test_worker.py::test_execute_job_unauthorized PASSED               [ 91%]
 tests/test_worker.py::test_execute_job_completed FAILED                  [100%]
-========================= 5 failed, 7 passed in 0.88s =========================
+========================= 5 failed, 7 passed in 0.17s =========================
 ```
 
-In the ChronoFork console, the **Verifier Tab** displays this exact comparison side-by-side, giving judges and engineers instant proof of the value proposition.
+In the ChronoFork console, the **Verifier Tab** displays this exact comparison side-by-side: Naive Git merge fails 5 tests in 0.17s, whereas ChronoFork's serialized merge passes all 12 tests in 0.12s.
 
 ---
 
@@ -226,16 +226,17 @@ External AI coding agents running in Cursor, Claude Desktop, or custom orchestra
 
 ---
 
-## Benchmarks & Verification
+## Benchmarks & Verification (Measured Numbers Only)
 
-All benchmarks measured live using `scripts/verify_phase0.py` and real subprocess pytests in `scripts/verify_item1.py`:
+All performance benchmarks are taken from saved test and execution logs on `repo:taskflow` (69 symbols, 29 `CALLS`, 16 `TESTED_BY` edges):
 
-- **Graph Cloning (`GRAPH.COPY`)**: `36.50 ms – 84.81 ms`
-- **PageRank Centrality (`algo.pageRank`)**: `19.30 ms – 21.73 ms`
-- **Betweenness Centrality (`algo.betweenness`)**: `7.67 ms – 13.62 ms`
-- **Variable-Length Path Traversal (`CALLS*1..4`)**: `4.12 ms – 4.31 ms`
-- **Shortest Path Calculation (`algo.SPpaths`)**: `2.02 ms – 4.30 ms`
-- **Real Pytest Verification (Merged Workspace)**: `12 passed in 0.45s`
+- **Graph Cloning (`graph.copy`)**: Min = 55.41 ms, **Median = 108.32 ms**, Max = 112.08 ms (`docs/evidence/phase2/falkordb_bench_stdout.txt`)
+- **PageRank Centrality (`algo.pageRank`)**: Min = 1.20 ms, **Median = 1.36 ms**, Max = 1.99 ms
+- **Betweenness Centrality (`algo.betweenness`)**: Min = 1.39 ms, **Median = 1.80 ms**, Max = 2.60 ms
+- **Variable-Length Path Traversal (`CALLS*1..4`)**: Min = 0.61 ms, **Median = 0.76 ms**, Max = 2.44 ms
+- **Real Subprocess Pytest (Naive Git Merge)**: 5 failed, 7 passed in 0.17s (`docs/evidence/phase0/verify_item1_stdout.txt`)
+- **Real Subprocess Pytest (ChronoFork Verifier)**: 12 passed in 0.12s (`docs/evidence/phase0/verify_item1_stdout.txt`)
+- **Collision Detection Benchmark ($N = 58$ Cases)**: Precision 100.0%, Recall 57.9% overall (100% on standard static call chains, 22/22; 100% specificity on safe cases, 20/20 with 0 false positives), Median Decision Time = 1.37 ms (`docs/evidence/phase3b/benchmark_stdout.txt`)
 
 ---
 

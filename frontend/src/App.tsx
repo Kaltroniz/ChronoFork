@@ -334,11 +334,20 @@ export const App: React.FC = () => {
   const activeEvent = events[currentIndex] || null;
   const currentEvents = events.slice(0, currentIndex + 1);
 
+  // Derive memory presence strictly from actual rule and episode counts
+  const hasMemoryItems = Boolean(
+    (memoryData && (
+      (memoryData.rules && memoryData.rules.length > 0) ||
+      (memoryData.episodes && memoryData.episodes.length > 0)
+    )) ||
+    events.some((e) => Boolean(e.memory_write) || e.phase === 'MEMORY_UPDATE')
+  );
+
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-[var(--bg-0)] text-[var(--text)] font-sans select-none">
       {/* Backend Unreachable Banner */}
       {!backendHealthy && (
-        <div className="bg-[var(--signal)] text-[var(--bg-0)] font-mono text-[13px] font-bold py-1 px-4 flex items-center justify-between z-50">
+        <div data-testid="backend-unreachable-banner" className="bg-[var(--signal)] text-[var(--bg-0)] font-mono text-[13px] font-bold py-1 px-4 flex items-center justify-between z-50">
           <div className="flex items-center gap-2">
             <AlertCircle className="w-4 h-4" />
             <span>Backend unreachable — retrying connection to http://127.0.0.1:8000</span>
@@ -387,7 +396,7 @@ export const App: React.FC = () => {
           memoryEnabled={memoryEnabled}
           onToggleMemory={() => setMemoryEnabled(!memoryEnabled)}
           isDevFixture={isDevFixture}
-          memoryWasReset={memoryWasReset}
+          hasMemoryItems={hasMemoryItems}
         />
 
         {/* CENTER COLUMN: Graph Canvas + Overlays + ResultStrip */}
@@ -477,14 +486,14 @@ export const App: React.FC = () => {
         />
       </div>
 
-      {/* Error Toast Bottom-Right */}
+      {/* Error Toast Top-Right (Clean clearance from shortcuts and bottom drawer) */}
       {errorMessage && (
-        <div className="fixed bottom-4 right-4 z-50 p-4 rounded-[8px] border border-[var(--breach)] bg-[var(--bg-1)] shadow-xl flex items-center gap-3 font-mono text-[13px] text-[var(--text)]">
+        <div data-testid="live-error-banner" className="fixed top-16 right-6 z-50 max-w-lg p-4 rounded-[8px] border border-[var(--breach)] bg-[var(--bg-1)] shadow-2xl flex items-center gap-3 font-mono text-[13px] text-[var(--text)]">
           <AlertCircle className="w-5 h-5 text-[var(--breach)] shrink-0" />
-          <span>{errorMessage}</span>
+          <span className="flex-1 leading-snug">{errorMessage}</span>
           <button
             onClick={() => setErrorMessage(null)}
-            className="ml-2 px-2 py-1 rounded bg-[var(--bg-2)] hover:bg-[var(--line)] text-[var(--text-dim)]"
+            className="ml-2 px-2.5 py-1 rounded bg-[var(--bg-2)] hover:bg-[var(--line)] text-[var(--text-dim)] hover:text-[var(--text)] transition-colors cursor-pointer shrink-0 font-bold"
           >
             Dismiss
           </button>

@@ -31,3 +31,7 @@ video_temp/
 # OS
 .DS_Store
 Thumbs.db
+
+# Live Run Replays
+replays/live_*.json
+
