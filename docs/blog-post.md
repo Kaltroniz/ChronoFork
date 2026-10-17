@@ -69,8 +69,8 @@ A hackathon rule we took to heart is: *FalkorDB must be the irreplaceable core o
 
 Here is why ChronoFork cannot exist without FalkorDB:
 
-### 1. Variable-Length Transitive Traversals (`1.8 ms`)
-Detecting transitive collisions requires discovering whether Agent 2's target calls Agent 1's target up to arbitrary depths. In SQL, this requires recursive Common Table Expressions (CTEs) with repeated self-joins that become computationally prohibitive as call trees branch. In FalkorDB, openCypher traverses arbitrary depths in **1.82 ms**:
+### 1. Variable-Length Transitive Traversals (`0.76 ms` median)
+Detecting transitive collisions requires discovering whether Agent 2's target calls Agent 1's target up to arbitrary depths. In SQL, this requires recursive Common Table Expressions (CTEs) with repeated self-joins that become computationally prohibitive as call trees branch. In FalkorDB, openCypher traverses arbitrary depths in **0.76 ms** (median on repo:taskflow):
 
 ```cypher
 MATCH (a1:Agent)-[c1:CLAIMS]->(s1:Symbol),
@@ -83,14 +83,14 @@ RETURN a1.id AS agent_a, a2.id AS agent_b,
        length(path) AS hops
 ```
 
-### 2. In-Memory PageRank & Betweenness Centrality (`21.3 ms` & `7.6 ms`)
+### 2. In-Memory PageRank & Betweenness Centrality (`1.36 ms` & `1.80 ms` median)
 Not all collisions carry equal risk. Modifying an internal helper function on a leaf node is low danger; modifying a foundational module sitting at the bottleneck of the entire system threatens catastrophic failure.
 FalkorDB executes graph algorithms directly in Redis memory without exporting data to external graph engines:
-- `CALL algo.pageRank('Symbol', 'CALLS')`: Computes structural prominence across all 69 symbols in **21.31 ms**.
-- `CALL algo.betweenness({nodeLabels: ['Symbol'], relationshipTypes: ['CALLS']})`: Identifies bridge functions on the shortest paths in **7.67 ms**.
+- `CALL algo.pageRank('Symbol', 'CALLS')`: Computes structural prominence across all 69 symbols in **1.36 ms** (median on repo:taskflow).
+- `CALL algo.betweenness({nodeLabels: ['Symbol'], relationshipTypes: ['CALLS']})`: Identifies bridge functions on the shortest paths in **1.80 ms** (median on repo:taskflow).
 
-### 3. Microsecond Speculative Graph Branching (`36.1 ms`)
-Before an agent writes a single line of physical code, it forks the repository graph using FalkorDB's native `GRAPH.COPY` (`graph.copy(clone_key)` in **36.14 ms**). The agent speculatively modifies the function's AST signature, re-runs PageRank and reverse `CALLS` queries on the fork, and calculates its exact blast radius without impacting other agents.
+### 3. Fast Speculative Graph Branching (`108.3 ms` median)
+Before an agent writes a single line of physical code, it forks the repository graph using FalkorDB's native `GRAPH.COPY` (`graph.copy(clone_key)` in **108.32 ms** median on repo:taskflow). The agent speculatively modifies the function's AST signature, re-runs PageRank and reverse `CALLS` queries on the fork, and calculates its exact blast radius without impacting other agents.
 
 ---
 
@@ -108,7 +108,7 @@ ChronoFork agents don't guess — they traverse connected graph structures at ev
    RETURN collect(DISTINCT caller.qualname) AS dependent_callers,
           collect(DISTINCT direct_test.qualname) + collect(DISTINCT transitive_test.qualname) AS affected_tests
    ```
-   Within 1.45 ms, the agent knows that altering `load_config` impacts 7 callers across 4 modules and threatens 5 unit test suites.
+   Within 1.13 ms (median 0.76 ms), the agent knows that altering `load_config` impacts 7 callers across 4 modules and threatens 5 unit test suites.
 
 2. **Centrality-Driven Risk Scoring**:
    ChronoFork combines PageRank ($PR$) and Betweenness ($BW$) into a normalized risk metric ($0.0 \le \text{Risk} \le 1.0$). If a symbol's risk exceeds $0.50$, the Coordinator refuses optimistic parallel merges and elevates the coordination policy to `SERIALIZE`.

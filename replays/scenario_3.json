@@ -1,7 +1,7 @@
 [
   {
     "index": 0,
-    "ts": 1792223259.4906938,
+    "ts": 1792225309.8162858,
     "run_id": "replay_gen_sc3",
     "agent": "Planner",
     "phase": "PLANNING",
@@ -18,25 +18,12 @@
     "scores": {},
     "collision": null,
     "memory_write": null,
-    "provenance": {
-      "graph": {
-        "source": "REAL",
-        "captured_at": "2026-10-17T07:47:39.490689+00:00"
-      },
-      "git": {
-        "source": "REAL",
-        "captured_at": "2026-10-17T07:47:39.490689+00:00"
-      },
-      "pytest": {
-        "source": "REAL",
-        "captured_at": "2026-10-17T07:47:39.490689+00:00"
-      }
-    },
+    "provenance": {},
     "message": "Planner dispatched subtasks to independent subsystems: Subsystem 1 (Worker core) and Subsystem 2 (Reports generator)."
   },
   {
     "index": 1,
-    "ts": 1792223259.588406,
+    "ts": 1792225309.919184,
     "run_id": "replay_gen_sc3",
     "agent": "WorkerCoder",
     "phase": "CLAIM",
@@ -57,7 +44,7 @@
         "intent": "BODY_EDIT",
         "subtask": "Queue optimizations"
       },
-      "duration_ms": 0.95,
+      "duration_ms": 1.48,
       "row_count": 1,
       "rows": [
         [
@@ -105,22 +92,14 @@
     "provenance": {
       "graph": {
         "source": "REAL",
-        "captured_at": "2026-10-17T07:47:39.588396+00:00"
-      },
-      "git": {
-        "source": "REAL",
-        "captured_at": "2026-10-17T07:47:39.588396+00:00"
-      },
-      "pytest": {
-        "source": "REAL",
-        "captured_at": "2026-10-17T07:47:39.588396+00:00"
+        "captured_at": "2026-10-17T08:21:49.919172+00:00"
       }
     },
     "message": "WorkerCoder claimed taskflow.worker.execute_job in core subsystem."
   },
   {
     "index": 2,
-    "ts": 1792223259.589018,
+    "ts": 1792225309.9203358,
     "run_id": "replay_gen_sc3",
     "agent": "ReportsCoder",
     "phase": "CLAIM",
@@ -141,7 +120,7 @@
         "intent": "BODY_EDIT",
         "subtask": "Quarterly aggregation"
       },
-      "duration_ms": 0.59,
+      "duration_ms": 1.13,
       "row_count": 1,
       "rows": [
         [
@@ -189,22 +168,14 @@
     "provenance": {
       "graph": {
         "source": "REAL",
-        "captured_at": "2026-10-17T07:47:39.589008+00:00"
-      },
-      "git": {
-        "source": "REAL",
-        "captured_at": "2026-10-17T07:47:39.589008+00:00"
-      },
-      "pytest": {
-        "source": "REAL",
-        "captured_at": "2026-10-17T07:47:39.589008+00:00"
+        "captured_at": "2026-10-17T08:21:49.920329+00:00"
       }
     },
     "message": "ReportsCoder claimed taskflow.reports.generator.generate_summary in reports subsystem."
   },
   {
     "index": 3,
-    "ts": 1792223259.600883,
+    "ts": 1792225309.932652,
     "run_id": "replay_gen_sc3",
     "agent": "Coordinator",
     "phase": "COLLISION_DETECTION",
@@ -215,7 +186,7 @@
       "graph": "coord:replay_gen_sc3",
       "cypher": "MATCH (a1:Agent)-[c1:CLAIMS]->(s1:Symbol),\n          (a2:Agent)-[c2:CLAIMS]->(s2:Symbol)\n    WHERE a1.id <> a2.id\n      AND c1.intent IN ['SIGNATURE_CHANGE', 'DELETE']\n    MATCH path = (s2)-[:CALLS*1..4]->(s1)\n    RETURN a1.id AS a1, a2.id AS a2, s1.qualname AS s1_qname, s2.qualname AS s2_qname,\n           c1.intent AS intent1, c2.intent AS intent2,\n           [n in nodes(path) | n.qualname] AS path_nodes, length(path) AS hops",
       "params": {},
-      "duration_ms": 1.13,
+      "duration_ms": 1.25,
       "row_count": 0,
       "rows": [],
       "header": [
@@ -318,22 +289,14 @@
     "provenance": {
       "graph": {
         "source": "REAL",
-        "captured_at": "2026-10-17T07:47:39.600877+00:00"
-      },
-      "git": {
-        "source": "REAL",
-        "captured_at": "2026-10-17T07:47:39.600877+00:00"
-      },
-      "pytest": {
-        "source": "REAL",
-        "captured_at": "2026-10-17T07:47:39.600877+00:00"
+        "captured_at": "2026-10-17T08:21:49.932641+00:00"
       }
     },
     "message": "ZERO PATHS FOUND (0 rows). Call graphs are fully disjoint (13 symbols in A2 cluster, 10 symbols in A3 cluster, 0 intersection). Policy: PARALLEL_OK!"
   },
   {
     "index": 4,
-    "ts": 1792223259.6008902,
+    "ts": 1792225309.932659,
     "run_id": "replay_gen_sc3",
     "agent": "Coordinator",
     "phase": "RESOLUTION",
@@ -350,22 +313,14 @@
     "provenance": {
       "graph": {
         "source": "REAL",
-        "captured_at": "2026-10-17T07:47:39.600887+00:00"
-      },
-      "git": {
-        "source": "REAL",
-        "captured_at": "2026-10-17T07:47:39.600887+00:00"
-      },
-      "pytest": {
-        "source": "REAL",
-        "captured_at": "2026-10-17T07:47:39.600887+00:00"
+        "captured_at": "2026-10-17T08:21:49.932656+00:00"
       }
     },
     "message": "Both agents proceed simultaneously in parallel workspaces. Zero lock contention or serialization."
   },
   {
     "index": 5,
-    "ts": 1792223259.751714,
+    "ts": 1792225310.087038,
     "run_id": "replay_gen_sc3",
     "agent": "Verifier",
     "phase": "VERIFICATION",
@@ -379,7 +334,7 @@
       "passed_count": 12,
       "failed_count": 0,
       "duration_seconds": 0.13,
-      "output": "============================= test session starts ==============================\nplatform darwin -- Python 3.11.17, pytest-9.1.1, pluggy-1.7.0 -- /Users/souhardya/ChronoFork/.venv/bin/python\ncachedir: .pytest_cache\nrootdir: /private/var/folders/t1/55jvjq_10y3dd248l0clr20r0000gn/T/chronofork_ws_zn2jqhsl/replay_gen_sc3_agent_2\nplugins: anyio-4.15.1\ncollecting ... collected 12 items\n\ntests/test_auth.py::test_extract_claims PASSED                           [  8%]\ntests/test_auth.py::test_validate_token_valid PASSED                     [ 16%]\ntests/test_auth.py::test_validate_token_invalid PASSED                   [ 25%]\ntests/test_config.py::test_get_default_config PASSED                     [ 33%]\ntests/test_config.py::test_load_config_default PASSED                    [ 41%]\ntests/test_config.py::test_compute_config_signature PASSED               [ 50%]\ntests/test_reports.py::test_calculate_metrics_summary PASSED             [ 58%]\ntests/test_reports.py::test_generate_summary PASSED                      [ 66%]\ntests/test_reports.py::test_format_as_markdown PASSED                    [ 75%]\ntests/test_reports.py::test_schedule_report_generation PASSED            [ 83%]\ntests/test_worker.py::test_execute_job_authorized PASSED                 [ 91%]\ntests/test_worker.py::test_execute_job_unauthorized PASSED               [100%]\n\n============================== 12 passed in 0.01s ==============================\n",
+      "output": "============================= test session starts ==============================\nplatform darwin -- Python 3.11.17, pytest-9.1.1, pluggy-1.7.0 -- /Users/souhardya/ChronoFork/.venv/bin/python\ncachedir: .pytest_cache\nrootdir: /private/var/folders/t1/55jvjq_10y3dd248l0clr20r0000gn/T/chronofork_ws_iceguspn/replay_gen_sc3_agent_2\nplugins: anyio-4.15.1\ncollecting ... collected 12 items\n\ntests/test_auth.py::test_extract_claims PASSED                           [  8%]\ntests/test_auth.py::test_validate_token_valid PASSED                     [ 16%]\ntests/test_auth.py::test_validate_token_invalid PASSED                   [ 25%]\ntests/test_config.py::test_get_default_config PASSED                     [ 33%]\ntests/test_config.py::test_load_config_default PASSED                    [ 41%]\ntests/test_config.py::test_compute_config_signature PASSED               [ 50%]\ntests/test_reports.py::test_calculate_metrics_summary PASSED             [ 58%]\ntests/test_reports.py::test_generate_summary PASSED                      [ 66%]\ntests/test_reports.py::test_format_as_markdown PASSED                    [ 75%]\ntests/test_reports.py::test_schedule_report_generation PASSED            [ 83%]\ntests/test_worker.py::test_execute_job_authorized PASSED                 [ 91%]\ntests/test_worker.py::test_execute_job_unauthorized PASSED               [100%]\n\n============================== 12 passed in 0.01s ==============================\n",
       "errors": ""
     },
     "node_ids": [
@@ -391,17 +346,9 @@
     "collision": null,
     "memory_write": null,
     "provenance": {
-      "graph": {
-        "source": "REAL",
-        "captured_at": "2026-10-17T07:47:39.751690+00:00"
-      },
-      "git": {
-        "source": "REAL",
-        "captured_at": "2026-10-17T07:47:39.751690+00:00"
-      },
       "pytest": {
         "source": "REAL",
-        "captured_at": "2026-10-17T07:47:39.751690+00:00"
+        "captured_at": "2026-10-17T08:21:50.087012+00:00"
       }
     },
     "message": "Parallel merges validated. Real pytest: 12 passed in 0.13s."

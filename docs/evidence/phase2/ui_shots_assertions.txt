@@ -76,7 +76,7 @@ Navigating to http://localhost:5173 ...
 ✅ [Item 1] Scenario 3: two disjoint neighborhoods separated by visible gap (> 200px) with NO connecting highlight -> PASSED
    Observed: A2 cluster: 13 nodes (rgb(224,164,88)), A3 cluster: 10 nodes (rgb(79,178,134)), gap: 340px
 ✅ [Item 1] Scenario 3 shows SAFE · 0 PATHS card -> PASSED
-   Observed: DockGraph Verification ProofSAFE · 0 PATHSNo call path within 4 hops between claimed symbolsFalkorDB query: 1.1 ms · rows: 0no breaking-intent claim reaches another claim · Parallel execution authorized
+   Observed: DockGraph Verification ProofSAFE · 0 PATHSNo call path within 4 hops between claimed symbolsFalkorDB query: 1.3 ms · rows: 0no breaking-intent claim reaches another claim · Parallel execution authorized
 📸 07-zero-path-proof.png saved.
 
 ================================================================
@@ -199,7 +199,7 @@ Clicked "Approve Merge". Waiting for "MERGE APPROVED" seal...
 
 [Item 1] Scenario 3 shows SAFE · 0 PATHS card
    Result: PASSED
-   Observed: DockGraph Verification ProofSAFE · 0 PATHSNo call path within 4 hops between claimed symbolsFalkorDB query: 1.1 ms · rows: 0no breaking-intent claim reaches another claim · Parallel execution authorized
+   Observed: DockGraph Verification ProofSAFE · 0 PATHSNo call path within 4 hops between claimed symbolsFalkorDB query: 1.3 ms · rows: 0no breaking-intent claim reaches another claim · Parallel execution authorized
 
 [Item 7] scenario1.webm duration is within target <= 28s
    Result: PASSED

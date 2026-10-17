@@ -38,10 +38,7 @@ class FalkorClient:
 
     def list_graphs(self) -> List[str]:
         """Lists all active graph keys."""
-        try:
-            return self.db.list_graphs()
-        except Exception:
-            return []
+        return self.db.list_graphs()
 
     def get_graph(self, name: str) -> Graph:
         """Selects an existing or new graph by name."""

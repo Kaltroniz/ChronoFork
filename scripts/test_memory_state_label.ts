@@ -25,13 +25,12 @@ async function testMemoryStateLabel() {
     // 2. Read "Memory state" label text after Reset
     const labelAfterReset = await page.evaluate(() => {
       const el = document.querySelector('[data-testid="memory-state-indicator"]');
-      if (!el) return 'ABSENT (hidden because memoryWasReset is true)';
-      return el.textContent?.trim() || 'EMPTY';
+      return el ? el.textContent : null;
     });
-    console.log(`>>> [OBSERVED STRING 1 - After Reset]: "${labelAfterReset}"\n`);
+    console.log(`>>> [OBSERVED VALUE 1 - After Reset]:`, labelAfterReset);
 
     // 3. Run Scenario 1 in replay
-    console.log('2. Clicking Scenario 1: Hidden Collision (replay)...');
+    console.log('\n2. Clicking Scenario 1: Hidden Collision (replay)...');
     await page.click('[data-testid="scenario-button-1"]');
 
     // 4. Wait for S1 replay to finish and write memory episode
@@ -49,19 +48,18 @@ async function testMemoryStateLabel() {
     // 5. Read "Memory state" label text after S1 completes
     const labelAfterS1 = await page.evaluate(() => {
       const el = document.querySelector('[data-testid="memory-state-indicator"]');
-      if (!el) return 'ABSENT';
-      return el.textContent?.trim() || 'EMPTY';
+      return el ? el.textContent : null;
     });
-    console.log(`>>> [OBSERVED STRING 2 - After S1 Replay]: "${labelAfterS1}"\n`);
+    console.log(`>>> [OBSERVED VALUE 2 - After S1 Replay]:`, labelAfterS1);
 
-    console.log('================================================================');
+    console.log('\n================================================================');
     console.log('TEST SUMMARY:');
-    console.log(`  Observed String 1 (After Reset):    "${labelAfterReset}"`);
-    console.log(`  Observed String 2 (After S1 Replay): "${labelAfterS1}"`);
+    console.log(`  Observed Value 1 (After Reset):    ${labelAfterReset === null ? 'null' : `"${labelAfterReset}"`}`);
+    console.log(`  Observed Value 2 (After S1 Replay): ${labelAfterS1 === null ? 'null' : `"${labelAfterS1}"`}`);
     console.log('================================================================');
 
-    if (!labelAfterReset.includes('ABSENT') || !labelAfterS1.includes('Memory state: carried over')) {
-      throw new Error(`Unexpected strings: [1] = "${labelAfterReset}", [2] = "${labelAfterS1}"`);
+    if (labelAfterReset !== null || !labelAfterS1 || !labelAfterS1.includes('carried over')) {
+      throw new Error(`Unexpected values: [1] = ${labelAfterReset}, [2] = "${labelAfterS1}"`);
     }
   } finally {
     await browser.close();

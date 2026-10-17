@@ -56,12 +56,24 @@ class EventBuffer:
         if provenance is None:
             import datetime
             iso_now = datetime.datetime.now(datetime.timezone.utc).isoformat()
-            provenance = {
-                "graph": {"source": "REAL", "captured_at": iso_now},
-                "git": {"source": "REAL", "captured_at": iso_now},
-                "pytest": {"source": "REAL", "captured_at": iso_now}
-            }
-            # Only present if a model actually produced output
+            provenance = {}
+
+            # Graph provenance: ONLY if a FalkorDB query ran in this event
+            if trace or cypher or tool in [
+                "recall_memory", "claim_symbols", "fork_graph", "detect_collisions",
+                "apply_policy", "get_impact", "record_handoff", "record_episode", "adapt_intent"
+            ]:
+                provenance["graph"] = {"source": "REAL", "captured_at": iso_now}
+
+            # Git provenance: ONLY if git merge / experiment ran in this event
+            if phase == "GIT_COMPARISON" or tool == "git_merge" or (execution_data and "git_status" in execution_data):
+                provenance["git"] = {"source": "REAL", "captured_at": iso_now}
+
+            # Pytest provenance: ONLY if pytest runner ran in this event
+            if tool == "run_pytest" or (execution_data and ("passed_count" in execution_data or "pytest_passed" in execution_data)):
+                provenance["pytest"] = {"source": "REAL", "captured_at": iso_now}
+
+            # LLM provenance: ONLY if a model produced output
             if execution_data and execution_data.get("llm_generated"):
                 provenance["llm"] = {"source": "REAL", "captured_at": iso_now}
 

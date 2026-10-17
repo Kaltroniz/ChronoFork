@@ -17,7 +17,7 @@ Manages low-level socket connections to FalkorDB using the official `falkordb` P
 **Key Architectural Mechanics:**
 - **Dynamic Configuration:** Reads `FALKORDB_HOST` and `FALKORDB_PORT` from environment variables, defaulting to `127.0.0.1:6379` for local execution or `falkordb:6379` in Docker Compose.
 - **Defensive Graph Copying (`copy_graph`):** Phase 0 live testing proved that calling FalkorDB's `graph.copy(dest)` will throw a `ResponseError: destination key already exists` if the target key already exists. `copy_graph` guarantees that the target key is dropped prior to initiating the copy.
-- **Microsecond Query Timing:** Measures query execution time via `time.perf_counter()`, returning both the raw FalkorDB `QueryResult` and execution duration in milliseconds for the frontend Cypher Inspector.
+- **Precise Millisecond Query Timing:** Measures query execution time via `time.perf_counter()`, returning both the raw FalkorDB `QueryResult` and execution duration in milliseconds for the frontend Cypher Inspector.
 """,
 
     "backend/app/parser.py": """### AST Code Graph Ingestion Engine (`backend/app/parser.py`)
@@ -74,7 +74,7 @@ Manages the live coordination graph (`coord:<run_id>`), handles agent symbol cla
 **Role & Purpose:**
 Maintains persistent episodic and procedural memory across runs in graph key `mem:<repo>`.
 
-**Dynamic Bayesian/Heuristic Confidence:**
+**Dynamic Heuristic Confidence:**
 - **Graph Schema:** `(:Symbol {qualname})`, `(:Episode)`, `(:ProceduralRule)`. Linked via `[:INVOLVED]` and `[:LEARNED_RULE]`.
 - **Dynamic Updates:** When a run completes successfully after serialization or avoidance, `update_rule_confidence` increases the rule confidence by `+0.10` (capped at 0.99). If a run fails tests, confidence drops by `-0.20` (floored at 0.10).
 - **Upfront Memory Recall:** Before claiming any symbol, an agent queries FalkorDB for any `ProceduralRule` connected to its target symbol or its 2-hop neighbors. If a high-confidence rule exists, the agent adapts its plan upfront (e.g. converting a breaking `SIGNATURE_CHANGE` into a backward-compatible `BODY_EDIT`).
@@ -101,7 +101,7 @@ Can be connected to external MCP clients (Cursor, Claude Desktop, Antigravity) o
 Ensures real-time Server-Sent Events (SSE) streaming from the backend to the React frontend with zero dropped events.
 
 **Deterministic Replay & Pacing:**
-- **Zero-Drop In-Memory Buffer:** All emitted events for a `run_id` are stored in an append-only memory list. When the frontend connects to `GET /runs/{id}/events?delay_ms=600`, it always streams from event index 0. Even if the backend finishes in 50ms, the frontend receives the full sequence at a comfortable animated pace (`delay_ms`).
+- **Indexed In-Memory Buffer:** All emitted events for a `run_id` are stored in an append-only memory list. When the frontend connects to `GET /runs/{id}/events?delay_ms=600`, it always streams from event index 0. Even if the backend finishes in 50ms, the frontend receives the full sequence at a comfortable animated pace (`delay_ms`).
 - **Strict Event Schema:** Every event contains `ts`, `run_id`, `agent`, `phase`, `tool`, `cypher`, `params`, `node_ids`, `edge_ids`, `scores`, `collision`, `memory_write`, and `message`.
 """,
 
@@ -263,9 +263,9 @@ ChronoFork solves this with:
     out.append("\n---\n\n")
     out.append("## 2. Why FalkorDB is Irreplaceable\n\n")
     out.append("""ChronoFork cannot function without FalkorDB. If FalkorDB is replaced with a relational or document database, the product stops working:
-- **Variable-Length Transitive Paths**: In openCypher, `(s2)-[:CALLS*1..4]->(s1)` executes in **1.8 ms**. In SQL, this requires complex, slow recursive CTEs.
-- **Native Graph Algorithms**: FalkorDB executes PageRank in **21.3 ms** and Betweenness in **7.67 ms** directly in Redis memory. Relational engines require exporting data to an external cluster.
-- **Instant Graph Branching**: FalkorDB clones a complete code graph (`graph.copy`) in **36.1 ms**, enabling lightweight per-agent speculative forks.
+- **Variable-Length Transitive Paths**: In openCypher, `(s2)-[:CALLS*1..4]->(s1)` executes in **0.76 ms** (median on repo:taskflow). In SQL, this requires complex, slow recursive CTEs.
+- **Native Graph Algorithms**: FalkorDB executes PageRank in **1.36 ms** (median) and Betweenness in **1.80 ms** (median) directly in Redis memory. Relational engines require exporting data to an external cluster.
+- **Fast Speculative Graph Branching**: FalkorDB clones a complete code graph (`graph.copy`) in **108.3 ms** (median), enabling lightweight per-agent speculative forks.
 """)
 
     out.append("\n---\n\n")

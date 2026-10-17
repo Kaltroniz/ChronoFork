@@ -175,7 +175,12 @@ export const App: React.FC = () => {
         });
 
         if (!runRes.ok) {
-          throw new Error(`Failed to start run: status ${runRes.status}`);
+          let detail = `HTTP ${runRes.status}`;
+          try {
+            const errData = await runRes.json();
+            if (errData.detail) detail = errData.detail;
+          } catch {}
+          throw new Error(`Execution error: ${detail}`);
         }
 
         const runData = await runRes.json();
@@ -212,9 +217,9 @@ export const App: React.FC = () => {
         es.onerror = () => {
           es.close();
         };
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error starting scenario:', err);
-        setErrorMessage('Failed to start scenario execution. Ensure backend is running.');
+        setErrorMessage(err.message || 'Failed to start scenario execution. Ensure backend and FalkorDB are running.');
         setIsRunning(false);
       }
     },

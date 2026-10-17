@@ -77,7 +77,7 @@ flowchart TB
 
     subgraph Backend["FastAPI Backend (Port 8000)"]
         API["FastAPI Endpoints (/runs, /graph, /memory)"]
-        SSE["In-Memory SSE Buffer (Zero-Drop Replay)"]
+        SSE["In-Memory SSE Buffer (Indexed Event Replay)"]
         Runner["Scenario Orchestrator (Scenarios 1-4)"]
         Parser["Import-Aware AST Parser"]
         FastMCP["FastMCP Server (7 Native Tools)"]

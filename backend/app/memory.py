@@ -3,7 +3,7 @@
 Stores long-term agent memories across runs:
   - Episode: Past execution outcomes and lessons.
   - ProceduralRule: Reusable guidelines with dynamic confidence scores (rising on success, falling on failure).
-  - Dynamic Bayesian/heuristic confidence strictly clamped [0.10, 0.99] with single-path updates.
+  - Dynamic heuristic confidence strictly clamped [0.10, 0.99] with single-path updates.
   - Reset and inspection capabilities for recording demonstrations.
 """
 

@@ -1,7 +1,7 @@
 # ChronoFork Handoff Status & Phase Audit
 
 > **Branch**: `SS1`  
-> **Timestamp**: 2026-10-17T13:40:00+05:30  
+> **Timestamp**: 2026-10-17T13:58:00+05:30  
 > **Target Track**: Graph Hacks (FalkorDB) - Track 1 (Agents on Connected Data) & Track 2 (Memory & Coordination)
 
 ---
@@ -145,7 +145,7 @@
 - **Git State**:
   - Active branch: `SS1` (tracking `origin/SS1`).
   - Working tree clean except `docs/evidence/` and `docs/HANDOFF_STATUS.md`.
-  - Head commit: `8ec8f85`.
+  - Head commit: `c9f178d`.
 - **Replay mtimes vs Backend Commit Date**:
   - Replay files commit: `fbb67cb` (2026-10-16 06:05:20 +0530).
   - Last backend commit: `2032d9b` (2026-10-16 05:29:31 +0530).
@@ -249,23 +249,35 @@
     - Intersect assertion: `false` (PASSED).
 - **ZeroPathProof Dynamic Intent**:
   - Derived dynamically from `a1Claim.intent` without scenario-number branching.
-- **Reset $\to$ Memory State Progression (Playwright Test)**:
-  - Observed String 1 (After Reset): `"ABSENT (hidden because memoryWasReset is true)"`
-  - Observed String 2 (After S1 Replay): `"Memory state: carried over from previous runs"`
+- **Reset $\to$ Memory State Progression (Playwright Test `scripts/test_memory_state_label.ts`)**:
+  - Observed Value 1 (After Reset): `null` (element absent from DOM because `memoryWasReset === true`)
+  - Observed Value 2 (After S1 Replay): `"Memory state: carried over from previous runs"`
+  - Code line: `const labelAfterReset = await page.evaluate(() => document.querySelector('[data-testid="memory-state-indicator"]')?.textContent ?? null);`
   - Exit code 0 (`docs/evidence/phase2/memory_state_label_test.txt`).
 - **Cytoscape Label Legibility & Idle Clearance**:
   - Idle state: 0 intersections across 24 visible labels. Font size clamped between 13.00px and 16.00px.
   - Focus state: 0 intersections across 13 visible labels.
-- **Screenshots & Videos Generated**:
-  - Saved to `docs/screens/`: `01-idle.png`, `02-claims.png`, `03-collision-hero.png`, `04-git-vs-chronofork.png`, `05-resolution-handoff.png`, `06-memory-run-compare.png`, `07-zero-path-proof.png`, `08-receipt.png`, `09-focus-view-4hop.png`.
-  - Videos:
-    - `scenario1.webm`: 16.0s (Target $\le 28$s, ends 2s after MERGE APPROVED).
-    - `scenario2.webm`: 12.0s (Target $\sim 12$s).
-    - `scenario3.webm`: 12.0s (Target $\sim 12$s).
+- **Fail-Loudly Verification (Container Stop & Restart)**:
+  - When FalkorDB container stopped:
+    - `POST /runs` (live mode) $\to$ Status: **503**, Body: `{"detail":"Live run execution failed (FalkorDB connection refused or offline): Error 61 connecting to 127.0.0.1:6379. Connection refused."}` (No cached fallback).
+    - `GET /graph/taskflow` $\to$ Status: **503**, Body: `{"detail":"FalkorDB connection refused or offline: Error 61 connecting to 127.0.0.1:6379. Connection refused."}`
+    - `GET /collisions/test_run` $\to$ Status: **503**, Body: `{"detail":"FalkorDB connection refused or offline: Error 61 connecting to 127.0.0.1:6379. Connection refused."}`
+  - When FalkorDB container restarted:
+    - `GET /health` $\to$ Status: **200**, healthy.
+    - `GET /graph/taskflow` $\to$ Status: **200**, recovery confirmed.
+- **Video Durations (ffprobe Verified)**:
+  - `docs/screens/scenario1.webm`: **17.84s** (stream duration, target $\le 28$s, ends 2.0s after MERGE APPROVED).
+  - `docs/screens/scenario2.webm`: **13.60s** (stream duration, target $\sim 12$s).
+  - `docs/screens/scenario3.webm`: **13.52s** (stream duration, target $\sim 12$s).
+- **Policy Label Verification (UI vs Event)**:
+  - Event `collision.policy` field: `"SERIALIZE_CALLEE_FIRST"`
+  - UI Pill in Hero card: `"POLICY: SERIALIZE_CALLEE_FIRST"`
+  - UI Strip Policy: `"SERIALIZE_CALLEE_FIRST"`
+  - UI Query Inspector Policy: `"Policy: SERIALIZE_CALLEE_FIRST"` (Exact 1:1 match).
 
-### Partial
-- None for Phase 2 or Phase 1b.
+### Partial (Honest Status)
+- **Live LLM Execution Mode**: NOT DONE. The codebase scaffolds Gemini integration via `backend/app/agents/llm.py`, but scenario runner currently relies on verified deterministic fallback patches (`backend/app/scenario_runner.py:251-275`). Live model invocation has not been validated end-to-end with production Gemini API keys.
 
 ### Not Done (Reserved for Phase 3)
-- Detection benchmark suite (Phase 3).
+- **Detection Benchmark Suite**: NOT DONE (`scripts/benchmark_detection.py` across 10+ synthetic collision cases, reserved for Phase 3).
 

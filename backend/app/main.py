@@ -125,16 +125,22 @@ async def start_run(req: RunRequest):
             print(f"Warning: Failed to load replay cache {cache_file}: {ex}")
 
     # 2. Mode = Live (or cache missing): Execute live
-    if req.scenario == 1:
-        events = execute_scenario_1(run_id, mode=req_mode)
-    elif req.scenario == 2:
-        events = execute_scenario_2(run_id, memory_enabled=req.memory_enabled)
-    elif req.scenario == 3:
-        events = execute_scenario_3(run_id)
-    elif req.scenario == 4:
-        events = execute_scenario_4(run_id)
-    else:
-        events = execute_scenario_1(run_id, mode=req_mode)
+    try:
+        if req.scenario == 1:
+            events = execute_scenario_1(run_id, mode=req_mode)
+        elif req.scenario == 2:
+            events = execute_scenario_2(run_id, memory_enabled=req.memory_enabled)
+        elif req.scenario == 3:
+            events = execute_scenario_3(run_id)
+        elif req.scenario == 4:
+            events = execute_scenario_4(run_id)
+        else:
+            events = execute_scenario_1(run_id, mode=req_mode)
+    except Exception as ex:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Live run execution failed (FalkorDB connection refused or offline): {ex}"
+        )
 
     # Save to live run record (canonical scenario_N.json are written only by scripts/regenerate_replays.py)
     try:
@@ -172,26 +178,53 @@ async def get_run_events(run_id: str, delay_ms: int = Query(default=500)):
     )
 
 
+@app.get("/collisions/{run_id}")
+def get_collisions(run_id: str):
+    """Detect multi-hop collisions for a run coordination graph."""
+    try:
+        from backend.app.coordinator import detect_collisions
+        return {"run_id": run_id, "collisions": detect_collisions(run_id)}
+    except Exception as ex:
+        raise HTTPException(
+            status_code=503,
+            detail=f"FalkorDB connection refused or offline: {ex}"
+        )
+
+
 @app.get("/graph/{graph_name}")
 def get_graph_data(graph_name: str):
     """
     Returns nodes and edges formatted for Cytoscape.js.
     Supports parent module clustering and centrality risk scores.
     """
-    if graph_name not in falkor_client.list_graphs():
-        if f"repo:{graph_name}" in falkor_client.list_graphs():
+    try:
+        graphs = falkor_client.list_graphs()
+    except Exception as ex:
+        raise HTTPException(
+            status_code=503,
+            detail=f"FalkorDB connection refused or offline: {ex}"
+        )
+
+    if graph_name not in graphs:
+        if f"repo:{graph_name}" in graphs:
             graph_name = f"repo:{graph_name}"
         else:
             raise HTTPException(status_code=404, detail=f"Graph '{graph_name}' not found.")
 
-    g = falkor_client.get_graph(graph_name)
+    try:
+        g = falkor_client.get_graph(graph_name)
 
-    # Retrieve all Symbol nodes
-    nodes_res = g.query("""
-    MATCH (s:Symbol)
-    RETURN s.qualname AS qualname, s.name AS name, labels(s) AS labels,
-           s.path AS path, s.lineno AS lineno, s.signature_hash AS signature_hash
-    """)
+        # Retrieve all Symbol nodes
+        nodes_res = g.query("""
+        MATCH (s:Symbol)
+        RETURN s.qualname AS qualname, s.name AS name, labels(s) AS labels,
+               s.path AS path, s.lineno AS lineno, s.signature_hash AS signature_hash
+        """)
+    except Exception as ex:
+        raise HTTPException(
+            status_code=503,
+            detail=f"FalkorDB connection refused or offline: {ex}"
+        )
 
     # Compute risk scores
     try:

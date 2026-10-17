@@ -64,24 +64,31 @@ export const ProvenanceStrip: React.FC<ProvenanceStripProps> = ({ activeEvent, m
     : '—';
 
   const visiblePills = PILLS.filter((pill) => {
-    if (pill.key === 'LLM') {
-      return Boolean(activeEvent?.provenance?.llm);
-    }
-    return true;
+    const key = pill.key.toLowerCase() as 'graph' | 'git' | 'pytest' | 'llm';
+    return Boolean(activeEvent?.provenance?.[key]);
   });
 
   return (
     <div className="flex items-center gap-2 select-none" role="region" aria-label="System Provenance">
       {visiblePills.map((pill) => {
+        const key = pill.key.toLowerCase() as 'graph' | 'git' | 'pytest' | 'llm';
+        const raw = activeEvent?.provenance?.[key];
         const state = getProvenance(pill.key, activeEvent, mode);
         const config = STATE_CONFIG[state] || STATE_CONFIG.UNAVAILABLE;
 
-        let tooltipText = config.tooltip;
-        if (state === 'CACHED') {
-          tooltipText = `REPLAY · captured ${timestampStr} from a real run`;
-        } else if (state === 'REAL') {
-          tooltipText = 'Live';
-        }
+        const capturedIso = typeof raw === 'object' && raw?.captured_at ? raw.captured_at : null;
+        const capturedDate = capturedIso
+          ? new Date(capturedIso).toLocaleTimeString(undefined, {
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit'
+            })
+          : '';
+
+        const badgeText = mode === 'replay' ? `CACHED · ${capturedDate || 'run'}` : 'REAL';
+        const tooltipText = mode === 'replay'
+          ? `REPLAY · captured ${capturedIso || timestampStr} from a real execution`
+          : 'Live Execution';
 
         return (
           <div
@@ -94,7 +101,7 @@ export const ProvenanceStrip: React.FC<ProvenanceStripProps> = ({ activeEvent, m
               style={{ backgroundColor: config.dotColor }}
             />
             <span className="text-[var(--text-dim)] font-semibold">{pill.label}</span>
-            <span style={{ color: config.textColor }}>{state}</span>
+            <span style={{ color: config.textColor }}>{badgeText}</span>
           </div>
         );
       })}
