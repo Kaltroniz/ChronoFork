@@ -1,7 +1,7 @@
 [
   {
     "index": 0,
-    "ts": 1792110819.4755778,
+    "ts": 1792223259.230229,
     "run_id": "replay_gen_sc2_mem",
     "agent": "Planner",
     "phase": "PLANNING",
@@ -18,11 +18,25 @@
     "scores": {},
     "collision": null,
     "memory_write": null,
+    "provenance": {
+      "graph": {
+        "source": "REAL",
+        "captured_at": "2026-10-17T07:47:39.230226+00:00"
+      },
+      "git": {
+        "source": "REAL",
+        "captured_at": "2026-10-17T07:47:39.230226+00:00"
+      },
+      "pytest": {
+        "source": "REAL",
+        "captured_at": "2026-10-17T07:47:39.230226+00:00"
+      }
+    },
     "message": "Planner received task: 'Refactor config schema and extend worker timeout'. Memory Coordination: ON."
   },
   {
     "index": 1,
-    "ts": 1792110819.5366895,
+    "ts": 1792223259.273443,
     "run_id": "replay_gen_sc2_mem",
     "agent": "ConfigCoder",
     "phase": "RECALL",
@@ -30,14 +44,14 @@
     "cypher": "MATCH (s:Symbol)<-[:INVOLVED]-(r:ProceduralRule)\n    WHERE s.qualname IN $qnames\n    RETURN DISTINCT r.id AS id, r.rule AS rule, r.advice AS advice, r.confidence AS confidence, r.samples AS samples, s.qualname AS trigger_symbol, r.recommended_intent AS recommended_intent\n    ORDER BY r.confidence DESC",
     "params": {
       "qnames": [
-        "taskflow.auth.validate_token",
-        "tests.test_config.test_get_default_config",
         "tests.test_config.test_compute_config_signature",
-        "tests.test_config.test_load_config_default",
-        "taskflow.config.get_default_config",
-        "taskflow.database.get_connection",
+        "taskflow.auth.validate_token",
         "taskflow.config.load_config",
-        "taskflow.config.compute_config_signature"
+        "taskflow.database.get_connection",
+        "taskflow.config.compute_config_signature",
+        "taskflow.config.get_default_config",
+        "tests.test_config.test_get_default_config",
+        "tests.test_config.test_load_config_default"
       ]
     },
     "trace": {
@@ -45,17 +59,17 @@
       "cypher": "MATCH (s:Symbol)<-[:INVOLVED]-(r:ProceduralRule)\n    WHERE s.qualname IN $qnames\n    RETURN DISTINCT r.id AS id, r.rule AS rule, r.advice AS advice, r.confidence AS confidence, r.samples AS samples, s.qualname AS trigger_symbol, r.recommended_intent AS recommended_intent\n    ORDER BY r.confidence DESC",
       "params": {
         "qnames": [
-          "taskflow.auth.validate_token",
-          "tests.test_config.test_get_default_config",
           "tests.test_config.test_compute_config_signature",
-          "tests.test_config.test_load_config_default",
-          "taskflow.config.get_default_config",
-          "taskflow.database.get_connection",
+          "taskflow.auth.validate_token",
           "taskflow.config.load_config",
-          "taskflow.config.compute_config_signature"
+          "taskflow.database.get_connection",
+          "taskflow.config.compute_config_signature",
+          "taskflow.config.get_default_config",
+          "tests.test_config.test_get_default_config",
+          "tests.test_config.test_load_config_default"
         ]
       },
-      "duration_ms": 0.93,
+      "duration_ms": 0.88,
       "row_count": 1,
       "rows": [
         [
@@ -111,11 +125,25 @@
       "rule_id": "rule_cfg_worker_transitive",
       "confidence": 0.95
     },
+    "provenance": {
+      "graph": {
+        "source": "REAL",
+        "captured_at": "2026-10-17T07:47:39.273436+00:00"
+      },
+      "git": {
+        "source": "REAL",
+        "captured_at": "2026-10-17T07:47:39.273436+00:00"
+      },
+      "pytest": {
+        "source": "REAL",
+        "captured_at": "2026-10-17T07:47:39.273436+00:00"
+      }
+    },
     "message": "MEMORY HIT! ConfigCoder recalled ProceduralRule 'load_config signature changes break transitive caller worker.execute_job (4 hops via database, auth, queue)' with 95% confidence. Recommended intent: BODY_EDIT. Advice: Serialize execution or provide backward-compatible dict access/default kwargs when modifying load_config.."
   },
   {
     "index": 2,
-    "ts": 1792110819.5366948,
+    "ts": 1792223259.273451,
     "run_id": "replay_gen_sc2_mem",
     "agent": "ConfigCoder",
     "phase": "MEMORY_ADAPTATION",
@@ -131,11 +159,193 @@
     "scores": {},
     "collision": null,
     "memory_write": null,
+    "provenance": {
+      "graph": {
+        "source": "REAL",
+        "captured_at": "2026-10-17T07:47:39.273446+00:00"
+      },
+      "git": {
+        "source": "REAL",
+        "captured_at": "2026-10-17T07:47:39.273446+00:00"
+      },
+      "pytest": {
+        "source": "REAL",
+        "captured_at": "2026-10-17T07:47:39.273446+00:00"
+      }
+    },
     "message": "Memory-Driven Adaptation: Rule 'rule_cfg_worker_transitive' recommends intent 'BODY_EDIT' instead of breaking SIGNATURE_CHANGE. Preserving signature compatibility!"
   },
   {
     "index": 3,
-    "ts": 1792110819.5461955,
+    "ts": 1792223259.274754,
+    "run_id": "replay_gen_sc2_mem",
+    "agent": "ConfigCoder",
+    "phase": "CLAIM",
+    "tool": "claim_symbols",
+    "cypher": "MATCH (a:Agent {id: $agent_id})\n    MATCH (s:Symbol {qualname: $symbol_qname})\n    MERGE (a)-[c:CLAIMS {intent: $intent}]->(s)\n    SET c.subtask = $subtask, c.claimed_at = timestamp()\n    RETURN a.id AS agent_id, a.name AS agent_name, s.qualname AS symbol, c.intent AS intent",
+    "params": {
+      "agent_id": "agent_1",
+      "symbol_qname": "taskflow.config.load_config",
+      "intent": "BODY_EDIT",
+      "subtask": "Preserve signature compatibility as advised by memory rule"
+    },
+    "trace": {
+      "graph": "coord:replay_gen_sc2_mem",
+      "cypher": "MATCH (a:Agent {id: $agent_id})\n    MATCH (s:Symbol {qualname: $symbol_qname})\n    MERGE (a)-[c:CLAIMS {intent: $intent}]->(s)\n    SET c.subtask = $subtask, c.claimed_at = timestamp()\n    RETURN a.id AS agent_id, a.name AS agent_name, s.qualname AS symbol, c.intent AS intent",
+      "params": {
+        "agent_id": "agent_1",
+        "symbol_qname": "taskflow.config.load_config",
+        "intent": "BODY_EDIT",
+        "subtask": "Preserve signature compatibility as advised by memory rule"
+      },
+      "duration_ms": 1.28,
+      "row_count": 1,
+      "rows": [
+        [
+          "agent_1",
+          "ConfigCoder",
+          "taskflow.config.load_config",
+          "BODY_EDIT"
+        ]
+      ],
+      "header": [
+        [
+          1,
+          "agent_id"
+        ],
+        [
+          1,
+          "agent_name"
+        ],
+        [
+          1,
+          "symbol"
+        ],
+        [
+          1,
+          "intent"
+        ]
+      ],
+      "tool": "claim_symbols"
+    },
+    "execution_data": {
+      "run_id": "replay_gen_sc2_mem",
+      "agent_id": "agent_1",
+      "agent_name": "ConfigCoder",
+      "symbol": "taskflow.config.load_config",
+      "symbol_qname": "taskflow.config.load_config",
+      "intent": "BODY_EDIT"
+    },
+    "node_ids": [
+      "taskflow.config.load_config"
+    ],
+    "edge_ids": [],
+    "scores": {},
+    "collision": null,
+    "memory_write": null,
+    "provenance": {
+      "graph": {
+        "source": "REAL",
+        "captured_at": "2026-10-17T07:47:39.274736+00:00"
+      },
+      "git": {
+        "source": "REAL",
+        "captured_at": "2026-10-17T07:47:39.274736+00:00"
+      },
+      "pytest": {
+        "source": "REAL",
+        "captured_at": "2026-10-17T07:47:39.274736+00:00"
+      }
+    },
+    "message": "ConfigCoder declared CLAIM on taskflow.config.load_config with memory-adapted intent BODY_EDIT."
+  },
+  {
+    "index": 4,
+    "ts": 1792223259.2756648,
+    "run_id": "replay_gen_sc2_mem",
+    "agent": "WorkerCoder",
+    "phase": "CLAIM",
+    "tool": "claim_symbols",
+    "cypher": "MATCH (a:Agent {id: $agent_id})\n    MATCH (s:Symbol {qualname: $symbol_qname})\n    MERGE (a)-[c:CLAIMS {intent: $intent}]->(s)\n    SET c.subtask = $subtask, c.claimed_at = timestamp()\n    RETURN a.id AS agent_id, a.name AS agent_name, s.qualname AS symbol, c.intent AS intent",
+    "params": {
+      "agent_id": "agent_2",
+      "symbol_qname": "taskflow.worker.execute_job",
+      "intent": "BODY_EDIT",
+      "subtask": "Extend worker job timeout"
+    },
+    "trace": {
+      "graph": "coord:replay_gen_sc2_mem",
+      "cypher": "MATCH (a:Agent {id: $agent_id})\n    MATCH (s:Symbol {qualname: $symbol_qname})\n    MERGE (a)-[c:CLAIMS {intent: $intent}]->(s)\n    SET c.subtask = $subtask, c.claimed_at = timestamp()\n    RETURN a.id AS agent_id, a.name AS agent_name, s.qualname AS symbol, c.intent AS intent",
+      "params": {
+        "agent_id": "agent_2",
+        "symbol_qname": "taskflow.worker.execute_job",
+        "intent": "BODY_EDIT",
+        "subtask": "Extend worker job timeout"
+      },
+      "duration_ms": 0.9,
+      "row_count": 1,
+      "rows": [
+        [
+          "agent_2",
+          "WorkerCoder",
+          "taskflow.worker.execute_job",
+          "BODY_EDIT"
+        ]
+      ],
+      "header": [
+        [
+          1,
+          "agent_id"
+        ],
+        [
+          1,
+          "agent_name"
+        ],
+        [
+          1,
+          "symbol"
+        ],
+        [
+          1,
+          "intent"
+        ]
+      ],
+      "tool": "claim_symbols"
+    },
+    "execution_data": {
+      "run_id": "replay_gen_sc2_mem",
+      "agent_id": "agent_2",
+      "agent_name": "WorkerCoder",
+      "symbol": "taskflow.worker.execute_job",
+      "symbol_qname": "taskflow.worker.execute_job",
+      "intent": "BODY_EDIT"
+    },
+    "node_ids": [
+      "taskflow.worker.execute_job"
+    ],
+    "edge_ids": [],
+    "scores": {},
+    "collision": null,
+    "memory_write": null,
+    "provenance": {
+      "graph": {
+        "source": "REAL",
+        "captured_at": "2026-10-17T07:47:39.275663+00:00"
+      },
+      "git": {
+        "source": "REAL",
+        "captured_at": "2026-10-17T07:47:39.275663+00:00"
+      },
+      "pytest": {
+        "source": "REAL",
+        "captured_at": "2026-10-17T07:47:39.275663+00:00"
+      }
+    },
+    "message": "WorkerCoder declared CLAIM on taskflow.worker.execute_job with intent BODY_EDIT in worker.py."
+  },
+  {
+    "index": 5,
+    "ts": 1792223259.285682,
     "run_id": "replay_gen_sc2_mem",
     "agent": "Coordinator",
     "phase": "COLLISION_DETECTION",
@@ -146,7 +356,7 @@
       "graph": "coord:replay_gen_sc2_mem",
       "cypher": "MATCH (a1:Agent)-[c1:CLAIMS]->(s1:Symbol),\n          (a2:Agent)-[c2:CLAIMS]->(s2:Symbol)\n    WHERE a1.id <> a2.id\n      AND c1.intent IN ['SIGNATURE_CHANGE', 'DELETE']\n    MATCH path = (s2)-[:CALLS*1..4]->(s1)\n    RETURN a1.id AS a1, a2.id AS a2, s1.qualname AS s1_qname, s2.qualname AS s2_qname,\n           c1.intent AS intent1, c2.intent AS intent2,\n           [n in nodes(path) | n.qualname] AS path_nodes, length(path) AS hops",
       "params": {},
-      "duration_ms": 1.1,
+      "duration_ms": 1.13,
       "row_count": 0,
       "rows": [],
       "header": [
@@ -185,17 +395,41 @@
       ],
       "tool": "detect_collisions"
     },
-    "execution_data": null,
+    "execution_data": {
+      "path_rows_count": 1,
+      "collisions_count": 0,
+      "path_nodes": [
+        "taskflow.worker.execute_job",
+        "taskflow.queue.dequeue_task",
+        "taskflow.auth.validate_token",
+        "taskflow.database.get_connection",
+        "taskflow.config.load_config"
+      ]
+    },
     "node_ids": [],
     "edge_ids": [],
     "scores": {},
     "collision": null,
     "memory_write": null,
-    "message": "Collision check: ZERO collisions! Memory-guided constraint prevented the breaking change before code was written."
+    "provenance": {
+      "graph": {
+        "source": "REAL",
+        "captured_at": "2026-10-17T07:47:39.285668+00:00"
+      },
+      "git": {
+        "source": "REAL",
+        "captured_at": "2026-10-17T07:47:39.285668+00:00"
+      },
+      "pytest": {
+        "source": "REAL",
+        "captured_at": "2026-10-17T07:47:39.285668+00:00"
+      }
+    },
+    "message": "Collision check: ZERO collisions! Path existence query returned 1 rows (call path exists), but memory changed A1's claim to BODY_EDIT; the breaking-intent query returned 0 rows."
   },
   {
-    "index": 4,
-    "ts": 1792110822.335221,
+    "index": 6,
+    "ts": 1792223259.420695,
     "run_id": "replay_gen_sc2_mem",
     "agent": "Verifier",
     "phase": "VERIFICATION",
@@ -208,8 +442,8 @@
       "exit_code": 0,
       "passed_count": 12,
       "failed_count": 0,
-      "duration_seconds": 0.66,
-      "output": "============================= test session starts ==============================\nplatform linux -- Python 3.12.3, pytest-9.1.1, pluggy-1.7.0 -- /opt/venv/bin/python3\ncachedir: .pytest_cache\nrootdir: /tmp/chronofork_ws_cpdy5nvd/replay_gen_sc2_mem_agent_1\nplugins: anyio-4.15.1\ncollecting ... collected 12 items\n\ntests/test_auth.py::test_extract_claims PASSED                           [  8%]\ntests/test_auth.py::test_validate_token_valid PASSED                     [ 16%]\ntests/test_auth.py::test_validate_token_invalid PASSED                   [ 25%]\ntests/test_config.py::test_get_default_config PASSED                     [ 33%]\ntests/test_config.py::test_load_config_default PASSED                    [ 41%]\ntests/test_config.py::test_compute_config_signature PASSED               [ 50%]\ntests/test_reports.py::test_calculate_metrics_summary PASSED             [ 58%]\ntests/test_reports.py::test_generate_summary PASSED                      [ 66%]\ntests/test_reports.py::test_format_as_markdown PASSED                    [ 75%]\ntests/test_reports.py::test_schedule_report_generation PASSED            [ 83%]\ntests/test_worker.py::test_execute_job_authorized PASSED                 [ 91%]\ntests/test_worker.py::test_execute_job_unauthorized PASSED               [100%]\n\n============================== 12 passed in 0.19s ==============================\n",
+      "duration_seconds": 0.13,
+      "output": "============================= test session starts ==============================\nplatform darwin -- Python 3.11.17, pytest-9.1.1, pluggy-1.7.0 -- /Users/souhardya/ChronoFork/.venv/bin/python\ncachedir: .pytest_cache\nrootdir: /private/var/folders/t1/55jvjq_10y3dd248l0clr20r0000gn/T/chronofork_ws_qn9y7av6/replay_gen_sc2_mem_agent_1\nplugins: anyio-4.15.1\ncollecting ... collected 12 items\n\ntests/test_auth.py::test_extract_claims PASSED                           [  8%]\ntests/test_auth.py::test_validate_token_valid PASSED                     [ 16%]\ntests/test_auth.py::test_validate_token_invalid PASSED                   [ 25%]\ntests/test_config.py::test_get_default_config PASSED                     [ 33%]\ntests/test_config.py::test_load_config_default PASSED                    [ 41%]\ntests/test_config.py::test_compute_config_signature PASSED               [ 50%]\ntests/test_reports.py::test_calculate_metrics_summary PASSED             [ 58%]\ntests/test_reports.py::test_generate_summary PASSED                      [ 66%]\ntests/test_reports.py::test_format_as_markdown PASSED                    [ 75%]\ntests/test_reports.py::test_schedule_report_generation PASSED            [ 83%]\ntests/test_worker.py::test_execute_job_authorized PASSED                 [ 91%]\ntests/test_worker.py::test_execute_job_unauthorized PASSED               [100%]\n\n============================== 12 passed in 0.01s ==============================\n",
       "errors": ""
     },
     "node_ids": [
@@ -220,11 +454,25 @@
     "scores": {},
     "collision": null,
     "memory_write": null,
-    "message": "Both agents executed concurrently without serialization. Real pytest: 12 passed in 0.66s!"
+    "provenance": {
+      "graph": {
+        "source": "REAL",
+        "captured_at": "2026-10-17T07:47:39.420673+00:00"
+      },
+      "git": {
+        "source": "REAL",
+        "captured_at": "2026-10-17T07:47:39.420673+00:00"
+      },
+      "pytest": {
+        "source": "REAL",
+        "captured_at": "2026-10-17T07:47:39.420673+00:00"
+      }
+    },
+    "message": "Both agents executed concurrently without serialization. Real pytest: 12 passed in 0.13s!"
   },
   {
-    "index": 5,
-    "ts": 1792110822.3371525,
+    "index": 7,
+    "ts": 1792223259.42282,
     "run_id": "replay_gen_sc2_mem",
     "agent": "Coordinator",
     "phase": "MEMORY_UPDATE",
@@ -240,6 +488,20 @@
     "memory_write": {
       "rule_id": "rule_cfg_worker_transitive",
       "confidence": 0.99
+    },
+    "provenance": {
+      "graph": {
+        "source": "REAL",
+        "captured_at": "2026-10-17T07:47:39.422816+00:00"
+      },
+      "git": {
+        "source": "REAL",
+        "captured_at": "2026-10-17T07:47:39.422816+00:00"
+      },
+      "pytest": {
+        "source": "REAL",
+        "captured_at": "2026-10-17T07:47:39.422816+00:00"
+      }
     },
     "message": "Memory reinforced: Rule confidence increased to 99%."
   }

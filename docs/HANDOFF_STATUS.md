@@ -1,7 +1,7 @@
 # ChronoFork Handoff Status & Phase Audit
 
 > **Branch**: `SS1`  
-> **Timestamp**: 2026-10-17T12:46:00+05:30  
+> **Timestamp**: 2026-10-17T13:40:00+05:30  
 > **Target Track**: Graph Hacks (FalkorDB) - Track 1 (Agents on Connected Data) & Track 2 (Memory & Coordination)
 
 ---
@@ -122,8 +122,8 @@
 | `scripts/test_all_scenarios.py` | Executes all 4 scenarios end-to-end | PASS | Exit 0. All 4 scenarios generated expected events and passed. |
 | `scripts/test_api_execution.py` | HTTP end-to-end against live backend `/runs` | PASS | Exit 0. Git 5 failed / 7 passed; ChronoFork 12 passed / 0 failed. |
 | `scripts/test_memory_toggle.py` | HTTP test of Scenario 2 with MEMORY ON vs OFF | PASS | Exit 0. Memory ON: 0 collisions; Memory OFF: 1 collision returned. |
-| `scripts/test_migration_sandbox.py`| Migration sandbox test | **FAILED** | Exit 1. Hardcoded WSL path `/mnt/c/Users/Acer/...` causes FileNotFoundError. |
-| `scripts/regenerate_replays.py` | Re-executes scenarios live and rewrites replays/*.json | Ready for Phase 2 | Untouched in Phase 0 audit. |
+| `scripts/test_migration_sandbox.py`| Migration sandbox test | PASS (FIXED) | Exit 0. Returncode: 0, Passed count: 12, Failed count: 0 (repo-relative path). |
+| `scripts/regenerate_replays.py` | Re-executes scenarios live and rewrites replays/*.json | PASS | Exit 0. Regenerated scenario_1.json, scenario_2_mem.json, scenario_2.json, scenario_3.json, scenario_4.json with full provenance. |
 
 ---
 
@@ -161,17 +161,20 @@
 - Backend replay regeneration with provenance fields and path-existence query (Phase 2).
 - Detection benchmark suite (Phase 3).
 
-### Known Bugs Found in Audit
+### Known Bugs Fixed
 1. **Hardcoded WSL path in `scripts/test_migration_sandbox.py`**:
-   Line 4 contains `/mnt/c/Users/Acer/OneDrive/Documents/hackathons/New folder/demo_repo/taskflow`, crashing on non-WSL environments.
+   - **STATUS**: FIXED (Phase 2).
+   - Changed WSL path `/mnt/c/Users/Acer/...` to repo-relative `demo_repo/taskflow`, and changed pytest execution to `sys.executable -m pytest`.
+   - Verified assertion: Returncode 0, Passed count 12, Failed count 0 (`docs/evidence/phase2/migration_sandbox_log.txt`).
 2. **ResultStrip Verdict Placeholder Bug**:
-   FIXED in Phase 1 (`frontend/src/components/ResultStrip.tsx`). Empty state now renders neutral `PENDING`, and `Not run in this scenario` for Scenarios 2 & 3.
+   - **STATUS**: FIXED (Phase 1). Neutral `PENDING` and `Not run in this scenario` rendered.
 3. **GraphCanvas Fallback Symbol Hardcoding**:
-   FIXED in Phase 1 (`frontend/src/components/GraphCanvas.tsx`). All 9 hard-coded fallback occurrences removed; renders nothing when event claims are missing.
+   - **STATUS**: FIXED (Phase 1). All 9 hard-coded fallback occurrences removed; renders nothing when event claims are missing.
 4. **Permanent `memoryWasReset` in Frontend**:
-   FIXED in Phase 1 (`frontend/src/App.tsx`). `setMemoryWasReset(false)` fires on `MEMORY_UPDATE` and memory writes, restoring the "carried over" label.
+   - **STATUS**: FIXED (Phase 1). `setMemoryWasReset(false)` fires on `MEMORY_UPDATE` and memory writes, restoring the "carried over" label.
 5. **Coder `pytest_cmd` Search Path**:
-   `coder.py` line 41 checks `/opt/venv/bin/pytest` and falls back to `pytest`. If `pytest` is not in the system `PATH`, it fails with 0 passed / 1 failed.
+   - **STATUS**: FIXED (Phase 2).
+   - In `backend/app/agents/coder.py`, pytest command now invokes `sys.executable -m pytest` with isolated `sys` import.
 
 ---
 
@@ -200,12 +203,69 @@
 - **Memory Reset State Progression**:
   - Verified live sequence `Reset -> Run S1 -> Label State` (`docs/evidence/phase1/reset_run_s1_sequence_stdout.txt`).
 - **Playwright State-Assertion Code Embedded**:
-  - Embedded in `scripts/ui_shots.ts` (screenshot and video generation deferred to after Phase 2 per Amendment 2).
+  - Embedded and executed in `scripts/ui_shots.ts`.
+
+---
+
+## 7. Phase 2 & Phase 1b Verification Findings
+
+### Done (with Evidence Path: `docs/evidence/phase2/`)
+
+#### Phase 2: Backend Truth, Real Queries & Benchmarks
+- **Hygiene & Live Replay Protection**:
+  - `git show --stat HEAD~3..HEAD` confirmed zero tracking of `.venv`, `node_modules`, `dist`, or `__pycache__`.
+  - Updated `backend/app/main.py:141-146`: Live runs write strictly to `replays/live_{run_id}.json`. Canonical `replays/scenario_N.json` are written only by `scripts/regenerate_replays.py`.
+- **FalkorDB Real Query Event Fields**:
+  - `CLAIM` events: `agent_id`, `agent_name`, `symbol` qualname, and `intent` returned directly from Cypher query.
+  - `FORK` event: `blast_radius` queried via `MATCH path = (caller:Symbol)-[:CALLS*1..4]->(target:Symbol {qualname: $qname}) RETURN DISTINCT caller.qualname AS caller_qname, length(path) AS depth ORDER BY depth ASC` (7 callers within <= 4 hops + claimed symbol = 8 nodes).
+  - `S3 DETECT` event: Neighborhoods `neighborhood_a2` (13 symbols) and `neighborhood_a3` (9 symbols) queried via undirected `<=4`-hop CALLS traversal. Machine assertion confirmed: `intersection count: 0` (empty set).
+  - `COLLISION` event: Path query returns `path_nodes` (5 nodes), `hops: 4`, `risk_score: 0.8250` (4 decimals), and full `risk_inputs` breakdown (`pagerank: 0.0561`, `betweenness: 26.0`, `max_pagerank: 0.0561`, `max_betweenness: 40.0`, `norm_pagerank: 1.0`, `norm_betweenness: 0.65`, formula: `"0.5 * (PR/max_PR) + 0.5 * (BW/max_BW)"`).
+- **Risk Mismatch Explanation**:
+  - Algorithm used: Max-normalization in `backend/app/algorithms.py:53-56`.
+  - Computed values on `repo:taskflow`:
+    - `taskflow.config.load_config`: Raw PR: 0.056058, Raw BW: 26.0 $\to$ Norm PR: 1.0000, Norm BW: 0.6500 $\to$ Risk = $0.5(1.0) + 0.5(0.65) = \mathbf{0.8250}$.
+    - `taskflow.auth.validate_token`: Raw PR: 0.039920, Raw BW: 40.0 $\to$ Norm PR: 0.7121, Norm BW: 1.0000 $\to$ Risk = $0.5(0.7121) + 0.5(1.0) = \mathbf{0.8561}$.
+  - The old replay hardcoded/typed `0.85` from an approximation of `validate_token`. All event messages and UI displays are now formatted dynamically from the numeric field `{risk_score:.4f}`.
+- **Path-Existence Control Queries (No Intent Filter)**:
+  - S1 Pair (`worker.execute_job` $\to$ `config.load_config`): **1 row** (4 hops).
+  - S2 Pair (`worker.execute_job` $\to$ `config.load_config`): **1 row** (path exists, but intent is `BODY_EDIT` $\to$ 0 breaking collisions).
+  - S3 Pair (`worker.execute_job` $\leftrightarrow$ `reports.generator.generate_summary`): **0 rows** (disjoint subgraphs).
+- **Provenance per Event**:
+  - Every event carries `{graph, git, pytest}` each with `{source: 'REAL', captured_at: ISO-8601}`.
+  - `llm` key is present **ONLY** if an LLM produced output; deterministic events omit the key.
+- **FalkorDB Latencies on `repo:taskflow` (69 symbols, 29 CALLS, 16 TESTED_BY)**:
+  - `graph.copy` (20 runs): min=55.408ms, median=108.317ms, max=112.076ms
+  - `pageRank` (20 runs): min=1.200ms, median=1.359ms, max=1.985ms
+  - `betweenness` (20 runs): min=1.389ms, median=1.801ms, max=2.600ms
+  - `collision query` (20 runs): min=0.609ms, median=0.756ms, max=2.435ms
+
+#### Phase 1b: Frontend Corrections, Bounding Box Clearance & Media
+- **Hero Card Height & Overlap Clearance (Playwright Verified)**:
+  - Hero card maximum height: `230px` (clamped by `max-h-[230px]`).
+  - First-render bounding box non-overlap assertion:
+    - Hero box: `[top: 68, bottom: 298]`
+    - Chain top: `399`
+    - Vertical clearance gap: **101px**
+    - Intersect assertion: `false` (PASSED).
+- **ZeroPathProof Dynamic Intent**:
+  - Derived dynamically from `a1Claim.intent` without scenario-number branching.
+- **Reset $\to$ Memory State Progression (Playwright Test)**:
+  - Observed String 1 (After Reset): `"ABSENT (hidden because memoryWasReset is true)"`
+  - Observed String 2 (After S1 Replay): `"Memory state: carried over from previous runs"`
+  - Exit code 0 (`docs/evidence/phase2/memory_state_label_test.txt`).
+- **Cytoscape Label Legibility & Idle Clearance**:
+  - Idle state: 0 intersections across 24 visible labels. Font size clamped between 13.00px and 16.00px.
+  - Focus state: 0 intersections across 13 visible labels.
+- **Screenshots & Videos Generated**:
+  - Saved to `docs/screens/`: `01-idle.png`, `02-claims.png`, `03-collision-hero.png`, `04-git-vs-chronofork.png`, `05-resolution-handoff.png`, `06-memory-run-compare.png`, `07-zero-path-proof.png`, `08-receipt.png`, `09-focus-view-4hop.png`.
+  - Videos:
+    - `scenario1.webm`: 16.0s (Target $\le 28$s, ends 2s after MERGE APPROVED).
+    - `scenario2.webm`: 12.0s (Target $\sim 12$s).
+    - `scenario3.webm`: 12.0s (Target $\sim 12$s).
 
 ### Partial
-- Replays regeneration and provenance field injection will be performed in Phase 2.
+- None for Phase 2 or Phase 1b.
 
-### Not Done (Reserved for Phase 2+)
-- Live LLM execution integration and path-existence Cypher query (Phase 2).
+### Not Done (Reserved for Phase 3)
 - Detection benchmark suite (Phase 3).
 

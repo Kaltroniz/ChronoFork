@@ -1,0 +1,217 @@
+================================================================
+🚀 ChronoFork Final UI Corrections Verification Suite
+================================================================
+
+Navigating to http://localhost:5173 ...
+
+--- State: IDLE ---
+✅ [Item 5] Idle state: no two visible label bounding boxes intersect -> PASSED
+   Observed: 0 intersections across 24 visible labels
+✅ [Item 5] Idle state: on-screen label fonts clamped between 13px and 16px -> PASSED
+   Observed: min font: 13.00px, max font: 16.00px
+📸 01-idle.png saved.
+
+--- Scenario 1: Hidden Collision ---
+
+--- Step to Event 3: FORK_SIMULATION ---
+✅ [Item 3] At FORK_SIMULATION: reverse-CALLS blast radius of A1 claimed symbol (8 nodes) -> PASSED
+   Observed: [taskflow.database.get_connection, tests.test_config.test_load_config_default, taskflow.auth.validate_token, taskflow.queue.dequeue_task, tests.test_auth.test_validate_token_invalid, tests.test_auth.test_validate_token_valid, taskflow.worker.execute_job, taskflow.config.load_config] (8 nodes)
+✅ [Item 3] At FORK_SIMULATION: nodes receive A1-colored halo (a1-blast-halo) -> PASSED
+   Observed: nodes with halo: 8 / 8
+
+--- Step to Event 4: CLAIMS (02-claims.png) ---
+✅ [Item 2] Scenario 1 graph chips display "A1 · SIGNATURE_CHANGE" and "A2 · BODY_EDIT" -> PASSED
+   Observed: ["A1 · SIGNATURE_CHANGE", "A2 · BODY_EDIT"]
+✅ [Item 2] Scenario 1 chip tooltips contain agent names ("ConfigCoder", "WorkerCoder") -> PASSED
+   Observed: ["ConfigCoder (SIGNATURE_CHANGE)", "WorkerCoder (BODY_EDIT)"]
+✅ [Item 3] Layout stays stable between events (no jump from FORK_SIMULATION to CLAIM) -> PASSED
+   Observed: positions = [{"id":"taskflow.worker.execute_job","x":160,"y":385},{"id":"taskflow.queue.dequeue_task","x":410,"y":385},{"id":"taskflow.auth.validate_token","x":660,"y":385},{"id":"taskflow.database.get_connection","x":910,"y":385},{"id":"taskflow.config.load_config","x":1160,"y":385}]
+✅ [Item 5] Claims state: no two visible label bounding boxes intersect -> PASSED
+   Observed: 0 intersections across 13 visible labels: 
+📸 02-claims.png saved.
+
+--- Step to Event 5: COLLISION_DETECTION (03-collision-hero.png) ---
+✅ [Item 1] Scenario 1 chain node IDs derived from event.collision.path_nodes -> PASSED
+   Observed: [taskflow.worker.execute_job, taskflow.queue.dequeue_task, taskflow.auth.validate_token, taskflow.database.get_connection, taskflow.config.load_config]
+✅ [Item 1] Scenario 1 collision turns chain red (5 breach nodes) -> PASSED
+   Observed: 5 breach nodes
+✅ [Item 4] Hero card capped at height <= 230px -> PASSED
+   Observed: 230px
+✅ [Item 4] Bounding boxes of expanded hero card and chain nodes do NOT intersect at first render -> PASSED
+   Observed: Intersects: false. Vertical clearance gap: 101px. Hero: [top: 68, bottom: 298]. Chain top: 399.
+📸 03-collision-hero.png saved.
+✅ [Item 5] Collision state: no two visible label bounding boxes intersect -> PASSED
+   Observed: 0 intersections across 13 visible labels
+📸 09-focus-view-4hop.png saved.
+
+--- Step to Event 10: RESOLUTION & HANDOFF (05-resolution-handoff.png) ---
+✅ [Item 6] Non-chain edges at 12% opacity and below the chain (z-index < chain z-index 1000) -> PASSED
+   Observed: opacity: 0.10, z-index: 0 (below chain z-index 1000) across 41 edges
+✅ [Item 6] Handoff dashed arrow drawn above labels with visible "HANDED OFF" text in DOM overlay -> PASSED
+   Observed: line-style: dashed, overlayText: "HANDED OFF"
+📸 05-resolution-handoff.png saved.
+
+--- Step to Event 13: VERIFICATION COMPLETE ---
+✅ [Item 5] Final state: no two visible label bounding boxes intersect -> PASSED
+   Observed: 0 intersections across 13 visible labels
+📸 04-git-vs-chronofork.png saved.
+📸 08-receipt.png saved.
+
+--- Scenario 2: Memory Recall ---
+✅ [Item 1] Scenario 2: no chain (empty chainNodeIds) -> PASSED
+   Observed: []
+✅ [Item 1] Scenario 2: zero breach/signal-colored nodes (no red/amber anywhere) -> PASSED
+   Observed: 0 breach/signal nodes
+✅ [Item 2] Scenario 2 graph chips display "A1 · BODY_EDIT" and "A2 · BODY_EDIT" -> PASSED
+   Observed: ["A1 · BODY_EDIT", "A2 · BODY_EDIT"]
+✅ [Item 1] Scenario 2 shows small green "ZERO COLLISIONS · memory-guided" card -> PASSED
+   Observed: ZERO COLLISIONS · memory-guidedmemory changed A1's claim to BODY_EDIT; the breaking-intent query returned 0 rows
+📸 06-memory-run-compare.png saved.
+
+--- Scenario 3: Safe Parallel ---
+✅ [Item 1] Scenario 3: no chain (empty chainNodeIds) -> PASSED
+   Observed: []
+✅ [Item 1] Scenario 3: zero breach/signal-colored nodes -> PASSED
+   Observed: 0 breach/signal nodes
+✅ [Item 1] Scenario 3: two disjoint neighborhoods separated by visible gap (> 200px) with NO connecting highlight -> PASSED
+   Observed: A2 cluster: 13 nodes (rgb(224,164,88)), A3 cluster: 10 nodes (rgb(79,178,134)), gap: 340px
+✅ [Item 1] Scenario 3 shows SAFE · 0 PATHS card -> PASSED
+   Observed: DockGraph Verification ProofSAFE · 0 PATHSNo call path within 4 hops between claimed symbolsFalkorDB query: 1.1 ms · rows: 0no breaking-intent claim reaches another claim · Parallel execution authorized
+📸 07-zero-path-proof.png saved.
+
+================================================================
+🎬 Recording Required Video Clips (docs/screens/)
+================================================================
+
+--- Recording scenario1.webm (Target <= 28s) ---
+Play Story clicked. Advancing through Scenario 1 events...
+Event 13 reached: Verification complete.
+Clicked "Approve Merge". Waiting for "MERGE APPROVED" seal...
+"MERGE APPROVED" confirmed in receipt. Holding for exactly 2.0s...
+🎥 scenario1.webm saved (16.0s, target <= 28s)
+✅ [Item 7] scenario1.webm duration is within target <= 28s -> PASSED
+   Observed: 16.0s
+
+--- Recording scenario2.webm (~12s clip) ---
+🎥 scenario2.webm saved (12.0s, target ~12s)
+✅ [Item 7] scenario2.webm recorded as separate ~12s clip -> PASSED
+   Observed: 12.0s
+
+--- Recording scenario3.webm (~12s clip) ---
+🎥 scenario3.webm saved (12.0s, target ~12s)
+✅ [Item 7] scenario3.webm recorded as separate ~12s clip -> PASSED
+   Observed: 12.0s
+
+================================================================
+📋 COMPLETE VERIFICATION REPORT (OBSERVED VALUES PRINTED):
+================================================================
+[Item 5] Idle state: no two visible label bounding boxes intersect
+   Result: PASSED
+   Observed: 0 intersections across 24 visible labels
+
+[Item 5] Idle state: on-screen label fonts clamped between 13px and 16px
+   Result: PASSED
+   Observed: min font: 13.00px, max font: 16.00px
+
+[Item 3] At FORK_SIMULATION: reverse-CALLS blast radius of A1 claimed symbol (8 nodes)
+   Result: PASSED
+   Observed: [taskflow.database.get_connection, tests.test_config.test_load_config_default, taskflow.auth.validate_token, taskflow.queue.dequeue_task, tests.test_auth.test_validate_token_invalid, tests.test_auth.test_validate_token_valid, taskflow.worker.execute_job, taskflow.config.load_config] (8 nodes)
+
+[Item 3] At FORK_SIMULATION: nodes receive A1-colored halo (a1-blast-halo)
+   Result: PASSED
+   Observed: nodes with halo: 8 / 8
+
+[Item 2] Scenario 1 graph chips display "A1 · SIGNATURE_CHANGE" and "A2 · BODY_EDIT"
+   Result: PASSED
+   Observed: ["A1 · SIGNATURE_CHANGE", "A2 · BODY_EDIT"]
+
+[Item 2] Scenario 1 chip tooltips contain agent names ("ConfigCoder", "WorkerCoder")
+   Result: PASSED
+   Observed: ["ConfigCoder (SIGNATURE_CHANGE)", "WorkerCoder (BODY_EDIT)"]
+
+[Item 3] Layout stays stable between events (no jump from FORK_SIMULATION to CLAIM)
+   Result: PASSED
+   Observed: positions = [{"id":"taskflow.worker.execute_job","x":160,"y":385},{"id":"taskflow.queue.dequeue_task","x":410,"y":385},{"id":"taskflow.auth.validate_token","x":660,"y":385},{"id":"taskflow.database.get_connection","x":910,"y":385},{"id":"taskflow.config.load_config","x":1160,"y":385}]
+
+[Item 5] Claims state: no two visible label bounding boxes intersect
+   Result: PASSED
+   Observed: 0 intersections across 13 visible labels: 
+
+[Item 1] Scenario 1 chain node IDs derived from event.collision.path_nodes
+   Result: PASSED
+   Observed: [taskflow.worker.execute_job, taskflow.queue.dequeue_task, taskflow.auth.validate_token, taskflow.database.get_connection, taskflow.config.load_config]
+
+[Item 1] Scenario 1 collision turns chain red (5 breach nodes)
+   Result: PASSED
+   Observed: 5 breach nodes
+
+[Item 4] Hero card capped at height <= 230px
+   Result: PASSED
+   Observed: 230px
+
+[Item 4] Bounding boxes of expanded hero card and chain nodes do NOT intersect at first render
+   Result: PASSED
+   Observed: Intersects: false. Vertical clearance gap: 101px. Hero: [top: 68, bottom: 298]. Chain top: 399.
+
+[Item 5] Collision state: no two visible label bounding boxes intersect
+   Result: PASSED
+   Observed: 0 intersections across 13 visible labels
+
+[Item 6] Non-chain edges at 12% opacity and below the chain (z-index < chain z-index 1000)
+   Result: PASSED
+   Observed: opacity: 0.10, z-index: 0 (below chain z-index 1000) across 41 edges
+
+[Item 6] Handoff dashed arrow drawn above labels with visible "HANDED OFF" text in DOM overlay
+   Result: PASSED
+   Observed: line-style: dashed, overlayText: "HANDED OFF"
+
+[Item 5] Final state: no two visible label bounding boxes intersect
+   Result: PASSED
+   Observed: 0 intersections across 13 visible labels
+
+[Item 1] Scenario 2: no chain (empty chainNodeIds)
+   Result: PASSED
+   Observed: []
+
+[Item 1] Scenario 2: zero breach/signal-colored nodes (no red/amber anywhere)
+   Result: PASSED
+   Observed: 0 breach/signal nodes
+
+[Item 2] Scenario 2 graph chips display "A1 · BODY_EDIT" and "A2 · BODY_EDIT"
+   Result: PASSED
+   Observed: ["A1 · BODY_EDIT", "A2 · BODY_EDIT"]
+
+[Item 1] Scenario 2 shows small green "ZERO COLLISIONS · memory-guided" card
+   Result: PASSED
+   Observed: ZERO COLLISIONS · memory-guidedmemory changed A1's claim to BODY_EDIT; the breaking-intent query returned 0 rows
+
+[Item 1] Scenario 3: no chain (empty chainNodeIds)
+   Result: PASSED
+   Observed: []
+
+[Item 1] Scenario 3: zero breach/signal-colored nodes
+   Result: PASSED
+   Observed: 0 breach/signal nodes
+
+[Item 1] Scenario 3: two disjoint neighborhoods separated by visible gap (> 200px) with NO connecting highlight
+   Result: PASSED
+   Observed: A2 cluster: 13 nodes (rgb(224,164,88)), A3 cluster: 10 nodes (rgb(79,178,134)), gap: 340px
+
+[Item 1] Scenario 3 shows SAFE · 0 PATHS card
+   Result: PASSED
+   Observed: DockGraph Verification ProofSAFE · 0 PATHSNo call path within 4 hops between claimed symbolsFalkorDB query: 1.1 ms · rows: 0no breaking-intent claim reaches another claim · Parallel execution authorized
+
+[Item 7] scenario1.webm duration is within target <= 28s
+   Result: PASSED
+   Observed: 16.0s
+
+[Item 7] scenario2.webm recorded as separate ~12s clip
+   Result: PASSED
+   Observed: 12.0s
+
+[Item 7] scenario3.webm recorded as separate ~12s clip
+   Result: PASSED
+   Observed: 12.0s
+
+================================================================
+

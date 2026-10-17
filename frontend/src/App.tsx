@@ -126,16 +126,21 @@ export const App: React.FC = () => {
     }
   };
 
-  // Reset Scenario handler: resets memory first for identical confidence
+  // Reset Scenario handler: resets memory and resets run to clean state
   const handleResetScenario = async (scId: number) => {
+    if (eventSourceRef.current) eventSourceRef.current.close();
+    if (timerRef.current) clearInterval(timerRef.current);
     try {
       await fetch(`/memory/${selectedRepo}/reset`, { method: 'POST' });
       await fetchMemoryData(selectedRepo);
       setMemoryWasReset(true);
+      setEvents([]);
+      setCurrentIndex(0);
+      setIsRunning(false);
+      setIsPaused(true);
     } catch (err) {
       console.warn('Memory reset failed:', err);
     }
-    startScenario(scId);
   };
 
   // 2. Scenario Runner

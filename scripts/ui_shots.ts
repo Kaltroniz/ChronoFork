@@ -208,8 +208,8 @@ async function main() {
     const blastRadiusStats = await page.evaluate(() => {
       const cy = (window as any).__chronoCy;
       if (!cy) return null;
-      const chainIds = (window as any).__chronoGetChainNodeIds?.() || [];
-      const nodesData = chainIds.map((id: string) => {
+      const blastIds = (window as any).__chronoGetBlastRadiusNodeIds?.() || (window as any).__chronoGetChainNodeIds?.() || [];
+      const nodesData = blastIds.map((id: string) => {
         const n = cy.getElementById(id);
         const pos = n.position();
         const rPos = n.renderedPosition();
@@ -223,25 +223,25 @@ async function main() {
         };
       });
       return {
-        chainIds,
+        blastIds,
         nodesData
       };
     });
 
     recordAssert(
       3,
-      'At FORK_SIMULATION: reverse-CALLS blast radius of A1 claimed symbol (5 nodes)',
-      blastRadiusStats !== null && blastRadiusStats.chainIds.length === 5,
-      '5 nodes: [execute_job, dequeue_task, validate_token, get_connection, load_config]',
-      `[${blastRadiusStats?.chainIds.join(', ')}]`
+      `At FORK_SIMULATION: reverse-CALLS blast radius of A1 claimed symbol (${blastRadiusStats?.blastIds.length} nodes)`,
+      blastRadiusStats !== null && blastRadiusStats.blastIds.length === 8,
+      '8 nodes: 7 reverse-CALLS callers <= 4 hops + claimed symbol load_config',
+      `[${blastRadiusStats?.blastIds.join(', ')}] (${blastRadiusStats?.blastIds.length} nodes)`
     );
 
     recordAssert(
       3,
       'At FORK_SIMULATION: nodes receive A1-colored halo (a1-blast-halo)',
       blastRadiusStats !== null && blastRadiusStats.nodesData.every((n: any) => n.hasA1Halo),
-      'all nodes have a1-blast-halo: true',
-      `nodes with halo: ${blastRadiusStats?.nodesData.filter((n: any) => n.hasA1Halo).length} / 5`
+      'all blast radius nodes have a1-blast-halo: true',
+      `nodes with halo: ${blastRadiusStats?.nodesData.filter((n: any) => n.hasA1Halo).length} / ${blastRadiusStats?.nodesData.length}`
     );
 
     // -------------------------------------------------------------------------
@@ -290,8 +290,8 @@ async function main() {
     );
 
     // Layout stability check: positions at step 4 match step 3
-    const positionsMatch = claimsStats.posMap.every((p: any, idx: number) => {
-      const prev = blastRadiusStats?.nodesData[idx];
+    const positionsMatch = claimsStats.posMap.every((p: any) => {
+      const prev = blastRadiusStats?.nodesData.find((n: any) => n.id === p.id);
       return prev && prev.x === p.x && prev.y === p.y;
     });
     recordAssert(
@@ -303,12 +303,15 @@ async function main() {
     );
 
     const claimsLabels = await checkLabelIntersections(page, 'claims');
+    if (claimsLabels.intersectionCount > 0) {
+      console.log('Intersections found in claimsLabels:', claimsLabels.intersections);
+    }
     recordAssert(
       5,
       'Claims state: no two visible label bounding boxes intersect',
       claimsLabels.intersectionCount === 0,
       '0 intersections',
-      `${claimsLabels.intersectionCount} intersections across ${claimsLabels.totalVisibleLabels} visible labels`
+      `${claimsLabels.intersectionCount} intersections across ${claimsLabels.totalVisibleLabels} visible labels: ${claimsLabels.intersections.join('; ')}`
     );
 
     await verifyMinimumFontSize(page, '02-claims');
@@ -556,9 +559,9 @@ async function main() {
       { timeout: 10000 }
     );
 
-    // Step to event 3 (COLLISION_DETECTION in Scenario 2)
+    // Step to event 5 (COLLISION_DETECTION in Scenario 2)
     await page.evaluate(() => {
-      (window as any).__chronoSetIndex(3);
+      (window as any).__chronoSetIndex(5);
     });
     await page.waitForTimeout(800);
 

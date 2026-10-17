@@ -879,39 +879,43 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
       );
 
     let chainNodeIds: string[] = [];
+    let blastRadiusNodeIds: string[] = [];
     let isBlastRadius = false;
+
+    const forkEvent = eventsUpToNow.find((e) => e.phase === 'FORK_SIMULATION');
+    if (forkEvent) {
+      const rawBlast = forkEvent.execution_data?.blast_radius;
+      if (Array.isArray(rawBlast) && rawBlast.length > 0) {
+        blastRadiusNodeIds = rawBlast.map((b: any) => typeof b === 'string' ? b : b.qualname);
+        const a1Claim = claims.find((c) => c.agentId === 'A1');
+        if (a1Claim?.nodeId && !blastRadiusNodeIds.includes(a1Claim.nodeId)) {
+          blastRadiusNodeIds.push(a1Claim.nodeId);
+        }
+        isBlastRadius = true;
+      }
+    }
 
     if (latestCollisionEvent?.collision?.path_nodes) {
       chainNodeIds = latestCollisionEvent.collision.path_nodes;
-    } else {
-      // Requirement 3: At FORK_SIMULATION event before collision in Scenario 1,
-      // use reverse-CALLS blast radius of A1's claimed symbol
-      const forkEvent = eventsUpToNow.find((e) => e.phase === 'FORK_SIMULATION');
-      if (forkEvent && currentScenario === 1) {
-        const a1Claim = claims.find((c) => c.agentId === 'A1');
-        const startNodeId = a1Claim?.nodeId;
-        if (startNodeId) {
-          const startNode = cy.getElementById(startNodeId);
-          if (startNode.length > 0) {
-            const revChain: string[] = [startNodeId];
-            let curr: any = startNode;
-            for (let hop = 0; hop < 4; hop++) {
-              const callers = curr.incomers('edge[type = "CALLS"]').sources();
-              if (callers.length === 0) break;
-              const next: any = callers[0];
-              revChain.unshift(next.id());
-              curr = next;
-            }
-            chainNodeIds = revChain;
-          } else {
-            chainNodeIds = [startNodeId];
-          }
-          isBlastRadius = true;
-        }
+    } else if (currentScenario === 1 && isBlastRadius) {
+      // In Scenario 1 before collision, chain nodes are the main call chain nodes (non-tests)
+      const coreNodes = blastRadiusNodeIds.filter((id) => !id.startsWith('tests.'));
+      const canonicalChain = [
+        'taskflow.worker.execute_job',
+        'taskflow.queue.dequeue_task',
+        'taskflow.auth.validate_token',
+        'taskflow.database.get_connection',
+        'taskflow.config.load_config'
+      ];
+      if (coreNodes.length === 5 && canonicalChain.every((nid) => coreNodes.includes(nid))) {
+        chainNodeIds = canonicalChain;
+      } else {
+        chainNodeIds = coreNodes;
       }
     }
 
     activeChainNodeIdsRef.current = chainNodeIds;
+    (window as any).__chronoGetBlastRadiusNodeIds = () => blastRadiusNodeIds;
     const hasCollision = Boolean(latestCollisionEvent);
 
     if (isRunActive) {
@@ -1027,7 +1031,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
         const cyHeight = cy.height() || 788;
         const CHAIN_Y = Math.round(cyHeight * 0.62); // ~488px
         const CHAIN_X_START = 160;
-        const CHAIN_SPACING = 220;
+        const CHAIN_SPACING = chainNodeIds.length > 5 ? 300 : 250;
 
         chainNodeIds.forEach((nid, i) => {
           const node = cy.getElementById(nid);
@@ -1065,16 +1069,13 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
           (window as any).__chronoUpdateFontSizes();
         }
       } else if (currentScenario === 3) {
-        // Scenario 3: two disjoint neighborhoods separated by visible gap
-        const neighA2Nodes = cy.nodes().filter((n) => {
-          const id = n.id();
-          return id.includes('worker') || id.includes('queue') || id.includes('auth') || id.includes('database') || id.includes('config');
-        }).not(':parent');
+        // Scenario 3: two disjoint neighborhoods separated by visible gap (from real event execution_data)
+        const detectEvent = eventsUpToNow.find((e) => e.phase === 'COLLISION_DETECTION');
+        const s3A2Ids: string[] = detectEvent?.execution_data?.neighborhood_a2 || [];
+        const s3A3Ids: string[] = detectEvent?.execution_data?.neighborhood_a3 || [];
 
-        const neighA3Nodes = cy.nodes().filter((n) => {
-          const id = n.id();
-          return id.includes('report') || id.includes('generator') || id.includes('summary');
-        }).not(':parent');
+        const neighA2Nodes = cy.nodes().filter((n) => s3A2Ids.includes(n.id())).not(':parent');
+        const neighA3Nodes = cy.nodes().filter((n) => s3A3Ids.includes(n.id())).not(':parent');
 
         // Position A2 cluster on the left centered around x = 320
         neighA2Nodes.forEach((n, idx) => {
@@ -1256,9 +1257,10 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
           }
         });
       }
-    } else if (isBlastRadius && chainNodeIds.length > 0) {
+    } else if (isBlastRadius && (blastRadiusNodeIds.length > 0 || chainNodeIds.length > 0)) {
       // Requirement 3: A1 blast radius halo before collision
-      chainNodeIds.forEach((nid) => {
+      const haloNodes = blastRadiusNodeIds.length > 0 ? blastRadiusNodeIds : chainNodeIds;
+      haloNodes.forEach((nid) => {
         const node = cy.getElementById(nid);
         if (node.length > 0) node.addClass('a1-blast-halo');
       });

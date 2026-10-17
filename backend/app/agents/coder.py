@@ -1,5 +1,6 @@
 """Coder, Verifier, and Git Merger Agents with Real Isolated Workspace Execution."""
 import os
+import sys
 import shutil
 import subprocess
 import tempfile
@@ -37,10 +38,8 @@ class Verifier:
     @staticmethod
     def run_tests(workspace_path: str) -> Dict[str, Any]:
         """Runs pytest inside the agent's workspace copy."""
-        # Find pytest binary
-        pytest_cmd = "/opt/venv/bin/pytest"
-        if not os.path.exists(pytest_cmd):
-            pytest_cmd = "pytest"
+        # Use current Python interpreter to invoke pytest
+        pytest_cmd = [sys.executable, "-m", "pytest"]
 
         env = os.environ.copy()
         env["PYTHONPATH"] = workspace_path
@@ -48,7 +47,7 @@ class Verifier:
         t0 = time.perf_counter()
         try:
             res = subprocess.run(
-                [pytest_cmd, "-v"],
+                [*pytest_cmd, "-v"],
                 cwd=workspace_path,
                 env=env,
                 capture_output=True,

@@ -97,6 +97,7 @@ export const LeftRail: React.FC<LeftRailProps> = ({
               return (
                 <button
                   key={sc.id}
+                  data-testid={`scenario-button-${sc.id}`}
                   onClick={() => onSelectScenario(sc.id)}
                   className={`w-full p-2.5 rounded-[8px] border text-left transition-colors cursor-pointer flex flex-col gap-0.5 ${
                     isSelected
@@ -120,7 +121,7 @@ export const LeftRail: React.FC<LeftRailProps> = ({
                     {sc.subtitle}
                   </span>
                   {sc.id === 2 && !memoryWasReset && (
-                    <span className="text-[13px] font-mono text-[var(--signal)] mt-1 block">
+                    <span data-testid="memory-state-indicator" className="text-[13px] font-mono text-[var(--signal)] mt-1 block">
                       Memory state: carried over from previous runs
                     </span>
                   )}
@@ -217,6 +218,7 @@ export const LeftRail: React.FC<LeftRailProps> = ({
             </button>
 
             <button
+              data-testid="reset-button"
               onClick={onReset}
               className="py-2 px-2 rounded-[6px] border border-[var(--line)] bg-[var(--bg-2)] text-[var(--text-dim)] hover:border-[var(--breach)] hover:text-[var(--breach)] transition-colors flex items-center justify-center gap-1 font-mono text-[13px] font-semibold cursor-pointer"
               title="Reset current run (R)"

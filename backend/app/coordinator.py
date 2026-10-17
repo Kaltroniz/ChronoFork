@@ -13,7 +13,7 @@ import ast
 import hashlib
 from typing import List, Dict, Any, Optional
 from backend.app.falkor_client import falkor_client
-from backend.app.algorithms import query_impact, compute_risk_rankings
+from backend.app.algorithms import query_impact, compute_risk_rankings, run_pagerank, run_betweenness
 
 
 class ClaimIntent:
@@ -76,17 +76,23 @@ def register_claim(
     MATCH (s:Symbol {qualname: $symbol_qname})
     MERGE (a)-[c:CLAIMS {intent: $intent}]->(s)
     SET c.subtask = $subtask, c.claimed_at = timestamp()
+    RETURN a.id AS agent_id, a.name AS agent_name, s.qualname AS symbol, c.intent AS intent
     """
-    falkor_client.query(coord_key, query, {
+    res, _ = falkor_client.query(coord_key, query, {
         "agent_id": agent_id,
         "symbol_qname": symbol_qualname,
         "intent": intent,
         "subtask": subtask_desc
     }, tool="claim_symbols")
+    agent_name = ""
+    if res and res.result_set:
+        agent_name = res.result_set[0][1]
     return {
         "run_id": run_id,
         "agent_id": agent_id,
+        "agent_name": agent_name,
         "symbol": symbol_qualname,
+        "symbol_qname": symbol_qualname,
         "intent": intent
     }
 
@@ -105,6 +111,10 @@ def detect_collisions(run_id: str) -> List[Dict[str, Any]]:
     """
     coord_key = f"coord:{run_id}"
     rankings = compute_risk_rankings(coord_key)
+    pr_scores = run_pagerank(coord_key)
+    bw_scores = run_betweenness(coord_key)
+    max_pr = max(pr_scores.values()) if pr_scores and max(pr_scores.values()) > 0 else 1.0
+    max_bw = max(bw_scores.values()) if bw_scores and max(bw_scores.values()) > 0 else 1.0
     collisions = []
 
     # Query 1: Direct same-symbol collision
@@ -116,7 +126,20 @@ def detect_collisions(run_id: str) -> List[Dict[str, Any]]:
     res_direct, _ = falkor_client.query(coord_key, direct_query)
     for row in res_direct.result_set:
         a1, a2, sym, intent1, intent2 = row[0], row[1], row[2], row[3], row[4]
-        risk = rankings.get(sym, {}).get("risk_score", 0.5)
+        pr_raw = pr_scores.get(sym, 0.0)
+        bw_raw = bw_scores.get(sym, 0.0)
+        pr_norm = pr_raw / max_pr
+        bw_norm = bw_raw / max_bw
+        risk = round(0.5 * pr_norm + 0.5 * bw_norm, 4)
+        risk_inputs = {
+            "pagerank": round(pr_raw, 6),
+            "betweenness": round(bw_raw, 4),
+            "max_pagerank": round(max_pr, 6),
+            "max_betweenness": round(max_bw, 4),
+            "norm_pagerank": round(pr_norm, 6),
+            "norm_betweenness": round(bw_norm, 4),
+            "formula": f"0.5 * {pr_norm:.6f} + 0.5 * {bw_norm:.4f} = {risk:.4f}"
+        }
         collisions.append({
             "type": "DIRECT_COLLISION",
             "agent_a": a1,
@@ -128,8 +151,9 @@ def detect_collisions(run_id: str) -> List[Dict[str, Any]]:
             "hops": 0,
             "path_nodes": [sym],
             "risk_score": risk,
+            "risk_inputs": risk_inputs,
             "policy": CollisionPolicy.SERIALIZE,
-            "reason": f"Direct claim overlap on {sym} ({intent1} vs {intent2}, risk={risk:.2f})"
+            "reason": f"Direct claim overlap on {sym} ({intent1} vs {intent2}, risk={risk:.4f})"
         })
 
     # Query 2: Transitive call chain collision (1 to 4 CALLS hops)
@@ -150,7 +174,20 @@ def detect_collisions(run_id: str) -> List[Dict[str, Any]]:
             row[0], row[1], row[2], row[3], row[4], row[5], row[6], int(row[7])
         )
 
-        risk_a = rankings.get(s1_q, {}).get("risk_score", 0.5)
+        pr_raw = pr_scores.get(s1_q, 0.0)
+        bw_raw = bw_scores.get(s1_q, 0.0)
+        pr_norm = pr_raw / max_pr
+        bw_norm = bw_raw / max_bw
+        risk_a = round(0.5 * pr_norm + 0.5 * bw_norm, 4)
+        risk_inputs = {
+            "pagerank": round(pr_raw, 6),
+            "betweenness": round(bw_raw, 4),
+            "max_pagerank": round(max_pr, 6),
+            "max_betweenness": round(max_bw, 4),
+            "norm_pagerank": round(pr_norm, 6),
+            "norm_betweenness": round(bw_norm, 4),
+            "formula": f"0.5 * {pr_norm:.6f} + 0.5 * {bw_norm:.4f} = {risk_a:.4f}"
+        }
 
         # CENTRALITY RISK DRIVES DECISION:
         # High-risk node (>= 0.5) or breaking signature change mandates SERIALIZE
@@ -170,9 +207,10 @@ def detect_collisions(run_id: str) -> List[Dict[str, Any]]:
             "hops": hops,
             "path_nodes": path_nodes,
             "risk_score": risk_a,
+            "risk_inputs": risk_inputs,
             "policy": policy,
             "reason": (
-                f"Agent {a1} claims {s1_q} ({intent1}, risk={risk_a:.2f}); "
+                f"Agent {a1} claims {s1_q} ({intent1}, risk={risk_a:.4f}); "
                 f"Agent {a2} touches {s2_q} which depends on it via a {hops}-hop call chain: "
                 f"{' -> '.join(path_nodes)}. Git would merge cleanly; runtime will break!"
             )
@@ -198,6 +236,49 @@ def detect_collisions(run_id: str) -> List[Dict[str, Any]]:
         })
 
     return collisions
+
+
+def check_path_existence(run_id: str) -> List[Dict[str, Any]]:
+    """
+    Path-existence Cypher query with NO intent filter.
+    Returns any 1..4 hop CALLS path between claimed symbols of different agents.
+    """
+    coord_key = f"coord:{run_id}"
+    query = """
+    MATCH (a1:Agent)-[c1:CLAIMS]->(s1:Symbol),
+          (a2:Agent)-[c2:CLAIMS]->(s2:Symbol)
+    WHERE a1.id <> a2.id
+    MATCH path = (s2)-[:CALLS*1..4]->(s1)
+    RETURN a1.id AS a1, a2.id AS a2, s1.qualname AS s1_qname, s2.qualname AS s2_qname,
+           c1.intent AS intent1, c2.intent AS intent2,
+           [n in nodes(path) | n.qualname] AS path_nodes, length(path) AS hops
+    """
+    res, _ = falkor_client.query(coord_key, query, tool="check_path_existence")
+    return [{
+        "agent_a": r[0],
+        "agent_b": r[1],
+        "symbol_a": r[2],
+        "symbol_b": r[3],
+        "intent_a": r[4],
+        "intent_b": r[5],
+        "path_nodes": r[6],
+        "hops": int(r[7])
+    } for r in res.result_set]
+
+
+def get_calls_neighborhood(graph_name: str, symbol_qualname: str, max_depth: int = 4) -> List[str]:
+    """
+    Returns <=4-hop CALLS neighborhood of a symbol in both directions (callers and callees).
+    """
+    if not graph_name.startswith("repo:") and not graph_name.startswith("coord:") and not graph_name.startswith("fork:"):
+        graph_name = f"repo:{graph_name}"
+    query = f"""
+    MATCH (s:Symbol {{qualname: $qname}})-[:CALLS*1..{max_depth}]-(neighbor:Symbol)
+    RETURN DISTINCT neighbor.qualname AS neighbor_qname
+    """
+    res, _ = falkor_client.query(graph_name, query, {"qname": symbol_qualname}, tool="get_neighborhood")
+    neighbors = sorted(list(set(r[0] for r in res.result_set) | {symbol_qualname}))
+    return neighbors
 
 
 def record_handoff(run_id: str, from_agent: str, to_agent: str, reason: str = "Contract patch verified and merged") -> None:
@@ -319,6 +400,7 @@ def simulate_on_fork(
     ORDER BY depth ASC
     """
     trans_res, _ = falkor_client.query(fork_key, trans_callers_q, {"qname": claim_symbol}, tool="fork_graph")
+    blast_radius = [{"qualname": r[0], "depth": int(r[1])} for r in trans_res.result_set]
     transitive_callers = [r[0] for r in trans_res.result_set]
 
     # 5. After metrics
@@ -341,6 +423,7 @@ def simulate_on_fork(
             "affected_tests": after_impact["affected_tests_count"],
             "risk_score": after_risk
         },
+        "blast_radius": blast_radius,
         "blast_radius_delta": after_impact["affected_tests_count"],
         "direct_callers_affected": direct_callers,
         "transitive_callers_affected": transitive_callers,

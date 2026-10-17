@@ -49,10 +49,10 @@ export interface SwarmEvent {
   collision?: CollisionInfo | null;
   memory_write?: MemoryWrite | null;
   provenance?: {
-    graph?: "REAL" | "CACHED" | "SIMULATED";
-    git?: "REAL" | "CACHED" | "SIMULATED";
-    pytest?: "REAL" | "CACHED" | "SIMULATED";
-    llm?: "REAL" | "CACHED" | "SIMULATED";
+    graph?: "REAL" | "CACHED" | "SIMULATED" | { source: string; captured_at: string };
+    git?: "REAL" | "CACHED" | "SIMULATED" | { source: string; captured_at: string };
+    pytest?: "REAL" | "CACHED" | "SIMULATED" | { source: string; captured_at: string };
+    llm?: "REAL" | "CACHED" | "SIMULATED" | { source: string; captured_at: string };
     capture_time?: string;
     timezone?: string;
   };

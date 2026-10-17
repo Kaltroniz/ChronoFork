@@ -23,7 +23,9 @@ from backend.app.coordinator import (
     simulate_on_fork,
     cleanup_run_graphs,
     record_handoff,
-    compute_merge_order
+    compute_merge_order,
+    check_path_existence,
+    get_calls_neighborhood
 )
 from backend.app.memory import (
     record_episode,
@@ -102,13 +104,15 @@ def execute_scenario_1(run_id: str = "run_scenario_1", mode: str = "replay") -> 
     )
 
     # 3. Agent 1 Claims load_config with SIGNATURE_CHANGE
-    register_claim(run_id, "agent_1", "taskflow.config.load_config", "SIGNATURE_CHANGE", "Return ConfigObject instead of dict")
+    claim_1 = register_claim(run_id, "agent_1", "taskflow.config.load_config", "SIGNATURE_CHANGE", "Return ConfigObject instead of dict")
     event_bus.emit_event(
         run_id=run_id,
         agent="ConfigCoder",
         phase="CLAIM",
         tool="claim_symbols",
         node_ids=["taskflow.config.load_config"],
+        params=claim_1,
+        execution_data=claim_1,
         message="ConfigCoder declared CLAIM on taskflow.config.load_config with intent SIGNATURE_CHANGE."
     )
 
@@ -123,7 +127,7 @@ def execute_scenario_1(run_id: str = "run_scenario_1", mode: str = "replay") -> 
         node_ids=["taskflow.config.load_config"],
         scores={
             "risk_score": sim_1["after"]["risk_score"],
-            "blast_radius": sim_1["blast_radius_delta"]
+            "blast_radius": len(sim_1["blast_radius"])
         },
         execution_data={
             "fork_key": sim_1["fork_key"],
@@ -131,27 +135,31 @@ def execute_scenario_1(run_id: str = "run_scenario_1", mode: str = "replay") -> 
             "after_risk": sim_1["after"]["risk_score"],
             "direct_callers": sim_1["direct_callers_affected"],
             "transitive_callers": sim_1["transitive_callers_affected"],
+            "blast_radius": sim_1["blast_radius"],
             "affected_tests": sim_1["affected_test_suites"]
         },
         message=(
             f"Speculative fork simulation on fork:{run_id}:agent_1: "
-            f"Centrality risk = {sim_1['after']['risk_score']:.2f}. "
-            f"Blast radius: {len(sim_1['transitive_callers_affected'])} callers affected across 4 modules."
+            f"Centrality risk = {sim_1['after']['risk_score']:.4f}. "
+            f"Blast radius: {len(sim_1['blast_radius'])} callers affected across 4 modules."
         )
     )
 
     # 5. Agent 2 Claims worker.execute_job with BODY_EDIT
-    register_claim(run_id, "agent_2", "taskflow.worker.execute_job", "BODY_EDIT", "Add retry mechanism")
+    claim_2 = register_claim(run_id, "agent_2", "taskflow.worker.execute_job", "BODY_EDIT", "Add retry mechanism")
     event_bus.emit_event(
         run_id=run_id,
         agent="WorkerCoder",
         phase="CLAIM",
         tool="claim_symbols",
         node_ids=["taskflow.worker.execute_job"],
+        params=claim_2,
+        execution_data=claim_2,
         message="WorkerCoder declared CLAIM on taskflow.worker.execute_job with intent BODY_EDIT in worker.py."
     )
 
     # 6. Coordinator Native Multi-Hop Collision Detection
+    paths_sc1 = check_path_existence(run_id)
     collisions = detect_collisions(run_id)
     c = collisions[0] if collisions else None
     
@@ -168,6 +176,10 @@ def execute_scenario_1(run_id: str = "run_scenario_1", mode: str = "replay") -> 
             "taskflow.database.get_connection->taskflow.config.load_config"
         ],
         collision=c,
+        execution_data={
+            "path_rows_count": len(paths_sc1),
+            "collisions_count": len(collisions)
+        },
         message=(
             f"TRANSITIVE COLLISION DETECTED! FalkorDB uncovered a {c['hops']}-hop call chain: "
             f"{' -> '.join(c['path_nodes'])}. "
@@ -202,7 +214,7 @@ def execute_scenario_1(run_id: str = "run_scenario_1", mode: str = "replay") -> 
         node_ids=c["path_nodes"] if c else [],
         execution_data={"merge_order": merge_order},
         message=(
-            f"POLICY: SERIALIZE (load_config centrality risk = {c['risk_score']:.2f} >= 0.50). "
+            f"POLICY: SERIALIZE (load_config centrality risk = {c['risk_score']:.4f} >= 0.50). "
             f"FalkorDB wrote (:WorkerCoder)-[:BLOCKED_BY]->(:ConfigCoder). "
             f"Callee-first merge order: 1. {merge_order[0]['symbol']} (Callee), 2. {merge_order[1]['symbol']} (Caller)."
         )
@@ -454,10 +466,33 @@ def execute_scenario_2(run_id: str = "run_scenario_2", memory_enabled: bool = Tr
                 message=f"Memory-Driven Adaptation: Rule '{rule['id']}' recommends intent '{derived_intent}' instead of breaking SIGNATURE_CHANGE. Preserving signature compatibility!"
             )
 
-            register_claim(run_id, "agent_1", "taskflow.config.load_config", derived_intent, "Preserve signature compatibility as advised by memory rule")
-            register_claim(run_id, "agent_2", "taskflow.worker.execute_job", "BODY_EDIT", "Extend worker job timeout")
+            claim_1 = register_claim(run_id, "agent_1", "taskflow.config.load_config", derived_intent, "Preserve signature compatibility as advised by memory rule")
+            event_bus.emit_event(
+                run_id=run_id,
+                agent="ConfigCoder",
+                phase="CLAIM",
+                tool="claim_symbols",
+                node_ids=["taskflow.config.load_config"],
+                params=claim_1,
+                execution_data=claim_1,
+                message=f"ConfigCoder declared CLAIM on taskflow.config.load_config with memory-adapted intent {derived_intent}."
+            )
 
-            # Collision Check: 0 collisions
+            claim_2 = register_claim(run_id, "agent_2", "taskflow.worker.execute_job", "BODY_EDIT", "Extend worker job timeout")
+            event_bus.emit_event(
+                run_id=run_id,
+                agent="WorkerCoder",
+                phase="CLAIM",
+                tool="claim_symbols",
+                node_ids=["taskflow.worker.execute_job"],
+                params=claim_2,
+                execution_data=claim_2,
+                message="WorkerCoder declared CLAIM on taskflow.worker.execute_job with intent BODY_EDIT in worker.py."
+            )
+
+            # Check path existence (no intent filter) -> returns >=1 rows, confirming physical call path exists
+            paths_sc2 = check_path_existence(run_id)
+            # Collision check (with breaking intent filter) -> returns 0 collisions because intent is BODY_EDIT
             collisions = detect_collisions(run_id)
             event_bus.emit_event(
                 run_id=run_id,
@@ -465,7 +500,15 @@ def execute_scenario_2(run_id: str = "run_scenario_2", memory_enabled: bool = Tr
                 phase="COLLISION_DETECTION",
                 tool="detect_collisions",
                 collision=None,
-                message="Collision check: ZERO collisions! Memory-guided constraint prevented the breaking change before code was written."
+                execution_data={
+                    "path_rows_count": len(paths_sc2),
+                    "collisions_count": len(collisions),
+                    "path_nodes": paths_sc2[0]["path_nodes"] if paths_sc2 else []
+                },
+                message=(
+                    f"Collision check: ZERO collisions! Path existence query returned {len(paths_sc2)} rows (call path exists), "
+                    f"but memory changed A1's claim to {derived_intent}; the breaking-intent query returned 0 rows."
+                )
             )
 
             # Real Pytest in Workspace
@@ -494,17 +537,30 @@ def execute_scenario_2(run_id: str = "run_scenario_2", memory_enabled: bool = Tr
             )
     else:
         # MEMORY OFF: Blindly claims SIGNATURE_CHANGE -> collision re-occurs!
+        claim_1 = register_claim(run_id, "agent_1", "taskflow.config.load_config", "SIGNATURE_CHANGE", "Uncoordinated change")
         event_bus.emit_event(
             run_id=run_id,
             agent="ConfigCoder",
             phase="CLAIM",
             tool="claim_symbols",
             node_ids=["taskflow.config.load_config"],
+            params=claim_1,
+            execution_data=claim_1,
             message="Memory Coordination OFF: ConfigCoder claims load_config with breaking SIGNATURE_CHANGE."
         )
-        register_claim(run_id, "agent_1", "taskflow.config.load_config", "SIGNATURE_CHANGE", "Uncoordinated change")
-        register_claim(run_id, "agent_2", "taskflow.worker.execute_job", "BODY_EDIT", "Worker edit")
+        claim_2 = register_claim(run_id, "agent_2", "taskflow.worker.execute_job", "BODY_EDIT", "Worker edit")
+        event_bus.emit_event(
+            run_id=run_id,
+            agent="WorkerCoder",
+            phase="CLAIM",
+            tool="claim_symbols",
+            node_ids=["taskflow.worker.execute_job"],
+            params=claim_2,
+            execution_data=claim_2,
+            message="WorkerCoder declared CLAIM on taskflow.worker.execute_job with intent BODY_EDIT in worker.py."
+        )
 
+        paths_sc2_off = check_path_existence(run_id)
         collisions = detect_collisions(run_id)
         c = collisions[0] if collisions else None
         event_bus.emit_event(
@@ -514,6 +570,10 @@ def execute_scenario_2(run_id: str = "run_scenario_2", memory_enabled: bool = Tr
             tool="detect_collisions",
             collision=c,
             node_ids=c["path_nodes"] if c else [],
+            execution_data={
+                "path_rows_count": len(paths_sc2_off),
+                "collisions_count": len(collisions)
+            },
             message="COLLISION RE-OCCURS! Without memory, agents collide on the transitive call chain."
         )
 
@@ -544,38 +604,61 @@ def execute_scenario_3(run_id: str = "run_scenario_3") -> List[Dict[str, Any]]:
 
     init_coordination_graph(run_id, repo)
     register_run(run_id, "Optimize worker execution and generate quarterly reports")
-    register_agent(run_id, "agent_1", "WorkerCoder", "Core Agent", "#f59e0b")
+    register_agent(run_id, "agent_2", "WorkerCoder", "Core Agent", "#f59e0b")
     register_agent(run_id, "agent_3", "ReportsCoder", "Analytics Agent", "#10b981")
 
-    register_claim(run_id, "agent_1", "taskflow.worker.execute_job", "BODY_EDIT", "Queue optimizations")
+    claim_a2 = register_claim(run_id, "agent_2", "taskflow.worker.execute_job", "BODY_EDIT", "Queue optimizations")
     event_bus.emit_event(
         run_id=run_id,
         agent="WorkerCoder",
         phase="CLAIM",
         tool="claim_symbols",
         node_ids=["taskflow.worker.execute_job"],
+        params=claim_a2,
+        execution_data=claim_a2,
         message="WorkerCoder claimed taskflow.worker.execute_job in core subsystem."
     )
 
-    register_claim(run_id, "agent_3", "taskflow.reports.generator.generate_summary", "BODY_EDIT", "Quarterly aggregation")
+    claim_a3 = register_claim(run_id, "agent_3", "taskflow.reports.generator.generate_summary", "BODY_EDIT", "Quarterly aggregation")
     event_bus.emit_event(
         run_id=run_id,
         agent="ReportsCoder",
         phase="CLAIM",
         tool="claim_symbols",
         node_ids=["taskflow.reports.generator.generate_summary"],
+        params=claim_a3,
+        execution_data=claim_a3,
         message="ReportsCoder claimed taskflow.reports.generator.generate_summary in reports subsystem."
     )
 
-    # Collision Check: Disjoint Subgraphs
+    # Collision Check: Compute <=4-hop neighborhoods and prove disjoint call subgraphs
+    neighborhood_a2 = get_calls_neighborhood(f"coord:{run_id}", "taskflow.worker.execute_job", max_depth=4)
+    neighborhood_a3 = get_calls_neighborhood(f"coord:{run_id}", "taskflow.reports.generator.generate_summary", max_depth=4)
+    intersection = list(set(neighborhood_a2) & set(neighborhood_a3))
+    assert len(intersection) == 0, f"Expected empty intersection but got {intersection}"
+    paths_sc3 = check_path_existence(run_id)
+    assert len(paths_sc3) == 0, f"Expected 0 paths between A2 and A3 but got {len(paths_sc3)}"
     collisions = detect_collisions(run_id)
+
     event_bus.emit_event(
         run_id=run_id,
         agent="Coordinator",
         phase="COLLISION_DETECTION",
         tool="detect_collisions",
         collision=None,
-        message="NO PATH FOUND between claimed symbols. Call graphs are fully disjoint. Policy: PARALLEL_OK!"
+        node_ids=neighborhood_a2 + neighborhood_a3,
+        execution_data={
+            "neighborhood_a2": neighborhood_a2,
+            "neighborhood_a3": neighborhood_a3,
+            "intersection": intersection,
+            "path_rows_count": len(paths_sc3),
+            "collisions_count": len(collisions)
+        },
+        message=(
+            f"ZERO PATHS FOUND ({len(paths_sc3)} rows). Call graphs are fully disjoint "
+            f"({len(neighborhood_a2)} symbols in A2 cluster, {len(neighborhood_a3)} symbols in A3 cluster, 0 intersection). "
+            f"Policy: PARALLEL_OK!"
+        )
     )
 
     event_bus.emit_event(
@@ -588,7 +671,7 @@ def execute_scenario_3(run_id: str = "run_scenario_3") -> List[Dict[str, Any]]:
 
     # Real Workspace Execution: Apply Real Non-Conflicting Patches
     ws_mgr = WorkspaceManager(taskflow_path)
-    coder_1 = Coder("agent_1", "WorkerCoder", run_id, ws_mgr)
+    coder_2 = Coder("agent_2", "WorkerCoder", run_id, ws_mgr)
     worker_patch_sc3 = """\"\"\"Worker execution and background job dispatch.\"\"\"
 from taskflow.queue import dequeue_task
 from taskflow.models import create_job_result
@@ -606,7 +689,7 @@ def execute_job(job_id: str, token: str) -> dict:
     save_result(job_id, result)
     return result
 """
-    coder_1.apply_patch("taskflow/worker.py", worker_patch_sc3)
+    coder_2.apply_patch("taskflow/worker.py", worker_patch_sc3)
 
     coder_3 = Coder("agent_3", "ReportsCoder", run_id, ws_mgr)
     reports_patch_sc3 = """\"\"\"Reporting subsystem for TaskFlow.\"\"\"
@@ -627,7 +710,7 @@ def generate_summary(results: list) -> dict:
     coder_3.apply_patch("taskflow/reports/generator.py", reports_patch_sc3)
 
     # Verifier runs real pytest on parallel merged workspace
-    test_res = coder_1.verify()
+    test_res = coder_2.verify()
 
     event_bus.emit_event(
         run_id=run_id,
@@ -679,13 +762,15 @@ def execute_scenario_4(run_id: str = "run_scenario_4") -> List[Dict[str, Any]]:
         node_ids=["analytics.collector.collect_datapoint"]
     )
 
-    register_claim(run_id, "agent_4", "analytics.collector.collect_datapoint", "BODY_EDIT", "Add high-precision timestamp")
+    claim_4 = register_claim(run_id, "agent_4", "analytics.collector.collect_datapoint", "BODY_EDIT", "Add high-precision timestamp")
     event_bus.emit_event(
         run_id=run_id,
         agent="TelemetryCoder",
         phase="CLAIM",
         tool="claim_symbols",
         node_ids=["analytics.collector.collect_datapoint"],
+        params=claim_4,
+        execution_data=claim_4,
         message="TelemetryCoder claimed analytics.collector.collect_datapoint in repo:analytics."
     )
 

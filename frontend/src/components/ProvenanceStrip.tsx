@@ -53,8 +53,12 @@ const STATE_CONFIG: Record<
 export const ProvenanceStrip: React.FC<ProvenanceStripProps> = ({ activeEvent, mode }) => {
   const timestampStr = activeEvent?.ts
     ? new Date(activeEvent.ts * 1000).toLocaleString(undefined, {
-        dateStyle: 'short',
-        timeStyle: 'medium',
+        year: 'numeric',
+        month: 'numeric',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
         timeZoneName: 'short'
       })
     : '—';

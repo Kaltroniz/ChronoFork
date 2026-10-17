@@ -1,7 +1,10 @@
-import tempfile, shutil, os, subprocess
+import tempfile, shutil, os, sys, subprocess
+
+REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+demo_taskflow = os.path.join(REPO_ROOT, "demo_repo", "taskflow")
 
 tmp = tempfile.mkdtemp()
-shutil.copytree('/mnt/c/Users/Acer/OneDrive/Documents/hackathons/New folder/demo_repo/taskflow', tmp, dirs_exist_ok=True)
+shutil.copytree(demo_taskflow, tmp, dirs_exist_ok=True)
 
 # 1. Breaking ConfigObject
 with open(os.path.join(tmp, 'taskflow/config.py'), 'w') as f:
@@ -77,7 +80,7 @@ def test_compute_config_signature():
 
 env = os.environ.copy()
 env['PYTHONPATH'] = tmp
-res = subprocess.run(['/opt/venv/bin/pytest', '-v'], cwd=tmp, env=env, capture_output=True, text=True)
+res = subprocess.run([sys.executable, '-m', 'pytest', '-v'], cwd=tmp, env=env, capture_output=True, text=True)
 print('Returncode:', res.returncode)
 print('Passed count:', res.stdout.count(' PASSED'))
 print('Failed count:', res.stdout.count(' FAILED'))

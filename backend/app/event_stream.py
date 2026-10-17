@@ -41,7 +41,8 @@ class EventBuffer:
         collision: Optional[Dict[str, Any]] = None,
         memory_write: Optional[Dict[str, Any]] = None,
         trace: Optional[Dict[str, Any]] = None,
-        execution_data: Optional[Dict[str, Any]] = None
+        execution_data: Optional[Dict[str, Any]] = None,
+        provenance: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """Creates, buffers, and distributes an event."""
         if run_id not in self._buffers:
@@ -51,6 +52,18 @@ class EventBuffer:
         if not trace and tool:
             from backend.app.falkor_client import falkor_client
             trace = falkor_client.get_trace_for_tool(tool, consume=True)
+
+        if provenance is None:
+            import datetime
+            iso_now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+            provenance = {
+                "graph": {"source": "REAL", "captured_at": iso_now},
+                "git": {"source": "REAL", "captured_at": iso_now},
+                "pytest": {"source": "REAL", "captured_at": iso_now}
+            }
+            # Only present if a model actually produced output
+            if execution_data and execution_data.get("llm_generated"):
+                provenance["llm"] = {"source": "REAL", "captured_at": iso_now}
 
         event = {
             "index": len(self._buffers[run_id]),
@@ -68,6 +81,7 @@ class EventBuffer:
             "scores": scores or {},
             "collision": collision,
             "memory_write": memory_write,
+            "provenance": provenance,
             "message": message
         }
 

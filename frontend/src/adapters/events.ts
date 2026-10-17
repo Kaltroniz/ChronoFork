@@ -426,7 +426,8 @@ export function getProvenance(
   }
 
   const key = category.toLowerCase() as 'graph' | 'git' | 'pytest' | 'llm';
-  const val = e.provenance[key];
+  const raw = e.provenance[key];
+  const val = typeof raw === 'object' && raw !== null ? (raw as any).source : raw;
   if (val === 'REAL' || val === 'CACHED' || val === 'SIMULATED') {
     return val;
   }

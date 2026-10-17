@@ -1,0 +1,25 @@
+============================================================
+FalkorDB Queries and Latencies on repo:taskflow (20 runs each)
+============================================================
+Graph repo:taskflow size: 69 symbols, 29 CALLS, 16 TESTED_BY
+
+graph.copy (20 runs): min=55.408ms, median=108.317ms, max=112.076ms
+pageRank (20 runs): min=1.200ms, median=1.359ms, max=1.985ms
+betweenness (20 runs): min=1.389ms, median=1.801ms, max=2.600ms
+collision query (20 runs): min=0.609ms, median=0.756ms, max=2.435ms
+
+------------------------------------------------------------
+PATH EXISTENCE QUERIES (NO INTENT FILTER) ON CONTROLS:
+------------------------------------------------------------
+S1 Pair (worker.execute_job -> config.load_config): 1 rows found (expected >= 1)
+  Path: [taskflow.worker.execute_job, taskflow.queue.dequeue_task, taskflow.auth.validate_token, taskflow.database.get_connection, taskflow.config.load_config], Hops: 4
+S2 Pair (worker.execute_job -> config.load_config path existence): 1 rows found (expected >= 1; path exists but intent is BODY_EDIT -> 0 breaking collisions)
+S3 Pair (worker.execute_job <-> reports.generate_summary): 0 rows found (expected 0: disjoint subgraphs)
+------------------------------------------------------------
+S3 DETECT EVENT: 4-hop undirected neighborhoods & intersection:
+------------------------------------------------------------
+Neighborhood A2 (worker.execute_job): 13 symbols
+Neighborhood A3 (reports.generate_summary): 9 symbols
+Intersection: [] (count: 0)
+Assertion Passed: Neighborhood intersection is EMPTY (0 symbols)!
+

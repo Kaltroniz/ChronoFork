@@ -45,28 +45,33 @@ export const ZeroPathProof: React.FC<ZeroPathProofProps> = ({
   // Trigger ONLY when COLLISION_DETECTION event has occurred, with collision == null and >= 2 distinct claims
   const shouldShow = Boolean(collisionEvent) && isZeroCollision && hasAtLeastTwoClaims;
 
-  const isScenario2 =
-    currentScenario === 2 ||
-    eventsUpToCurrent.some(
-      (e) => e.phase === 'MEMORY_ADAPTATION' || e.message?.toLowerCase().includes('memory-guided')
-    );
+  // Derive A1 claim intent directly from CLAIM events
+  const a1ClaimEvent = eventsUpToCurrent.find(
+    (e) => e.phase === 'CLAIM' && (e.params?.agent_id === 'agent_1' || e.agent?.toLowerCase().includes('config') || e.agent === 'A1')
+  );
+  const a1Intent = a1ClaimEvent?.params?.intent || a1ClaimEvent?.execution_data?.intent || 'BODY_EDIT';
 
-  // Auto-compact after 3s like the hero (only for Scenario 3)
+  // Memory adaptation detected from events (never scenario-number branching)
+  const isMemoryAdapted = eventsUpToCurrent.some(
+    (e) => e.phase === 'MEMORY_ADAPTATION' || (e.phase === 'COLLISION_DETECTION' && (e.execution_data?.path_rows_count ?? 0) > 0)
+  );
+
+  // Auto-compact after 3s like the hero (only for disjoint subgraphs proof)
   useEffect(() => {
     setIsCollapsed(false);
-    if (!shouldShow || isScenario2) return;
+    if (!shouldShow || isMemoryAdapted) return;
 
     const timer = setTimeout(() => {
       setIsCollapsed(true);
     }, 3000);
 
     return () => clearTimeout(timer);
-  }, [activeEvent, shouldShow, isScenario2]);
+  }, [activeEvent, shouldShow, isMemoryAdapted]);
 
   if (!shouldShow || dismissed) return null;
 
-  // Scenario 2: Small green "ZERO COLLISIONS · memory-guided" card
-  if (isScenario2) {
+  // Memory-guided non-breaking claim proof
+  if (isMemoryAdapted) {
     return (
       <div
         className="absolute top-4 left-1/2 -translate-x-1/2 z-30 px-4 py-2.5 rounded-[6px] border border-[var(--clear)] bg-[var(--bg-1)] font-mono text-[13px] text-[var(--clear)] shadow-2xl flex items-center gap-3 select-none"
@@ -76,7 +81,7 @@ export const ZeroPathProof: React.FC<ZeroPathProofProps> = ({
         <ShieldCheck className="w-4 h-4 text-[var(--clear)] shrink-0" />
         <span className="font-bold">ZERO COLLISIONS · memory-guided</span>
         <span className="text-[var(--text-dim)] font-sans text-[13px]">
-          memory changed A1's claim to BODY_EDIT; the breaking-intent query returned 0 rows
+          {`memory changed A1's claim to ${a1Intent}; the breaking-intent query returned 0 rows`}
         </span>
       </div>
     );

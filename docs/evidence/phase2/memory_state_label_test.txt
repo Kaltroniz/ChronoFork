@@ -1,0 +1,16 @@
+================================================================
+🧪 Real Playwright Test: Reset -> Read Label -> Run S1 -> Read Label
+================================================================
+
+1. Clicking Reset button...
+>>> [OBSERVED STRING 1 - After Reset]: "ABSENT (hidden because memoryWasReset is true)"
+
+2. Clicking Scenario 1: Hidden Collision (replay)...
+3. Waiting for Scenario 1 replay stream to complete (event 13 MEMORY_UPDATE)...
+>>> [OBSERVED STRING 2 - After S1 Replay]: "Memory state: carried over from previous runs"
+
+================================================================
+TEST SUMMARY:
+  Observed String 1 (After Reset):    "ABSENT (hidden because memoryWasReset is true)"
+  Observed String 2 (After S1 Replay): "Memory state: carried over from previous runs"
+================================================================

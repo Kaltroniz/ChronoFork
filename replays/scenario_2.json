@@ -1,7 +1,7 @@
 [
   {
     "index": 0,
-    "ts": 1792110822.3527665,
+    "ts": 1792223259.424769,
     "run_id": "replay_gen_sc2_nomem",
     "agent": "Planner",
     "phase": "PLANNING",
@@ -18,38 +18,83 @@
     "scores": {},
     "collision": null,
     "memory_write": null,
+    "provenance": {
+      "graph": {
+        "source": "REAL",
+        "captured_at": "2026-10-17T07:47:39.424764+00:00"
+      },
+      "git": {
+        "source": "REAL",
+        "captured_at": "2026-10-17T07:47:39.424764+00:00"
+      },
+      "pytest": {
+        "source": "REAL",
+        "captured_at": "2026-10-17T07:47:39.424764+00:00"
+      }
+    },
     "message": "Planner received task: 'Refactor config schema and extend worker timeout'. Memory Coordination: OFF."
   },
   {
     "index": 1,
-    "ts": 1792110822.4587705,
+    "ts": 1792223259.477254,
     "run_id": "replay_gen_sc2_nomem",
     "agent": "ConfigCoder",
     "phase": "CLAIM",
     "tool": "claim_symbols",
-    "cypher": "MATCH (a:Agent {id: $agent_id})\n    MATCH (s:Symbol {qualname: $symbol_qname})\n    MERGE (a)-[c:CLAIMS {intent: $intent}]->(s)\n    SET c.subtask = $subtask, c.claimed_at = timestamp()",
+    "cypher": "MATCH (a:Agent {id: $agent_id})\n    MATCH (s:Symbol {qualname: $symbol_qname})\n    MERGE (a)-[c:CLAIMS {intent: $intent}]->(s)\n    SET c.subtask = $subtask, c.claimed_at = timestamp()\n    RETURN a.id AS agent_id, a.name AS agent_name, s.qualname AS symbol, c.intent AS intent",
     "params": {
-      "agent_id": "agent_2",
-      "symbol_qname": "taskflow.worker.execute_job",
-      "intent": "BODY_EDIT",
-      "subtask": "Extend worker job timeout"
+      "agent_id": "agent_1",
+      "symbol_qname": "taskflow.config.load_config",
+      "intent": "SIGNATURE_CHANGE",
+      "subtask": "Uncoordinated change"
     },
     "trace": {
-      "graph": "coord:replay_gen_sc2_mem",
-      "cypher": "MATCH (a:Agent {id: $agent_id})\n    MATCH (s:Symbol {qualname: $symbol_qname})\n    MERGE (a)-[c:CLAIMS {intent: $intent}]->(s)\n    SET c.subtask = $subtask, c.claimed_at = timestamp()",
+      "graph": "coord:replay_gen_sc2_nomem",
+      "cypher": "MATCH (a:Agent {id: $agent_id})\n    MATCH (s:Symbol {qualname: $symbol_qname})\n    MERGE (a)-[c:CLAIMS {intent: $intent}]->(s)\n    SET c.subtask = $subtask, c.claimed_at = timestamp()\n    RETURN a.id AS agent_id, a.name AS agent_name, s.qualname AS symbol, c.intent AS intent",
       "params": {
-        "agent_id": "agent_2",
-        "symbol_qname": "taskflow.worker.execute_job",
-        "intent": "BODY_EDIT",
-        "subtask": "Extend worker job timeout"
+        "agent_id": "agent_1",
+        "symbol_qname": "taskflow.config.load_config",
+        "intent": "SIGNATURE_CHANGE",
+        "subtask": "Uncoordinated change"
       },
-      "duration_ms": 1.4,
-      "row_count": 0,
-      "rows": [],
-      "header": [],
+      "duration_ms": 1.43,
+      "row_count": 1,
+      "rows": [
+        [
+          "agent_1",
+          "ConfigCoder",
+          "taskflow.config.load_config",
+          "SIGNATURE_CHANGE"
+        ]
+      ],
+      "header": [
+        [
+          1,
+          "agent_id"
+        ],
+        [
+          1,
+          "agent_name"
+        ],
+        [
+          1,
+          "symbol"
+        ],
+        [
+          1,
+          "intent"
+        ]
+      ],
       "tool": "claim_symbols"
     },
-    "execution_data": null,
+    "execution_data": {
+      "run_id": "replay_gen_sc2_nomem",
+      "agent_id": "agent_1",
+      "agent_name": "ConfigCoder",
+      "symbol": "taskflow.config.load_config",
+      "symbol_qname": "taskflow.config.load_config",
+      "intent": "SIGNATURE_CHANGE"
+    },
     "node_ids": [
       "taskflow.config.load_config"
     ],
@@ -57,11 +102,109 @@
     "scores": {},
     "collision": null,
     "memory_write": null,
+    "provenance": {
+      "graph": {
+        "source": "REAL",
+        "captured_at": "2026-10-17T07:47:39.477244+00:00"
+      },
+      "git": {
+        "source": "REAL",
+        "captured_at": "2026-10-17T07:47:39.477244+00:00"
+      },
+      "pytest": {
+        "source": "REAL",
+        "captured_at": "2026-10-17T07:47:39.477244+00:00"
+      }
+    },
     "message": "Memory Coordination OFF: ConfigCoder claims load_config with breaking SIGNATURE_CHANGE."
   },
   {
     "index": 2,
-    "ts": 1792110822.48468,
+    "ts": 1792223259.478035,
+    "run_id": "replay_gen_sc2_nomem",
+    "agent": "WorkerCoder",
+    "phase": "CLAIM",
+    "tool": "claim_symbols",
+    "cypher": "MATCH (a:Agent {id: $agent_id})\n    MATCH (s:Symbol {qualname: $symbol_qname})\n    MERGE (a)-[c:CLAIMS {intent: $intent}]->(s)\n    SET c.subtask = $subtask, c.claimed_at = timestamp()\n    RETURN a.id AS agent_id, a.name AS agent_name, s.qualname AS symbol, c.intent AS intent",
+    "params": {
+      "agent_id": "agent_2",
+      "symbol_qname": "taskflow.worker.execute_job",
+      "intent": "BODY_EDIT",
+      "subtask": "Worker edit"
+    },
+    "trace": {
+      "graph": "coord:replay_gen_sc2_nomem",
+      "cypher": "MATCH (a:Agent {id: $agent_id})\n    MATCH (s:Symbol {qualname: $symbol_qname})\n    MERGE (a)-[c:CLAIMS {intent: $intent}]->(s)\n    SET c.subtask = $subtask, c.claimed_at = timestamp()\n    RETURN a.id AS agent_id, a.name AS agent_name, s.qualname AS symbol, c.intent AS intent",
+      "params": {
+        "agent_id": "agent_2",
+        "symbol_qname": "taskflow.worker.execute_job",
+        "intent": "BODY_EDIT",
+        "subtask": "Worker edit"
+      },
+      "duration_ms": 0.75,
+      "row_count": 1,
+      "rows": [
+        [
+          "agent_2",
+          "WorkerCoder",
+          "taskflow.worker.execute_job",
+          "BODY_EDIT"
+        ]
+      ],
+      "header": [
+        [
+          1,
+          "agent_id"
+        ],
+        [
+          1,
+          "agent_name"
+        ],
+        [
+          1,
+          "symbol"
+        ],
+        [
+          1,
+          "intent"
+        ]
+      ],
+      "tool": "claim_symbols"
+    },
+    "execution_data": {
+      "run_id": "replay_gen_sc2_nomem",
+      "agent_id": "agent_2",
+      "agent_name": "WorkerCoder",
+      "symbol": "taskflow.worker.execute_job",
+      "symbol_qname": "taskflow.worker.execute_job",
+      "intent": "BODY_EDIT"
+    },
+    "node_ids": [
+      "taskflow.worker.execute_job"
+    ],
+    "edge_ids": [],
+    "scores": {},
+    "collision": null,
+    "memory_write": null,
+    "provenance": {
+      "graph": {
+        "source": "REAL",
+        "captured_at": "2026-10-17T07:47:39.478016+00:00"
+      },
+      "git": {
+        "source": "REAL",
+        "captured_at": "2026-10-17T07:47:39.478016+00:00"
+      },
+      "pytest": {
+        "source": "REAL",
+        "captured_at": "2026-10-17T07:47:39.478016+00:00"
+      }
+    },
+    "message": "WorkerCoder declared CLAIM on taskflow.worker.execute_job with intent BODY_EDIT in worker.py."
+  },
+  {
+    "index": 3,
+    "ts": 1792223259.489075,
     "run_id": "replay_gen_sc2_nomem",
     "agent": "Coordinator",
     "phase": "COLLISION_DETECTION",
@@ -72,7 +215,7 @@
       "graph": "coord:replay_gen_sc2_nomem",
       "cypher": "MATCH (a1:Agent)-[c1:CLAIMS]->(s1:Symbol),\n          (a2:Agent)-[c2:CLAIMS]->(s2:Symbol)\n    WHERE a1.id <> a2.id\n      AND c1.intent IN ['SIGNATURE_CHANGE', 'DELETE']\n    MATCH path = (s2)-[:CALLS*1..4]->(s1)\n    RETURN a1.id AS a1, a2.id AS a2, s1.qualname AS s1_qname, s2.qualname AS s2_qname,\n           c1.intent AS intent1, c2.intent AS intent2,\n           [n in nodes(path) | n.qualname] AS path_nodes, length(path) AS hops",
       "params": {},
-      "duration_ms": 2.59,
+      "duration_ms": 1.19,
       "row_count": 1,
       "rows": [
         [
@@ -128,7 +271,10 @@
       ],
       "tool": "detect_collisions"
     },
-    "execution_data": null,
+    "execution_data": {
+      "path_rows_count": 1,
+      "collisions_count": 1
+    },
     "node_ids": [
       "taskflow.worker.execute_job",
       "taskflow.queue.dequeue_task",
@@ -154,11 +300,34 @@
         "taskflow.database.get_connection",
         "taskflow.config.load_config"
       ],
-      "risk_score": 0.8542,
+      "risk_score": 0.825,
+      "risk_inputs": {
+        "pagerank": 0.054412,
+        "betweenness": 26.0,
+        "max_pagerank": 0.054412,
+        "max_betweenness": 40.0,
+        "norm_pagerank": 1.0,
+        "norm_betweenness": 0.65,
+        "formula": "0.5 * 1.000000 + 0.5 * 0.6500 = 0.8250"
+      },
       "policy": "SERIALIZE",
-      "reason": "Agent agent_1 claims taskflow.config.load_config (SIGNATURE_CHANGE, risk=0.85); Agent agent_2 touches taskflow.worker.execute_job which depends on it via a 4-hop call chain: taskflow.worker.execute_job -> taskflow.queue.dequeue_task -> taskflow.auth.validate_token -> taskflow.database.get_connection -> taskflow.config.load_config. Git would merge cleanly; runtime will break!"
+      "reason": "Agent agent_1 claims taskflow.config.load_config (SIGNATURE_CHANGE, risk=0.8250); Agent agent_2 touches taskflow.worker.execute_job which depends on it via a 4-hop call chain: taskflow.worker.execute_job -> taskflow.queue.dequeue_task -> taskflow.auth.validate_token -> taskflow.database.get_connection -> taskflow.config.load_config. Git would merge cleanly; runtime will break!"
     },
     "memory_write": null,
+    "provenance": {
+      "graph": {
+        "source": "REAL",
+        "captured_at": "2026-10-17T07:47:39.489071+00:00"
+      },
+      "git": {
+        "source": "REAL",
+        "captured_at": "2026-10-17T07:47:39.489071+00:00"
+      },
+      "pytest": {
+        "source": "REAL",
+        "captured_at": "2026-10-17T07:47:39.489071+00:00"
+      }
+    },
     "message": "COLLISION RE-OCCURS! Without memory, agents collide on the transitive call chain."
   }
 ]

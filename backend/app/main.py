@@ -136,13 +136,14 @@ async def start_run(req: RunRequest):
     else:
         events = execute_scenario_1(run_id, mode=req_mode)
 
-    # Save to replay cache after successful live run
+    # Save to live run record (canonical scenario_N.json are written only by scripts/regenerate_replays.py)
     try:
         os.makedirs(REPLAYS_DIR, exist_ok=True)
-        with open(cache_file, "w", encoding="utf-8") as f:
+        live_run_file = os.path.join(REPLAYS_DIR, f"live_{run_id}.json")
+        with open(live_run_file, "w", encoding="utf-8") as f:
             json.dump(events, f, indent=2)
     except Exception as ex:
-        print(f"Warning: Failed to save replay cache: {ex}")
+        print(f"Warning: Failed to save live run log {live_run_file}: {ex}")
 
     return {
         "run_id": run_id,
