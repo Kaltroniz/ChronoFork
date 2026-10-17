@@ -81,11 +81,19 @@
 ## 3. How to Run & Prerequisites
 
 ### Prerequisites
-- Docker (for FalkorDB container)
+- Docker (for FalkorDB container or full Compose deployment)
 - Python 3.11 (`.venv/bin/python`)
-- Node.js 18+ (for frontend)
+- Node.js 18+ (for frontend development)
 
-### Running Services
+### Option A: Complete Docker Compose Deployment (Production Build)
+```bash
+docker compose up --build -d
+```
+- Frontend: `http://localhost:5173` (static build served via Nginx, reverse-proxying API calls)
+- Backend: `http://localhost:8000` (FastAPI with healthcheck and startup auto-seed)
+- FalkorDB: `localhost:6379` (FalkorDB graph engine with healthcheck)
+
+### Option B: Local Development
 1. **Start FalkorDB**:
    ```bash
    docker compose up -d falkordb
@@ -123,11 +131,23 @@
 - **Trajectory Dynamics**: On every successful rule-guided run, confidence rises by `+0.10` and saturates at `0.99`. On failure, confidence decreases by `-0.20`, clamped to a minimum of `0.10`.
 - **Adaptive Execution**: In Scenario 2 with memory enabled, recalled rules dynamically mutate agent intent from a breaking `SIGNATURE_CHANGE` to a backward-compatible `BODY_EDIT`, preventing collision.
 
-### Verification & Agents
-- **Deterministic Scripted Patches**: Agent code generation is executed via deterministic scripted patches designed to simulate specific refactor and collision scenarios.
-- **LLM Mode Status**: Live LLM invocation via Gemini API (`backend/app/agents/llm.py`) is scaffolded with fallback handling, but live model execution is **NOT validated** against production API keys.
-- **Real Test Isolation**: Automated verification runs real `pytest` in isolated workspace directory copies, proving that naive git merges fail (5 failed, 7 passed) while ChronoFork coordinated merges pass (12 passed, 0 failed).
+### Detection Benchmark (Phase 3 Corrections)
+- **Dataset**: $N = 58$ seeded cases (38 ground-truth collisions, 20 ground-truth safe cases).
+- **Ground Truth**: Strictly defined by merged-tree `pytest` runtime execution.
+- **Detector Comparison**:
+  - `(a1) Git text conflict`: $0\%$ recall (all edits in separate functions/files merge with 0 text conflicts).
+  - `(a2) Per-branch tests`: $0\%$ recall (cross-branch semantic collisions are invisible on isolated branches before landing).
+  - `(a3) Merged-tree tests`: $100\%$ recall, but known only **post-merge** after CI breaks and compute is wasted.
+  - `(b) ChronoFork`: Discovers collisions at **claim time** before code is written, achieving **100% precision** ($FP=0, TN=20$), **100% recall on static call chains (1–4 hops)**, with a median query latency of **1.37 ms**.
+- **Documented Blind Spots**: Dynamic metaprogramming patterns (`getattr`, `dict_dispatch`, `alias`, `self_method`) require runtime dataflow or type inference.
 
-### Media & Assets
-- **Video Recordings**: `docs/screens/scenario1.webm` (17.80s), `docs/screens/scenario2.webm` (13.52s), and `docs/screens/scenario3.webm` (13.56s) are preserved in git tracking as essential evidence deliverables for submission.
-- **Screenshots**: Screen captures verifying clean layout, bounding box clearance, and fail-loudly error states are stored in `docs/screens/`.
+### Docker & Deployment (Phase 5-lite)
+- **Production Build**: Multi-stage Docker build serving production frontend bundle statically via Nginx on port 5173, proxying API and SSE streaming to FastAPI backend on port 8000.
+- **Auto-Seed on Startup**: Automatically parses and ingests `taskflow` (69 nodes, 109 edges) and `analytics` repos into FalkorDB upon service start.
+- **Clean Clone Verified**: Validated via automated test [`scripts/test_clean_clone_docker.py`](file:///Users/souhardya/ChronoFork/scripts/test_clean_clone_docker.py) cloning `SS1` into an isolated temp directory, building containers, verifying `/health`, `/graph/taskflow`, Scenario 1 replay (`Passed = 12, Failed = 0, ExitCode = 0`), frontend HTTP status (`200 OK`), and capturing UI screenshot [`docs/screens/clean-clone-story.png`](file:///Users/souhardya/ChronoFork/docs/screens/clean-clone-story.png).
+- **CORS Restricted**: Controlled via `CORS_ORIGINS` environment variable, defaulting to explicit localhost and 127.0.0.1 ports with allowed methods `["GET", "POST", "OPTIONS"]`.
+
+### Explicitly Not Done (Scope Boundaries)
+- **FalkorDB Cloud**: NOT DONE. The system runs against local/containerized FalkorDB instances. No remote cloud instance configuration was attempted.
+- **MCP Server in Deployment**: NOT DONE. In-process tool wrappers and FastMCP definitions exist in `backend/app/mcp_tools.py`, but a standalone deployed MCP service daemon is not configured in Docker.
+- **Live LLM Execution Mode**: NOT DONE. Scenario runner relies on verified deterministic scripted patches. Live Gemini API execution is scaffolded but not validated against production keys.
