@@ -1,9 +1,6 @@
-version: '3.8'
-
 services:
   falkordb:
     image: falkordb/falkordb:latest
-    container_name: chronofork-falkordb
     ports:
       - "6379:6379"
       - "3000:3000"
@@ -18,7 +15,6 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
-    container_name: chronofork-backend
     ports:
       - "8000:8000"
     environment:
@@ -29,7 +25,7 @@ services:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - DEMO_MODE=${DEMO_MODE:-false}
-      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:5173,http://localhost:3000,http://localhost:8000,http://127.0.0.1:5173,http://127.0.0.1:3000,http://127.0.0.1:8000}
     depends_on:
       falkordb:
         condition: service_healthy
@@ -39,7 +35,6 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: chronofork-frontend
     ports:
       - "5173:5173"
     environment:
