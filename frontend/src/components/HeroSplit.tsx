@@ -21,21 +21,20 @@ export const HeroSplit: React.FC<HeroSplitProps> = ({
   onDismiss,
   dismissed
 }) => {
-  const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(true);
 
   const collision = getCollision(activeEvent);
 
-  // Auto-collapse to docked top-center bar after 3 seconds
+  // Requirement 4: Expanded at first render of collision event, auto-docks after 1.5s
   useEffect(() => {
-    setIsCollapsed(false);
-    if (!collision) return;
-
-    const timer = setTimeout(() => {
-      setIsCollapsed(true);
-    }, 3000);
-
-    return () => clearTimeout(timer);
-  }, [activeEvent, collision]);
+    if (activeEvent?.phase === 'COLLISION_DETECTION' && collision) {
+      setIsCollapsed(false);
+      const timer = setTimeout(() => {
+        setIsCollapsed(true);
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [activeEvent?.phase, activeEvent?.index, Boolean(collision)]);
 
   if (!collision || dismissed) return null;
 
@@ -59,22 +58,23 @@ export const HeroSplit: React.FC<HeroSplitProps> = ({
     }
   }
 
-  // Collapsed One-Line Bar Docked Top-Center
+  // Collapsed One-Line Bar Docked Top-Left (min 440px, no truncation)
   if (isCollapsed) {
     return (
       <div
         onClick={() => setIsCollapsed(false)}
-        className="absolute top-4 left-1/2 -translate-x-1/2 z-30 px-4 py-2 rounded-[6px] border border-[var(--breach)] bg-[var(--bg-1)] font-mono text-[13px] font-semibold text-[var(--text)] shadow-xl cursor-pointer hover:border-[var(--accent)] flex items-center gap-3 select-none transition-all duration-200"
+        className="absolute top-4 left-6 z-30 min-w-[440px] w-auto max-w-[90%] px-4 py-2 rounded-[6px] border border-[var(--breach)] bg-[var(--bg-1)] font-mono text-[13px] font-semibold text-[var(--text)] shadow-xl cursor-pointer hover:border-[var(--accent)] flex items-center justify-between select-none transition-all duration-200"
         role="alert"
         aria-label="Collision Detection Docked Bar"
         title="Click to expand collision details"
       >
-        <span className="w-2 h-2 rounded-full bg-[var(--breach)] animate-pulse inline-block" />
-        <span>
-          Git: 0 conflicts · ChronoFork: {hops !== undefined ? `${hops}-hop` : 'transitive'} collision ·{' '}
-          {collision.policy || 'SERIALIZE'}
-        </span>
-        <span className="flex items-center gap-0.5 text-[13px] text-[var(--accent)] hover:underline ml-1">
+        <div className="flex items-center gap-2 whitespace-nowrap">
+          <span className="w-2 h-2 rounded-full bg-[var(--breach)] shrink-0 animate-pulse" />
+          <span className="whitespace-nowrap">
+            ChronoFork: {hops !== undefined ? `${hops}-hop` : 'transitive'} collision · {collision.policy || 'SERIALIZE'}
+          </span>
+        </div>
+        <span className="flex items-center gap-0.5 text-[13px] text-[var(--accent)] hover:underline ml-3 shrink-0">
           <span>Expand</span>
           <ChevronDown className="w-3.5 h-3.5" />
         </span>
@@ -84,29 +84,45 @@ export const HeroSplit: React.FC<HeroSplitProps> = ({
 
   return (
     <div
-      className="absolute top-4 left-1/2 -translate-x-1/2 z-30 w-[780px] max-w-[94%] cf-floating-card p-5 transition-opacity duration-200 shadow-2xl select-none"
+      className="absolute top-4 left-6 z-30 w-[780px] max-w-[94%] max-h-[230px] overflow-hidden cf-floating-card p-3.5 transition-opacity duration-200 shadow-2xl select-none"
       role="alert"
       aria-label="Collision Detection Split View"
     >
-      {/* Dismiss / Collapse Buttons */}
-      <div className="absolute top-3 right-3 flex items-center gap-1">
-        <button
-          onClick={() => setIsCollapsed(true)}
-          className="p-1 rounded hover:bg-[var(--bg-2)] text-[var(--text-dim)] hover:text-[var(--text)] transition-colors cursor-pointer text-[13px] font-mono px-2"
-          title="Dock to top-center bar"
-        >
-          Dock
-        </button>
-        {onDismiss && (
+      {/* Top Header Row with zero-overlap grid: Title on left, Policy + Risk + Controls on right */}
+      <div className="flex items-center justify-between pb-2 mb-2 border-b border-[var(--line)]">
+        <div className="flex items-center gap-2">
+          <span className="w-2.5 h-2.5 rounded-full bg-[var(--breach)] animate-pulse inline-block" />
+          <span className="text-eyebrow text-[var(--breach)] font-semibold">
+            ChronoFork Collision Detected
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="px-2 py-0.5 rounded-[6px] font-mono text-[13px] font-bold bg-[var(--bg-2)] text-[var(--breach)] border border-[var(--breach)]">
+            POLICY: {collision.policy || 'SERIALIZE'}
+          </span>
+          {risk !== undefined && (
+            <span className="px-2 py-0.5 rounded-[6px] font-mono text-[13px] bg-[var(--bg-2)] text-[var(--text-dim)] border border-[var(--line)]">
+              RISK {risk}
+            </span>
+          )}
           <button
-            onClick={onDismiss}
-            className="p-1 rounded hover:bg-[var(--bg-2)] text-[var(--text-dim)] hover:text-[var(--text)] transition-colors cursor-pointer"
-            title="Dismiss card"
-            aria-label="Close"
+            onClick={() => setIsCollapsed(true)}
+            className="p-1 rounded hover:bg-[var(--bg-2)] text-[var(--text-dim)] hover:text-[var(--text)] transition-colors cursor-pointer text-[13px] font-mono px-2 border border-[var(--line)]"
+            title="Dock to top-left bar"
           >
-            <X className="w-4 h-4" />
+            Dock
           </button>
-        )}
+          {onDismiss && (
+            <button
+              onClick={onDismiss}
+              className="p-1 rounded hover:bg-[var(--bg-2)] text-[var(--text-dim)] hover:text-[var(--text)] transition-colors cursor-pointer border border-[var(--line)]"
+              title="Dismiss card"
+              aria-label="Close"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
       </div>
 
       <div
@@ -152,20 +168,8 @@ export const HeroSplit: React.FC<HeroSplitProps> = ({
         {/* RIGHT COLUMN: ChronoFork */}
         <div className="flex flex-col justify-between pl-2 space-y-3">
           <div>
-            <div className="flex items-center justify-between">
-              <div className="text-eyebrow text-[var(--breach)] font-semibold">ChronoFork Swarm</div>
-              <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 rounded-[6px] font-mono text-[13px] font-bold bg-[var(--bg-2)] text-[var(--breach)] border border-[var(--breach)]">
-                  POLICY: {collision.policy || 'SERIALIZE'}
-                </span>
-                {risk !== undefined && (
-                  <span className="px-2 py-0.5 rounded-[6px] font-mono text-[13px] bg-[var(--bg-2)] text-[var(--text-dim)] border border-[var(--line)]">
-                    RISK {risk}
-                  </span>
-                )}
-              </div>
-            </div>
-            <div className="text-[13px] text-[var(--text-dim)] mt-0.5">1 transitive collision detected</div>
+            <div className="text-eyebrow text-[var(--breach)] font-semibold">ChronoFork Detection</div>
+            <div className="text-[13px] text-[var(--text-dim)] mt-0.5">1 transitive collision detected across call path</div>
           </div>
 
           <div className="my-1">

@@ -126,6 +126,18 @@ export const App: React.FC = () => {
     }
   };
 
+  // Reset Scenario handler: resets memory first for identical confidence
+  const handleResetScenario = async (scId: number) => {
+    try {
+      await fetch(`/memory/${selectedRepo}/reset`, { method: 'POST' });
+      await fetchMemoryData(selectedRepo);
+      setMemoryWasReset(true);
+    } catch (err) {
+      console.warn('Memory reset failed:', err);
+    }
+    startScenario(scId);
+  };
+
   // 2. Scenario Runner
   const startScenario = useCallback(
     async (scId: number, autoPlay: boolean = true) => {
@@ -297,6 +309,26 @@ export const App: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [events.length, currentScenario, startScenario]);
 
+  // Expose test automation hooks on window in dev
+  useEffect(() => {
+    (window as any).__chronoSetIndex = (idx: number) => {
+      setIsPaused(true);
+      setCurrentIndex(idx);
+    };
+    (window as any).__chronoStartScenario = (scId: number) => {
+      return startScenario(scId, false);
+    };
+    (window as any).__chronoGetState = () => ({
+      currentIndex,
+      currentScenario,
+      activeEvent: events[currentIndex] || null,
+      events,
+      eventsLength: events.length,
+      isRunning,
+      isPaused
+    });
+  }, [currentIndex, currentScenario, events, isRunning, isPaused, startScenario]);
+
   // Current active event and events strictly up to current index
   const activeEvent = events[currentIndex] || null;
   const currentEvents = events.slice(0, currentIndex + 1);
@@ -348,7 +380,7 @@ export const App: React.FC = () => {
           onStepForward={() => {
             setCurrentIndex((prev) => Math.min(prev + 1, events.length - 1));
           }}
-          onReset={() => startScenario(currentScenario)}
+          onReset={() => handleResetScenario(currentScenario)}
           speedMs={speedMs}
           onChangeSpeed={setSpeedMs}
           memoryEnabled={memoryEnabled}
@@ -365,6 +397,7 @@ export const App: React.FC = () => {
               graphData={graphData}
               activeEvent={activeEvent}
               events={currentEvents}
+              currentScenario={currentScenario}
               selectedNodeId={selectedNodeId}
               onSelectNode={(nodeId) => setSelectedNodeId(nodeId)}
             />
@@ -383,11 +416,15 @@ export const App: React.FC = () => {
             <ZeroPathProof
               activeEvent={activeEvent}
               events={currentEvents}
+              currentScenario={currentScenario}
               onDismiss={() => setZeroProofDismissed(true)}
               dismissed={zeroProofDismissed}
             />
 
-            {/* Story Caption & 5-Chapter Bar (bottom-center) */}
+          </div>
+
+          {/* DOCKED CAPTION BAR (72px strip between canvas and bottom result strip) */}
+          <div id="chrono-caption-bar" className="h-[72px] shrink-0 border-t border-[var(--line)] bg-[var(--bg-1)] flex items-center justify-center px-4 z-10">
             <StoryCaptionBar
               activeEvent={activeEvent}
               currentScenario={currentScenario}

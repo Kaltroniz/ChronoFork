@@ -50,24 +50,27 @@ export const StoryCaptionBar: React.FC<StoryCaptionBarProps> = ({
     currentChapter = 5;
   }
 
-  const captionText = getEventFirstSentence(activeEvent);
+  const captionText = activeEvent
+    ? getEventFirstSentence(activeEvent)
+    : 'Swarm ready. Select a scenario or start execution to observe multi-agent coordination.';
 
   return (
     <div
-      className="absolute bottom-16 left-1/2 -translate-x-1/2 z-30 w-[840px] max-w-[94%] cf-floating-card px-6 py-4 transition-opacity duration-300 pointer-events-auto"
+      id="chrono-caption-bar"
+      className="w-full max-w-[960px] h-[72px] flex flex-col justify-center px-4 transition-opacity duration-300 select-none"
       role="region"
       aria-label="Story Narration and Chapter Progress"
     >
       {/* 5 Chapter Progress Ticks */}
-      <div className="flex items-center justify-between gap-2 pb-3 mb-3 border-b border-[var(--line)]">
+      <div className="flex items-center justify-between gap-3 pb-1 mb-1 border-b border-[var(--line)]">
         {CHAPTERS.map((ch) => {
           const isPassed = ch.id < currentChapter;
           const isCurrent = ch.id === currentChapter;
 
           return (
-            <div key={ch.id} className="flex-1 flex flex-col items-center gap-1.5">
+            <div key={ch.id} className="flex-1 flex flex-col items-center gap-1">
               <div
-                className={`w-full h-1.5 rounded-full transition-colors ${
+                className={`w-full h-1 rounded-full transition-colors ${
                   isCurrent
                     ? 'bg-[var(--accent)]'
                     : isPassed
@@ -76,7 +79,7 @@ export const StoryCaptionBar: React.FC<StoryCaptionBarProps> = ({
                 }`}
               />
               <span
-                className={`font-mono text-[13px] uppercase tracking-wider text-center select-none ${
+                className={`font-mono text-[13px] tracking-tight text-center select-none whitespace-nowrap ${
                   isCurrent
                     ? 'text-[var(--text)] font-bold'
                     : isPassed
@@ -92,7 +95,7 @@ export const StoryCaptionBar: React.FC<StoryCaptionBarProps> = ({
       </div>
 
       {/* Narration Caption */}
-      <div className="text-[17px] font-medium text-[var(--text)] leading-snug line-clamp-2 select-text font-sans">
+      <div className="text-[13px] font-medium text-[var(--text)] leading-tight truncate select-text font-sans text-center">
         <VerifiedText text={captionText} graphData={graphData} onSelectNode={onSelectNode} />
       </div>
     </div>

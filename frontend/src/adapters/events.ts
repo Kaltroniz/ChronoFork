@@ -190,26 +190,31 @@ export function getGitComparisonData(e?: SwarmEvent | null): NormalizedGitData |
  */
 export function getVerificationData(e?: SwarmEvent | null): NormalizedVerifierData | undefined {
   if (!e?.execution_data) return undefined;
+  if (e.phase === 'GIT_COMPARISON' || e.tool === 'git_merge') return undefined;
   const d = e.execution_data;
 
   const passed = typeof d.passed_count === 'number'
     ? d.passed_count
     : typeof d.pytest_passed === 'number'
     ? d.pytest_passed
-    : typeof d.naive_pytest_passed === 'number'
-    ? d.naive_pytest_passed
+    : typeof d.passed === 'number'
+    ? d.passed
     : undefined;
 
   const failed = typeof d.failed_count === 'number'
     ? d.failed_count
     : typeof d.pytest_failed === 'number'
     ? d.pytest_failed
-    : typeof d.naive_pytest_failed === 'number'
-    ? d.naive_pytest_failed
+    : typeof d.failed === 'number'
+    ? d.failed
     : undefined;
 
   const duration = typeof d.duration_seconds === 'number'
     ? d.duration_seconds
+    : typeof d.duration === 'number'
+    ? d.duration
+    : typeof d.duration_ms === 'number'
+    ? d.duration_ms / 1000
     : typeof d.pytest_duration === 'number'
     ? d.pytest_duration
     : undefined;
@@ -300,30 +305,100 @@ export function getTrace(e?: SwarmEvent | null): CypherTrace | undefined {
   return e.trace;
 }
 
+export interface AgentIdentity {
+  id: 'A1' | 'A2' | 'A3' | 'A4' | 'CO' | 'VE' | 'PL' | string;
+  name: string;
+}
+
+/**
+ * Returns canonical agent identity (id: A1..A4/CO/VE/PL, name).
+ * Derives from the claim's agent name when present, else agent_id; never mixes.
+ */
+export function agentLabel(eventOrAgent?: SwarmEvent | string | AgentIdentity | null): AgentIdentity {
+  if (!eventOrAgent) return { id: '—', name: '—' };
+  if (typeof eventOrAgent === 'object' && 'id' in eventOrAgent && 'name' in eventOrAgent) {
+    return eventOrAgent as AgentIdentity;
+  }
+
+  let target = '';
+  let claimAgentName = '';
+
+  if (typeof eventOrAgent === 'string') {
+    target = eventOrAgent.trim();
+  } else {
+    // SwarmEvent
+    // Priority: claim's agent name when present and not a generic coordinator/system
+    if (eventOrAgent.agent && eventOrAgent.agent !== 'Coordinator' && eventOrAgent.agent !== 'System') {
+      claimAgentName = eventOrAgent.agent;
+      target = eventOrAgent.agent;
+    } else if (eventOrAgent.params?.agent_name) {
+      target = String(eventOrAgent.params.agent_name);
+    } else if (eventOrAgent.params?.agent) {
+      target = String(eventOrAgent.params.agent);
+    } else if (eventOrAgent.params?.agent_id) {
+      target = String(eventOrAgent.params.agent_id);
+    } else {
+      target = eventOrAgent.agent || 'Coordinator';
+    }
+  }
+
+  const norm = target.toLowerCase();
+  let id = 'A1';
+  let name = target;
+
+  if (norm.includes('config') || norm === 'agent_1' || norm === 'a1') {
+    id = 'A1';
+    name = claimAgentName || 'ConfigCoder';
+  } else if (norm.includes('worker') || norm === 'agent_2' || norm === 'a2') {
+    id = 'A2';
+    name = claimAgentName || 'WorkerCoder';
+  } else if (norm.includes('report') || norm.includes('auth') || norm === 'agent_3' || norm === 'a3') {
+    id = 'A3';
+    name = claimAgentName || (norm.includes('report') ? 'ReportsCoder' : 'AuthCoder');
+  } else if (norm.includes('telemetry') || norm === 'agent_4' || norm === 'a4') {
+    id = 'A4';
+    name = claimAgentName || 'TelemetryCoder';
+  } else if (norm.includes('coordinator')) {
+    id = 'CO';
+    name = 'Coordinator';
+  } else if (norm.includes('verifier')) {
+    id = 'VE';
+    name = 'Verifier';
+  } else if (norm.includes('planner')) {
+    id = 'PL';
+    name = 'Planner';
+  } else {
+    id = target.slice(0, 2).toUpperCase();
+    name = target;
+  }
+
+  return { id, name };
+}
+
 /**
  * Returns canonical agent chip & halo color
  */
-export function getAgentColor(agent: string): string {
-  const norm = agent.toLowerCase();
-  if (norm.includes('config') || norm === 'agent_1' || norm === 'a1') {
+export function getAgentColor(agentOrId: string | AgentIdentity): string {
+  const norm = (typeof agentOrId === 'string' ? agentOrId : agentOrId.id || agentOrId.name).toLowerCase();
+  if (norm === 'a1' || norm.includes('config') || norm === 'agent_1') {
     return '#5B8DEF'; // A1
   }
-  if (norm.includes('worker') || norm === 'agent_2' || norm === 'a2') {
+  if (norm === 'a2' || norm.includes('worker') || norm === 'agent_2') {
     return '#E0A458'; // A2
   }
-  if (norm.includes('auth') || norm.includes('report') || norm === 'agent_3' || norm === 'a3') {
+  if (norm === 'a3' || norm.includes('auth') || norm.includes('report') || norm === 'agent_3') {
     return '#4FB286'; // A3
   }
-  if (norm.includes('telemetry') || norm === 'agent_4' || norm === 'a4') {
+  if (norm === 'a4' || norm.includes('telemetry') || norm === 'agent_4') {
     return '#A58BE0'; // A4
   }
-  if (norm.includes('coordinator')) {
+  if (norm === 'co' || norm.includes('coordinator')) {
     return '#6EA8FE'; // Accent
   }
-  if (norm.includes('verifier')) {
+  if (norm === 've' || norm.includes('verifier')) {
     return '#3FA796'; // Clear
   }
-  if (norm.includes('planner')) {
+  if (norm === 'pl' || norm.includes('planner')) {
     return '#9AA4B2'; // Text dim
   }
   return '#9AA4B2';
@@ -332,16 +407,8 @@ export function getAgentColor(agent: string): string {
 /**
  * Returns canonical agent initials (e.g. A1, A2, CO, PL, VE)
  */
-export function getAgentInitials(agent: string): string {
-  const norm = agent.toLowerCase();
-  if (norm.includes('config') || norm === 'agent_1') return 'A1';
-  if (norm.includes('worker') || norm === 'agent_2') return 'A2';
-  if (norm.includes('auth') || norm.includes('report') || norm === 'agent_3') return 'A3';
-  if (norm.includes('telemetry') || norm === 'agent_4') return 'A4';
-  if (norm.includes('coordinator')) return 'CO';
-  if (norm.includes('verifier')) return 'VE';
-  if (norm.includes('planner')) return 'PL';
-  return agent.slice(0, 2).toUpperCase();
+export function getAgentInitials(agentOrId: string | AgentIdentity): string {
+  return agentLabel(agentOrId).id;
 }
 
 /**

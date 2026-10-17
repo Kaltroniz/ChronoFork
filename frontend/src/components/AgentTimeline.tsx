@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { SwarmEvent, GraphData } from '../types';
-import { getAgentColor, getAgentInitials, getCollision } from '../adapters/events';
+import { getAgentColor, getAgentInitials, getCollision, agentLabel } from '../adapters/events';
 import { VerifiedText } from './VerifiedText';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 
@@ -81,8 +81,9 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({
             const isCollision = !!collision;
             const isHandoff = evt.phase === 'HANDOFF' || evt.tool === 'record_handoff';
             const eyebrow = PHASE_EYEBROWS[evt.phase] || evt.phase;
-            const agentColor = getAgentColor(evt.agent);
-            const initials = getAgentInitials(evt.agent);
+            const identity = agentLabel(evt);
+            const agentColor = getAgentColor(identity);
+            const initials = identity.id;
             const isExpanded = !!expandedIndices[idx];
 
             return (
@@ -119,14 +120,14 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({
                       </span>
                     ) : (
                       <span
-                        className="cf-chip font-bold"
+                        className="cf-chip cf-timeline-chip font-bold"
                         style={{
                           backgroundColor: 'var(--bg-2)',
                           color: agentColor,
                           borderColor: agentColor
                         }}
                       >
-                        {initials} · {evt.agent}
+                        {identity.id} · {identity.name}
                       </span>
                     )}
                   </div>

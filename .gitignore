@@ -26,6 +26,7 @@ dist-ssr/
 # Logs & Temp
 *.log
 /tmp/chronofork_*
+video_temp/
 
 # OS
 .DS_Store

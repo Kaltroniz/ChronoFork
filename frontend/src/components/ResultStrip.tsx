@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { SwarmEvent, MemoryData, GraphData } from '../types';
 import {
   getGitComparisonData,
@@ -6,7 +6,8 @@ import {
   getForkSimulationData,
   getMergeOrder,
   getMemoryWrite,
-  getCollision
+  getCollision,
+  agentLabel
 } from '../adapters/events';
 import { SymbolChip } from './VerifiedText';
 import {
@@ -65,29 +66,59 @@ export const ResultStrip: React.FC<ResultStripProps> = ({
   const [approved, setApproved] = useState<boolean>(false);
   const [approvalHash, setApprovalHash] = useState<string | null>(null);
   const [approvalTime, setApprovalTime] = useState<string | null>(null);
+  const contentContainerRef = useRef<HTMLDivElement>(null);
+
+  // Auto-switch bottom tab by scenario:
+  // Verdict for sc1, Memory for sc2, Verdict for sc3, Receipt only after approval
+  useEffect(() => {
+    if (approved) {
+      setActiveTab('receipt');
+    } else if (currentScenario === 2) {
+      setActiveTab('memory');
+    } else {
+      setActiveTab('verdict');
+    }
+  }, [currentScenario, approved]);
+
+  // Scroll to top when tab changes or approval occurs
+  useEffect(() => {
+    if (contentContainerRef.current) {
+      contentContainerRef.current.scrollTop = 0;
+    }
+  }, [activeTab, approved]);
 
   // Verdict gating: events are strictly derived up to the CURRENT index only
+  // Reset approval state whenever scenario changes or run starts
+  useEffect(() => {
+    setApproved(false);
+    setApprovalHash(null);
+    setApprovalTime(null);
+  }, [currentScenario, activeEvent?.run_id]);
+
   const hasRunStarted = events.length > 0 && activeEvent !== null && activeEvent.phase !== 'IDLE';
 
+  // Naive Git Column: reads ONLY the GIT_COMPARISON event
   const gitCompEvent = useMemo(
     () =>
-      events.slice().reverse().find((e) => e.phase === 'GIT_COMPARISON' || e.execution_data?.git_status),
+      events
+        .slice()
+        .reverse()
+        .find((e) => e.phase === 'GIT_COMPARISON'),
     [events]
   );
 
+  // ChronoFork column = reads ONLY events where phase is PATCH or VERIFICATION AND tool is not git_merge AND event is NOT GIT_COMPARISON
   const verifierEvent = useMemo(
     () =>
       events
         .slice()
         .reverse()
-        .find(
-          (e) =>
-            (e.tool === 'run_pytest' || e.phase === 'VERIFICATION') &&
-            (e.execution_data?.passed !== undefined ||
-              e.execution_data?.failed !== undefined ||
-              e.execution_data?.pytest_passed !== undefined ||
-              e.execution_data?.pytest_failed !== undefined)
-        ),
+        .find((e) => {
+          if (e.phase !== 'PATCH' && e.phase !== 'VERIFICATION') return false;
+          if (e.tool === 'git_merge') return false;
+          const v = getVerificationData(e);
+          return v !== undefined && (v.passedCount !== undefined || v.failedCount !== undefined);
+        }),
     [events]
   );
 
@@ -103,12 +134,35 @@ export const ResultStrip: React.FC<ResultStripProps> = ({
     [events]
   );
 
+  const collisionEvent = useMemo(
+    () => events.find((e) => e.collision && (e.phase === 'COLLISION_DETECTION' || e.phase === 'RESOLUTION')),
+    [events]
+  );
+
+  const detectEvent = useMemo(
+    () => events.find((e) => e.phase === 'COLLISION_DETECTION'),
+    [events]
+  );
+
+  const memWriteEvent = useMemo(
+    () => events.slice().reverse().find((e) => e.memory_write),
+    [events]
+  );
+
   const gitData = getGitComparisonData(gitCompEvent);
   const verifierData = getVerificationData(verifierEvent);
   const forkData = getForkSimulationData(forkEvent);
   const mergeOrder = getMergeOrder(resolutionEvent);
-  const collision = getCollision(activeEvent) || events.map(getCollision).find(Boolean);
-  const memWrite = events.map(getMemoryWrite).find(Boolean);
+  const collision = collisionEvent ? getCollision(collisionEvent) : undefined;
+  const memWrite = memWriteEvent ? getMemoryWrite(memWriteEvent) : undefined;
+
+  // Policy & Risk: built strictly from collision or resolution event, or detect event if safe parallel (scenario 3)
+  const policy = collision?.policy
+    ? collision.policy
+    : (detectEvent && !collision ? 'PARALLEL_OK' : '—');
+  const risk = collision?.risk_score !== undefined
+    ? collision.risk_score.toFixed(2)
+    : '—';
 
   const gitOccurred = Boolean(gitCompEvent);
   const verificationOccurred = Boolean(verifierEvent);
@@ -119,10 +173,10 @@ export const ResultStrip: React.FC<ResultStripProps> = ({
 
   const handleApproveMerge = async () => {
     const payload = JSON.stringify({
-      run_id: activeEvent?.run_id || 'run_verified',
+      run_id: activeEvent?.run_id || 'run_current',
       mode,
       scenario: currentScenario,
-      policy: collision?.policy || 'SERIALIZE',
+      policy: policy,
       verifier: verifierData,
       merge_order: mergeOrder
     });
@@ -130,6 +184,7 @@ export const ResultStrip: React.FC<ResultStripProps> = ({
     setApprovalHash(hash);
     setApprovalTime(new Date().toISOString());
     setApproved(true);
+    setActiveTab('receipt');
   };
 
   const handleExecuteReset = () => {
@@ -139,12 +194,13 @@ export const ResultStrip: React.FC<ResultStripProps> = ({
 
   const captureTime = activeEvent?.ts
     ? new Date(activeEvent.ts * 1000).toLocaleTimeString()
-    : '11:42:00';
+    : '—';
 
   return (
     <div
+      id="chrono-result-strip"
       className={`border-t border-[var(--line)] bg-[var(--bg-1)] flex flex-col transition-all duration-300 z-20 select-none ${
-        isExpanded ? 'h-[280px]' : 'h-[44px]'
+        isExpanded ? 'h-[335px]' : 'h-[44px]'
       }`}
       role="region"
       aria-label="Result and Verification Strip"
@@ -225,7 +281,7 @@ export const ResultStrip: React.FC<ResultStripProps> = ({
 
       {/* Tab Panels: Fixed 280px container with 16px padding on all sides, internal scroll */}
       {isExpanded && (
-        <div className="flex-1 overflow-y-auto p-4 select-text">
+        <div ref={contentContainerRef} className="flex-1 overflow-y-auto p-4 select-text">
           {/* TAB 1: VERDICT */}
           {activeTab === 'verdict' && (
             <div>
@@ -261,12 +317,12 @@ export const ResultStrip: React.FC<ResultStripProps> = ({
                             <div className="text-tally text-[var(--breach)]">
                               {gitData?.pytestFailed !== undefined
                                 ? `${gitData.pytestFailed} FAILED`
-                                : '1 FAILED'}
+                                : '— FAILED'}
                             </div>
                             <div className="text-[16px] text-[var(--text-dim)] font-bold mt-1">
                               {gitData?.pytestPassed !== undefined
                                 ? `${gitData.pytestPassed} PASSED`
-                                : '0 PASSED'}
+                                : '— PASSED'}
                             </div>
                           </>
                         ) : (
@@ -285,7 +341,7 @@ export const ResultStrip: React.FC<ResultStripProps> = ({
                         <>
                           {gitData?.durationSeconds !== undefined
                             ? `Pytest duration: ${gitData.durationSeconds.toFixed(2)}s`
-                            : 'Duration: 1.40s'}
+                            : 'Duration: —'}
                           <div className="text-[var(--text-faint)] text-[13px] mt-0.5">
                             Merged cleanly with 0 text conflicts, but failed runtime test suites.
                           </div>
@@ -332,12 +388,12 @@ export const ResultStrip: React.FC<ResultStripProps> = ({
                             <div className="text-tally text-[var(--clear)]">
                               {verifierData?.passedCount !== undefined
                                 ? `${verifierData.passedCount} PASSED`
-                                : '12 PASSED'}
+                                : '— PASSED'}
                             </div>
                             <div className="text-[16px] text-[var(--text-dim)] font-bold mt-1">
                               {verifierData?.failedCount !== undefined
                                 ? `${verifierData.failedCount} FAILED`
-                                : '0 FAILED'}
+                                : '— FAILED'}
                             </div>
                           </>
                         ) : (
@@ -353,35 +409,33 @@ export const ResultStrip: React.FC<ResultStripProps> = ({
 
                     <div className="border-t border-[var(--line)] pt-2">
                       <span className="text-eyebrow block mb-1">Merge Order</span>
-                      {verificationOccurred ? (
-                        mergeOrder && mergeOrder.length > 0 ? (
-                          <div className="space-y-1">
-                            {mergeOrder.map((m) => (
-                              <div
-                                key={m.rank}
-                                className="text-[13px] text-[var(--text)] flex items-center gap-2"
-                              >
-                                <span className="text-[var(--text-dim)]">#{m.rank}</span>
-                                <span className="font-semibold text-[var(--accent)]">
-                                  {m.agent_id}
+                      {mergeOrder && mergeOrder.length > 0 ? (
+                        <div className="space-y-1">
+                          {mergeOrder.map((m) => (
+                            <div
+                              key={m.rank}
+                              className="text-[13px] text-[var(--text)] flex items-center gap-2"
+                            >
+                              <span className="text-[var(--text-dim)]">#{m.rank}</span>
+                              <span className="font-semibold text-[var(--accent)]">
+                                {m.agent_id}
+                              </span>
+                              <span className="text-[var(--text-faint)]">→</span>
+                              <span className="truncate">{m.symbol}</span>
+                              {m.policy_action && (
+                                <span className="text-[13px] text-[var(--text-dim)]">
+                                  ({m.policy_action})
                                 </span>
-                                <span className="text-[var(--text-faint)]">→</span>
-                                <span className="truncate">{m.symbol}</span>
-                                {m.policy_action && (
-                                  <span className="text-[13px] text-[var(--text-dim)]">
-                                    ({m.policy_action})
-                                  </span>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="text-[13px] text-[var(--text-dim)]">
-                            {verifierData?.durationSeconds !== undefined
-                              ? `Real pytest duration: ${verifierData.durationSeconds.toFixed(2)}s`
-                              : 'Execution verified clean.'}
-                          </div>
-                        )
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : verificationOccurred ? (
+                        <div className="text-[13px] text-[var(--text-dim)]">
+                          {verifierData?.durationSeconds !== undefined
+                            ? `Real pytest duration: ${verifierData.durationSeconds.toFixed(2)}s`
+                            : 'Execution verified clean.'}
+                        </div>
                       ) : (
                         <div className="text-[13px] text-[var(--text-faint)]">
                           Awaiting coordinated verification phase...
@@ -583,16 +637,16 @@ export const ResultStrip: React.FC<ResultStripProps> = ({
 
           {/* TAB 4: MERGE RECEIPT */}
           {activeTab === 'receipt' && (
-            <div className="space-y-4 font-mono text-[13px]">
-              <div className="grid grid-cols-4 gap-3">
-                <div className="p-3 rounded-[8px] bg-[var(--bg-2)] border border-[var(--line)]">
-                  <span className="text-eyebrow block mb-1">Run ID</span>
+            <div className="space-y-2.5 font-mono text-[13px]">
+              <div className="grid grid-cols-4 gap-2.5">
+                <div className="p-2.5 rounded-[8px] bg-[var(--bg-2)] border border-[var(--line)]">
+                  <span className="text-eyebrow block mb-0.5">Run ID</span>
                   <span className="text-[var(--text)] font-semibold truncate block">
-                    {activeEvent?.run_id || 'run_verified_01'}
+                    {activeEvent?.run_id || '—'}
                   </span>
                 </div>
-                <div className="p-3 rounded-[8px] bg-[var(--bg-2)] border border-[var(--line)]">
-                  <span className="text-eyebrow block mb-1">Scenario & Mode</span>
+                <div className="p-2.5 rounded-[8px] bg-[var(--bg-2)] border border-[var(--line)]">
+                  <span className="text-eyebrow block mb-0.5">Scenario & Mode</span>
                   <span className="text-[var(--text)] font-semibold">
                     Scenario {currentScenario} · {mode.toUpperCase()}
                   </span>
@@ -600,79 +654,87 @@ export const ResultStrip: React.FC<ResultStripProps> = ({
                     captured {captureTime}
                   </span>
                 </div>
-                <div className="p-3 rounded-[8px] bg-[var(--bg-2)] border border-[var(--line)]">
-                  <span className="text-eyebrow block mb-1">Policy & Risk Score</span>
+                <div className="p-2.5 rounded-[8px] bg-[var(--bg-2)] border border-[var(--line)]">
+                  <span className="text-eyebrow block mb-0.5">Policy & Risk Score</span>
                   <span className="text-[var(--accent)] font-semibold">
-                    {collision?.policy || 'SERIALIZE'}
+                    {policy}
                   </span>
                   <span className="text-[var(--text-dim)] text-[13px] block">
-                    Risk: {collision?.risk_score !== undefined ? collision.risk_score.toFixed(2) : '0.84'}
+                    Risk: {risk}
                   </span>
                 </div>
-                <div className="p-3 rounded-[8px] bg-[var(--bg-2)] border border-[var(--line)]">
-                  <span className="text-eyebrow block mb-1">Pytest Result</span>
+                <div className="p-2.5 rounded-[8px] bg-[var(--bg-2)] border border-[var(--line)]">
+                  <span className="text-eyebrow block mb-0.5">Pytest Result</span>
                   <span
                     className={`font-semibold block ${
-                      isVerifiedClean ? 'text-[var(--clear)]' : 'text-[var(--breach)]'
+                      isVerifiedClean ? 'text-[var(--clear)]' : 'text-[var(--text-dim)]'
                     }`}
                   >
-                    {verifierData?.passedCount !== undefined
+                    {verifierEvent && verifierData?.passedCount !== undefined
                       ? `${verifierData.passedCount} PASSED · ${verifierData?.failedCount ?? 0} FAILED`
-                      : '12 PASSED · 0 FAILED'}
+                      : '—'}
                   </span>
                   <span className="text-[var(--text-dim)] text-[13px] block">
-                    duration: {verifierData?.durationSeconds !== undefined ? `${verifierData.durationSeconds.toFixed(2)}s` : '1.40s'}
+                    duration: {verifierEvent && verifierData?.durationSeconds !== undefined ? `${verifierData.durationSeconds.toFixed(2)}s` : '—'}
                   </span>
                 </div>
               </div>
 
               {/* Merge Order & Memory Write Record */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-3 rounded-[8px] bg-[var(--bg-2)] border border-[var(--line)]">
-                  <span className="text-eyebrow block mb-1.5">Merge Order</span>
-                  <div className="text-[13px] text-[var(--text-dim)] space-y-1">
+              <div className="grid grid-cols-2 gap-2.5">
+                <div className="p-2.5 rounded-[8px] bg-[var(--bg-2)] border border-[var(--line)]">
+                  <span className="text-eyebrow block mb-1">Merge Order</span>
+                  <div className="text-[13px] text-[var(--text-dim)] space-y-0.5">
                     {mergeOrder && mergeOrder.length > 0 ? (
-                      mergeOrder.map((m) => (
-                        <div key={m.rank} className="flex items-center gap-2">
-                          <span className="text-[var(--text-dim)]">#{m.rank}</span>
-                          <span className="font-semibold text-[var(--accent)]">{m.agent_id}</span>
-                          <span className="text-[var(--text-faint)]">→</span>
-                          <span className="text-[var(--text)]">{m.symbol}</span>
-                          <span className="text-[var(--text-faint)]">({m.policy_action || 'MERGE'})</span>
-                        </div>
-                      ))
+                      mergeOrder.map((m) => {
+                        const agentIdLabel = agentLabel(m.agent_id).id;
+                        return (
+                          <div key={m.rank} className="flex items-center gap-2">
+                            <span className="text-[var(--text-dim)]">#{m.rank}</span>
+                            <span className="font-semibold text-[var(--accent)]">
+                              {m.agent_id} {agentIdLabel !== '—' && `(${agentIdLabel})`}
+                            </span>
+                            <span className="text-[var(--text-faint)]">→</span>
+                            <span className="text-[var(--text)]">{m.symbol}</span>
+                            <span className="text-[var(--text-faint)]">({m.policy_action || 'MERGE'})</span>
+                          </div>
+                        );
+                      })
                     ) : (
-                      <div className="space-y-1">
-                        <div>#1 ConfigCoder (A1) → taskflow.config.load_config (CALLEE_FIRST)</div>
-                        <div>#2 WorkerTask (A2) → taskflow.tasks.worker_task (SERIALIZED)</div>
-                      </div>
+                      <span className="text-[var(--text-faint)]">—</span>
                     )}
                   </div>
                 </div>
 
-                <div className="p-3 rounded-[8px] bg-[var(--bg-2)] border border-[var(--line)]">
-                  <span className="text-eyebrow block mb-1.5">FalkorDB Memory Receipt</span>
+                <div className="p-2.5 rounded-[8px] bg-[var(--bg-2)] border border-[var(--line)]">
+                  <span className="text-eyebrow block mb-1">FalkorDB Memory Receipt</span>
                   <div className="text-[13px] text-[var(--text-dim)] space-y-1">
-                    <div>
-                      Episode ID:{' '}
-                      <span className="text-[var(--text)] font-semibold">
-                        {memWrite?.episode_id || 'ep_taskflow_01'}
-                      </span>
-                    </div>
-                    <div>
-                      Rule ID:{' '}
-                      <span className="text-[var(--accent)] font-semibold">
-                        {memWrite?.rule_id || 'rule_cfg_worker_transitive'}
-                      </span>
-                    </div>
-                    <div>
-                      Confidence Score:{' '}
-                      <span className="text-[var(--clear)] font-semibold">
-                        {memWrite?.confidence !== undefined
-                          ? `${Math.round(memWrite.confidence * 100)}%`
-                          : '95% (verified)'}
-                      </span>
-                    </div>
+                    {memWrite ? (
+                      <>
+                        <div>
+                          Episode ID:{' '}
+                          <span className="text-[var(--text)] font-semibold">
+                            {memWrite.episode_id || '—'}
+                          </span>
+                        </div>
+                        <div>
+                          Rule ID:{' '}
+                          <span className="text-[var(--accent)] font-semibold">
+                            {memWrite.rule_id || '—'}
+                          </span>
+                        </div>
+                        <div>
+                          Confidence Score:{' '}
+                          <span className="text-[var(--clear)] font-semibold">
+                            {memWrite.confidence !== undefined
+                              ? `${Math.round(memWrite.confidence * 100)}%`
+                              : '—'}
+                          </span>
+                        </div>
+                      </>
+                    ) : (
+                      <span className="text-[var(--text-faint)]">—</span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -694,11 +756,11 @@ export const ResultStrip: React.FC<ResultStripProps> = ({
                 <div>
                   <button
                     onClick={handleApproveMerge}
-                    disabled={approved}
+                    disabled={approved || !verificationOccurred || !isVerifiedClean}
                     className={`px-4 py-2 rounded-[6px] font-mono text-[13px] font-bold flex items-center gap-2 transition-colors cursor-pointer ${
                       approved
                         ? 'bg-[var(--clear)] text-[var(--bg-0)] cursor-default'
-                        : isVerifiedClean
+                        : verificationOccurred && isVerifiedClean
                         ? 'bg-[var(--accent)] text-[var(--bg-0)] hover:opacity-90'
                         : 'bg-[var(--bg-2)] text-[var(--text-faint)] border border-[var(--line)] cursor-not-allowed'
                     }`}

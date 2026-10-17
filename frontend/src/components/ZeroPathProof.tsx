@@ -6,6 +6,7 @@ import { ShieldCheck, X, ChevronDown } from 'lucide-react';
 interface ZeroPathProofProps {
   activeEvent: SwarmEvent | null;
   events?: SwarmEvent[];
+  currentScenario?: number;
   onDismiss?: () => void;
   dismissed?: boolean;
 }
@@ -13,55 +14,73 @@ interface ZeroPathProofProps {
 export const ZeroPathProof: React.FC<ZeroPathProofProps> = ({
   activeEvent,
   events = [],
+  currentScenario,
   onDismiss,
   dismissed
 }) => {
   const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
-
-  // Check if active event is a collision check with no collision and >= 2 claims exist
-  const collision = getCollision(activeEvent);
-  const isZeroCollision = !collision || collision.hops === 0 || collision.policy === 'PARALLEL_OK';
 
   // Count claims up to active event
   const eventsUpToCurrent = activeEvent
     ? events.slice(0, activeEvent.index + 1)
     : events;
 
+  // Find COLLISION_DETECTION event up to current index
+  const collisionEvent = activeEvent?.phase === 'COLLISION_DETECTION'
+    ? activeEvent
+    : eventsUpToCurrent.slice().reverse().find((e) => e.phase === 'COLLISION_DETECTION');
+
+  const collision = collisionEvent ? getCollision(collisionEvent) : null;
+  const isZeroCollision = collisionEvent ? (!collision || collision === null) : false;
+
   const distinctClaimAgents = new Set<string>();
   eventsUpToCurrent.forEach((e) => {
-    if (e.phase === 'CLAIM' || (['CLAIM', 'CODE_GEN'].includes(e.phase) && e.node_ids && e.node_ids.length > 0)) {
+    if (e.phase === 'CLAIM') {
       distinctClaimAgents.add(e.agent);
     }
   });
 
-  const hasAtLeastTwoClaims = distinctClaimAgents.size >= 2;
+  const hasAtLeastTwoClaims = distinctClaimAgents.size >= 2 || eventsUpToCurrent.some(e => e.phase === 'MEMORY_ADAPTATION');
 
-  const isEligiblePhase =
-    activeEvent?.phase === 'COLLISION_DETECTION' ||
-    (activeEvent?.phase === 'FORK_SIMULATION' && isZeroCollision) ||
-    Boolean(
-      activeEvent?.message &&
-        (activeEvent.message.toLowerCase().includes('0 collisions') ||
-          activeEvent.message.toLowerCase().includes('disjoint') ||
-          activeEvent.message.toLowerCase().includes('parallel_ok') ||
-          activeEvent.message.toLowerCase().includes('safe parallel'))
+  // Trigger ONLY when COLLISION_DETECTION event has occurred, with collision == null and >= 2 distinct claims
+  const shouldShow = Boolean(collisionEvent) && isZeroCollision && hasAtLeastTwoClaims;
+
+  const isScenario2 =
+    currentScenario === 2 ||
+    eventsUpToCurrent.some(
+      (e) => e.phase === 'MEMORY_ADAPTATION' || e.message?.toLowerCase().includes('memory-guided')
     );
 
-  const shouldShow = isEligiblePhase && isZeroCollision && (hasAtLeastTwoClaims || distinctClaimAgents.size > 0);
-
-  // Auto-compact after 3s like the hero
+  // Auto-compact after 3s like the hero (only for Scenario 3)
   useEffect(() => {
     setIsCollapsed(false);
-    if (!shouldShow) return;
+    if (!shouldShow || isScenario2) return;
 
     const timer = setTimeout(() => {
       setIsCollapsed(true);
     }, 3000);
 
     return () => clearTimeout(timer);
-  }, [activeEvent, shouldShow]);
+  }, [activeEvent, shouldShow, isScenario2]);
 
   if (!shouldShow || dismissed) return null;
+
+  // Scenario 2: Small green "ZERO COLLISIONS · memory-guided" card
+  if (isScenario2) {
+    return (
+      <div
+        className="absolute top-4 left-1/2 -translate-x-1/2 z-30 px-4 py-2.5 rounded-[6px] border border-[var(--clear)] bg-[var(--bg-1)] font-mono text-[13px] text-[var(--clear)] shadow-2xl flex items-center gap-3 select-none"
+        role="status"
+        aria-label="Zero Collisions Memory Guided"
+      >
+        <ShieldCheck className="w-4 h-4 text-[var(--clear)] shrink-0" />
+        <span className="font-bold">ZERO COLLISIONS · memory-guided</span>
+        <span className="text-[var(--text-dim)] font-sans text-[13px]">
+          Constraint prevented breaking changes before code was written
+        </span>
+      </div>
+    );
+  }
 
   const trace = getTrace(activeEvent);
   const durationMs = trace?.duration_ms;
