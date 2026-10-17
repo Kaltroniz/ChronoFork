@@ -1,0 +1,15 @@
+=== 1. SCENARIO 1 RECALL MESSAGE ===
+Message: ConfigCoder queried mem:taskflow: 0 prior rules found. Proceeding with initial claim.
+
+=== 2. SCENARIO 2 MEM RECALL MESSAGE ===
+Message: MEMORY HIT! ConfigCoder recalled ProceduralRule 'load_config signature changes break transitive caller worker.execute_job (4 hops via database, auth, queue)' with 95% confidence. Recommended intent: BODY_EDIT. Advice: Serialize execution or provide backward-compatible dict access/default kwargs when modifying load_config..
+
+=== 3. FALKORDB MEMORY NODE COUNTS & CONFIDENCE ===
+Episodes count: 1
+Rules count: 1
+Confidences: [0.99]
+Rules: ['load_config signature changes break transitive caller worker.execute_job (4 hops via database, auth, queue)']
+IDs: ['rule_cfg_worker_transitive']
+Label: ['Episode'], Count: 1
+Label: ['Symbol'], Count: 2
+Label: ['ProceduralRule'], Count: 1

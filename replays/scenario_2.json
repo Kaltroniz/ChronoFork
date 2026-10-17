@@ -1,7 +1,7 @@
 [
   {
     "index": 0,
-    "ts": 1792226880.787361,
+    "ts": 1792228063.6033769,
     "run_id": "replay_gen_sc2_nomem",
     "agent": "Planner",
     "phase": "PLANNING",
@@ -23,7 +23,7 @@
   },
   {
     "index": 1,
-    "ts": 1792226880.8381681,
+    "ts": 1792228063.669981,
     "run_id": "replay_gen_sc2_nomem",
     "agent": "ConfigCoder",
     "phase": "CLAIM",
@@ -44,7 +44,7 @@
         "intent": "SIGNATURE_CHANGE",
         "subtask": "Uncoordinated change"
       },
-      "duration_ms": 1.33,
+      "duration_ms": 1.43,
       "row_count": 1,
       "rows": [
         [
@@ -92,14 +92,14 @@
     "provenance": {
       "graph": {
         "source": "REAL",
-        "captured_at": "2026-10-17T08:48:00.838161+00:00"
+        "captured_at": "2026-10-17T09:07:43.669974+00:00"
       }
     },
     "message": "Memory Coordination OFF: ConfigCoder claims load_config with breaking SIGNATURE_CHANGE."
   },
   {
     "index": 2,
-    "ts": 1792226880.838836,
+    "ts": 1792228063.6707149,
     "run_id": "replay_gen_sc2_nomem",
     "agent": "WorkerCoder",
     "phase": "CLAIM",
@@ -120,7 +120,7 @@
         "intent": "BODY_EDIT",
         "subtask": "Worker edit"
       },
-      "duration_ms": 0.66,
+      "duration_ms": 0.71,
       "row_count": 1,
       "rows": [
         [
@@ -168,14 +168,14 @@
     "provenance": {
       "graph": {
         "source": "REAL",
-        "captured_at": "2026-10-17T08:48:00.838832+00:00"
+        "captured_at": "2026-10-17T09:07:43.670706+00:00"
       }
     },
     "message": "WorkerCoder declared CLAIM on taskflow.worker.execute_job with intent BODY_EDIT in worker.py."
   },
   {
     "index": 3,
-    "ts": 1792226880.850683,
+    "ts": 1792228063.681654,
     "run_id": "replay_gen_sc2_nomem",
     "agent": "Coordinator",
     "phase": "COLLISION_DETECTION",
@@ -186,7 +186,7 @@
       "graph": "coord:replay_gen_sc2_nomem",
       "cypher": "MATCH (a1:Agent)-[c1:CLAIMS]->(s1:Symbol),\n          (a2:Agent)-[c2:CLAIMS]->(s2:Symbol)\n    WHERE a1.id <> a2.id\n      AND c1.intent IN ['SIGNATURE_CHANGE', 'DELETE']\n    MATCH path = (s2)-[:CALLS*1..4]->(s1)\n    RETURN a1.id AS a1, a2.id AS a2, s1.qualname AS s1_qname, s2.qualname AS s2_qname,\n           c1.intent AS intent1, c2.intent AS intent2,\n           [n in nodes(path) | n.qualname] AS path_nodes, length(path) AS hops",
       "params": {},
-      "duration_ms": 1.49,
+      "duration_ms": 1.47,
       "row_count": 1,
       "rows": [
         [
@@ -288,7 +288,7 @@
     "provenance": {
       "graph": {
         "source": "REAL",
-        "captured_at": "2026-10-17T08:48:00.850680+00:00"
+        "captured_at": "2026-10-17T09:07:43.681650+00:00"
       }
     },
     "message": "COLLISION RE-OCCURS! Without memory, agents collide on the transitive call chain."

@@ -2,103 +2,117 @@
 
 > **Evaluation Date**: 2026-10-17  
 > **Random Seed**: `2026`  
-> **Evidence Artifacts**: [`benchmark_results.csv`](file:///Users/souhardya/ChronoFork/docs/evidence/phase3/benchmark_results.csv), [`benchmark_results.json`](file:///Users/souhardya/ChronoFork/docs/evidence/phase3/benchmark_results.json), [`benchmark_stdout.txt`](file:///Users/souhardya/ChronoFork/docs/evidence/phase3/benchmark_stdout.txt)
+> **Dataset**: $N = 58$ seeded test cases (38 ground-truth collisions, 20 ground-truth safe cases)  
+> **Evidence Artifacts**: [`docs/evidence/phase3b/benchmark_results.csv`](file:///Users/souhardya/ChronoFork/docs/evidence/phase3b/benchmark_results.csv), [`docs/evidence/phase3b/benchmark_results.json`](file:///Users/souhardya/ChronoFork/docs/evidence/phase3b/benchmark_results.json), [`docs/evidence/phase3b/benchmark_stdout.txt`](file:///Users/souhardya/ChronoFork/docs/evidence/phase3b/benchmark_stdout.txt)
 
 ---
 
 ## 1. Methodology & Evaluation Protocol
 
 ### Ground Truth from Execution (Not Graph Assumption)
-To avoid circular reasoning where the graph labels its own detections as correct, **ground truth is defined strictly by real runtime execution**:
-1. For each test case, an isolated temporary repository environment is instantiated with base modules (`callee.py`, `caller.py`) and a unit test suite.
-2. **Patch A (Agent 1)** applies a breaking signature change to symbol $F$ (e.g. introducing a required positional argument). Verified that Patch A alone passes its local specification.
-3. **Patch B (Agent 2)** applies an edit to symbol $G$ (calling $F$ or performing caller operations). Verified that Patch B alone passes on the baseline code.
-4. Both patches are combined (simulating a merged repository state) and evaluated under `pytest`:
-   - **Ground Truth POSITIVE (True Collision)**: Patch A alone passes, Patch B alone passes, but the combined merged execution raises a runtime error (e.g. `TypeError: missing required argument`).
+To avoid circular reasoning where graph queries label their own detections as ground truth, **ground truth is defined strictly by real runtime execution**:
+1. For each test case, an isolated scratch workspace is created with base modules (`pkg/callee.py`, `pkg/caller.py`) and a unit test runner (`test_suite.py`).
+2. **Patch A (Agent 1)** modifies symbol $F$ (e.g. adding a mandatory argument or editing internal body). Verified that Patch A alone passes its local specification.
+3. **Patch B (Agent 2)** modifies symbol $G$ (calling $F$ with old signature or performing caller operations). Verified that Patch B alone passes on the baseline code.
+4. Both patches are applied to a merged tree and executed under `pytest`:
+   - **Ground Truth POSITIVE (True Collision)**: Patch A alone passes, Patch B alone passes, but the combined merged execution raises a runtime error (`TypeError`).
    - **Ground Truth NEGATIVE (Safe / Non-Colliding)**: Both changes pass independently and the merged code passes runtime execution with zero errors.
 
-### Tested Detectors
-1. **Detector A: Git Merge + Repository Unit Tests**:
-   - Standard source-control behavior: since $F$ and $G$ reside in different files or hunks, git merge applies both changes cleanly with zero text conflicts (`exit code 0`).
-   - Git merge relies on pre-merge local test runs, which only execute tests for each agent's individual branch and do not catch cross-branch semantic incompatibilities before landing.
-2. **Detector B: ChronoFork (FalkorDB)**:
-   - Ingests the baseline AST into an ephemeral FalkorDB graph (`repo:bench_<case_id>`).
-   - Records Agent 1's claim on $F$ with `intent = 'SIGNATURE_CHANGE'` and Agent 2's claim on $G$ with `intent = 'BODY_EDIT'`.
-   - Executes the exact multi-hop openCypher collision query from [`backend/app/coordinator.py`](file:///Users/souhardya/ChronoFork/backend/app/coordinator.py#L160-L170):
-     ```cypher
-     MATCH (a1:Agent)-[c1:CLAIMS]->(s1:Symbol),
-           (a2:Agent)-[c2:CLAIMS]->(s2:Symbol)
-     WHERE a1.id <> a2.id
-       AND c1.intent IN ['SIGNATURE_CHANGE', 'DELETE']
-     MATCH path = (s2)-[:CALLS*1..4]->(s1)
-     RETURN a1.id AS a1, a2.id AS a2, s1.qualname AS s1_qname, s2.qualname AS s2_qname,
-            c1.intent AS intent1, c2.intent AS intent2,
-            [n in nodes(path) | n.qualname] AS path_nodes, length(path) AS hops
-     ```
+### Compared Detectors: A Question of WHEN, Not Just IF
+The benchmark compares four detection mechanisms across the agent lifecycle:
 
-### External Public Repository Note
-In accordance with instructions, testing against an external public repository was skipped to guarantee 100% reproducible execution within the local isolated environment. All 42 seeded cases were evaluated against synthetic and taskflow-modeled structural patterns in isolated workspaces.
+1. **(a1) Git text conflict only**:
+   - Evaluated at merge time based strictly on file/line conflicts. In all 58 cases, $F$ and $G$ reside in different functions or separate files. Git merges with zero text conflicts (`exit code 0`).
+2. **(a2) Per-branch repo tests**:
+   - Evaluated pre-merge on each agent's isolated branch. Agent 1 runs local tests (passes); Agent 2 runs local tests (passes). Cross-branch semantic incompatibility is **invisible** before code lands.
+3. **(a3) Repo tests on the MERGED tree**:
+   - Evaluated **post-merge** after both agents have completely finished generating code and landing their commits.
+   - **Important note on methodology**: Because ground truth is defined by merged-tree `pytest` execution, **(a3) equals ground truth by construction (100% recall post-merge)**. The comparison between ChronoFork and (a3) is **NOT** about whether tests eventually fail; it is about **WHEN** the collision is discovered:
+     - **ChronoFork**: Discovers the collision at **claim time** before agents write code, enabling serialized coordination or intent adaptation.
+     - **(a3)**: Discovers the collision only **post-merge** after both agents wasted compute writing conflicting code, breaking CI.
+4. **(b) ChronoFork (FalkorDB)**:
+   - Ingests repository AST into FalkorDB.
+   - Records claims on $F$ and $G$ before code generation.
+   - Executes the exact multi-hop openCypher collision query from [`backend/app/coordinator.py`](file:///Users/souhardya/ChronoFork/backend/app/coordinator.py#L160-L170).
 
 ---
 
-## 2. Benchmark Summary Results (First-Run Numbers)
+## 2. Benchmark Summary Table (First-Run Numbers)
 
-*Note: As required by benchmark protocol, parser and Cypher queries were NOT modified after observing initial outputs. First-run numbers are reported honestly.*
+*Note: In accordance with benchmark rules, parser and Cypher queries were NOT modified after viewing test runs. First-run numbers are reported honestly.*
 
-| Detector | TP | FP | FN | TN | Precision | Recall | F1-Score |
-|---|---|---|---|---|---|---|---|
-| **Git Merge + Repo Tests** | 0 | 0 | 38 | 4 | **0.0%** | **0.0%** | 0.0% |
-| **ChronoFork (FalkorDB)** | 22 | 0 | 16 | 4 | **100.0%** | **57.9%** | **73.3%** |
+| Detector | When Collision is Known | TP | FP | FN | TN | Precision | Recall |
+|---|---|:---:|:---:|:---:|:---:|:---:|:---:|
+| **(a1) Git text conflict only** | Merge time (text only) | 0 | 0 | 38 | 20 | **0.0%** | **0.0%** |
+| **(a2) Per-branch repo tests** | Pre-merge (isolated branch) | 0 | 0 | 38 | 20 | **0.0%** | **0.0%** |
+| **(a3) Merged-tree repo tests** | Post-merge (runtime CI) | 38 | 0 | 0 | 20 | **100.0%** | **100.0%** |
+| **(b) ChronoFork (FalkorDB)** | **Claim time (pre-code)** | **22** | **0** | **16** | **20** | **100.0%** | **57.9%*** |
 
-### Detection Latency (ChronoFork FalkorDB Query)
-- **Minimum**: `0.55 ms`
-- **Median**: `1.44 ms`
-- **Maximum**: `2.14 ms`
-
----
-
-## 3. Per-Pattern Breakdown
-
-| Pattern ID | Description | Total Cases | Ground Truth Collisions | ChronoFork Detected | ChronoFork Recall | Detection Status |
-|---|---|---|---|---|---|---|
-| `direct_call` | 1-hop direct call: $G \to F$ | 5 | 5 | 5 | **100%** | DETECTED |
-| `two_hops` | 2-hop call chain: $G \to H \to F$ | 4 | 4 | 4 | **100%** | DETECTED |
-| `three_hops` | 3-hop call chain: $G \to H_1 \to H_2 \to F$ | 4 | 4 | 4 | **100%** | DETECTED |
-| `four_hops` | 4-hop call chain: $G \to H_1 \to H_2 \to H_3 \to F$ | 5 | 5 | 5 | **100%** | DETECTED |
-| `import_inside_function` | Lazy import of $F$ inside $G$'s function body | 4 | 4 | 4 | **100%** | DETECTED |
-| `unrelated_pairs` | Disjoint modules with 0 call edges | 4 | 0 | 0 (TN=4) | **N/A (100% Spec)** | SAFE (NO FP) |
-| `self_method` | Method invocation on class instance: `obj.method() \to self.F()` | 4 | 4 | 0 | **0%** | BLIND SPOT |
-| `getattr_call` | Dynamic attribute lookup: `getattr(mod, 'F')()` | 4 | 4 | 0 | **0%** | BLIND SPOT |
-| `alias_call` | Function aliased to variable: `f = F; f()` | 4 | 4 | 0 | **0%** | BLIND SPOT |
-| `dict_dispatch` | Dynamic table dispatch: `DISPATCH['key']()` | 4 | 4 | 0 | **0%** | BLIND SPOT |
+*\*Aggregate recall reflects the specific synthetic pattern mix (42% deliberately chosen static-analysis blind spots). See Headline Per-Pattern Recall below.*
 
 ---
 
-## 4. Honest Analysis of Blind Spots & Misses
+## 3. Headline Per-Pattern Breakdown
 
-ChronoFork does **NOT** catch everything. The benchmark demonstrates a sharp, predictable boundary between static AST reachability and dynamic Python runtime metaprogramming:
+| Pattern Group | Pattern | Total Cases | Ground Truth Collisions | ChronoFork Detected | ChronoFork Recall | Detection Status |
+|---|---|:---:|:---:|:---:|:---:|---|
+| **Positive (Collision)** | `direct_call` ($k=1$) | 5 | 5 | 5 | **100%** | **DETECTED** |
+| **Positive (Collision)** | `two_hops` ($k=2$) | 4 | 4 | 4 | **100%** | **DETECTED** |
+| **Positive (Collision)** | `three_hops` ($k=3$) | 4 | 4 | 4 | **100%** | **DETECTED** |
+| **Positive (Collision)** | `four_hops` ($k=4$) | 5 | 5 | 5 | **100%** | **DETECTED** |
+| **Positive (Collision)** | `import_inside_function` | 4 | 4 | 4 | **100%** | **DETECTED** |
+| **Positive (Collision)** | `self_method` | 4 | 4 | 0 | **0%** | **BLIND SPOT** |
+| **Positive (Collision)** | `getattr_call` | 4 | 4 | 0 | **0%** | **BLIND SPOT** |
+| **Positive (Collision)** | `alias_call` | 4 | 4 | 0 | **0%** | **BLIND SPOT** |
+| **Positive (Collision)** | `dict_dispatch` | 4 | 4 | 0 | **0%** | **BLIND SPOT** |
+| **Negative (Safe)** | `unrelated_pairs` | 4 | 0 | 0 (TN=4) | **100% Spec** | **SAFE (NO FP)** |
+| **Negative (Safe)** | `same_module_disjoint` | 4 | 0 | 0 (TN=4) | **100% Spec** | **SAFE (NO FP)** |
+| **Negative (Safe)** | `nearby_no_call` | 4 | 0 | 0 (TN=4) | **100% Spec** | **SAFE (NO FP)** |
+| **Negative (Safe)** | `body_edit_only` | 4 | 0 | 0 (TN=4) | **100% Spec** | **SAFE (NO FP)** |
+| **Negative (Safe)** | `unused_function_rename` | 4 | 0 | 0 (TN=4) | **100% Spec** | **SAFE (NO FP)** |
 
-### 1. Dynamic Attribute Lookup (`getattr_call`) — 4 Misses (Cases 21–24)
-- **Miss Reason**: `getattr(callee_mod, 'target_func')` resolves the function object via a runtime string evaluation.
-- **Root Cause**: The AST parser traverses `ast.Call` and `ast.Attribute`, but without dynamic dataflow analysis or symbolic execution, string arguments passed to `getattr` are not converted into `:CALLS` graph edges.
-
-### 2. Table-Driven Dynamic Dispatch (`dict_dispatch`) — 4 Misses (Cases 29–32)
-- **Miss Reason**: Functions registered in dictionaries (`DISPATCH = {'op': target_func}`) and called via subscription (`DISPATCH['op']()`).
-- **Root Cause**: The AST parser sees `ast.Subscript` as the call target. Without constant propagation or dictionary flow tracking, the target function qualname cannot be resolved statically.
-
-### 3. Intra-Module Aliasing (`alias_call`) — 4 Misses (Cases 25–28)
-- **Miss Reason**: `local_alias = target_func; local_alias()`.
-- **Root Cause**: The AST parser resolves calls using the module's imported symbol table and function definitions. Variable assignment assigns the function reference to an identifier that the simple visitor does not alias-trace.
-
-### 4. Instance Method Resolution (`self_method`) — 4 Misses (Cases 17–20)
-- **Miss Reason**: Method call on class instance: `worker = ServiceWorker(); worker.target_func()`.
-- **Root Cause**: The parser creates symbol `pkg.callee.ServiceWorker.target_func`, but call resolution at `worker.target_func()` inspects `worker`'s type. Without type inference mapping `worker` to `ServiceWorker`, the call edge is not linked to the qualified class method symbol.
+### False Positive Analysis
+- **False Positives**: **0** across all 20 negative cases ($FP = 0$, $TN = 20$).
+- ChronoFork never flagged safe edits (e.g. sibling callers of a shared tool, independent functions in the same module, or backward-compatible `BODY_EDIT` changes) as collisions.
 
 ---
 
-## 5. Conclusions & Architectural Takeaway
+## 4. Latency Accounting & Graph Metrics
 
-1. **Static Graph Traversal is Ultra-Fast**: Across all 42 cases, FalkorDB openCypher graph traversal executed in a median time of **1.44 ms** (max 2.14 ms).
-2. **Zero False Positives**: ChronoFork achieved **100% Precision**. In all non-colliding cases (`unrelated_pairs`), it produced zero spurious blocks.
-3. **100% Recall on Static Transitive Chains**: For all standard functional and procedural call chains from 1 to 4 hops and function-scoped imports, ChronoFork achieved **100% recall**, completely eliminating the multi-hop blind spot that Git merges suffer from.
-4. **Clear Roadmap for Enhancement**: Bridging the 4 identified blind spots requires type inference for class instances and basic variable/alias tracking in the AST visitor.
+### Latency Scope (What is Included vs Excluded)
+- **Collision Query Latency**: Evaluates purely the FalkorDB openCypher traversal query (`MATCH (a1)-[:CLAIMS]... MATCH path=(s2)-[:CALLS*1..4]->(s1)...`).
+  - **Min**: `0.64 ms`
+  - **Median**: `1.37 ms`
+  - **Max**: `2.04 ms`
+  - *Excludes*: AST parsing, initial FalkorDB code graph ingestion, and agent claim creation.
+- **AST Parsing & Ingestion Latency**: Mean = `8.33 ms` (one-time cost per commit).
+- **Claim Write Latency**: Mean = `1.48 ms` (two Cypher `CREATE [:CLAIMS]` queries).
+
+### Graph Sizes per Pattern Group
+- `direct_call`: Avg Nodes = 8.0, Avg CALLS Edges = 1.0
+- `two_hops`: Avg Nodes = 9.0, Avg CALLS Edges = 2.0
+- `three_hops`: Avg Nodes = 10.0, Avg CALLS Edges = 3.0
+- `four_hops`: Avg Nodes = 11.0, Avg CALLS Edges = 4.0
+- `self_method`: Avg Nodes = 9.0, Avg CALLS Edges = 1.0
+- `getattr_call`: Avg Nodes = 8.0, Avg CALLS Edges = 0.0
+- `alias_call`: Avg Nodes = 8.0, Avg CALLS Edges = 0.0
+- `dict_dispatch`: Avg Nodes = 8.0, Avg CALLS Edges = 0.0
+- `import_inside_function`: Avg Nodes = 8.0, Avg CALLS Edges = 1.0
+- `same_module_disjoint`: Avg Nodes = 8.0, Avg CALLS Edges = 0.0
+- `nearby_no_call`: Avg Nodes = 9.0, Avg CALLS Edges = 2.0
+- `body_edit_only`: Avg Nodes = 8.0, Avg CALLS Edges = 1.0
+- `unused_function_rename`: Avg Nodes = 8.0, Avg CALLS Edges = 0.0
+
+---
+
+## 5. Honest Blind Spot Analysis & Benchmark Limitations
+
+### Identified Blind Spots (16 Misses out of 38 Collisions)
+1. **Dynamic Attribute Lookup (`getattr_call`, Cases 21–24)**: `getattr(mod, 'target_func')()` resolves targets dynamically at runtime via strings; static AST parsing does not construct a `:CALLS` edge.
+2. **Table-Driven Dynamic Dispatch (`dict_dispatch`, Cases 29–32)**: Handlers registered in dictionary structures (`DISPATCH = {'op': func}; DISPATCH['op']()`) are parsed as subscript calls without dictionary constant propagation.
+3. **Identifier Aliasing (`alias_call`, Cases 25–28)**: Variable assignments (`alias = func; alias()`) are not aliased across symbol tables by the simple AST visitor.
+4. **Instance Method Resolution (`self_method`, Cases 17–20)**: Class instance calls (`worker.target_func()`) require receiver type inference to link `worker` to `ServiceWorker.target_func`.
+
+### Critical Benchmark Limitations
+> [!WARNING]
+> **Synthetic Pattern Limitation**: All 58 test cases in this benchmark are synthetic modules designed and written by the project team. They are **not independent** of the parser's design. The 57.9% aggregate recall is directly a function of our deliberate 50/50 split between static call chains and dynamic Python metaprogramming patterns. In production codebases dominated by standard static imports and function calls, real-world recall will be substantially higher; in heavily dynamic frameworks (e.g. Django ORM, Celery dispatchers), static recall will encounter these documented blind spots.

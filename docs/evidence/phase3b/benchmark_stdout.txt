@@ -1,0 +1,128 @@
+============================================================
+CHRONOFORK DETECTION BENCHMARK SUITE (PHASE 3 CORRECTIONS)
+Random Seed: 2026
+Ground Truth: STRICT RUNTIME EXECUTION (pytest in scratch workspace)
+Detectors: (a1) Git text conflict, (a2) Per-branch tests, (a3) Merged-tree tests, (b) ChronoFork
+============================================================
+
+Total Seeded Cases Generated: 58 (38 Collisions, 20 Safe)
+Executing evaluations...
+
+Case 01 [direct_call             ]: GT=COLLISION | a1=NO_CONF | a2=PASS | a3=FAIL | CF=DETECTED (Query: 1.99ms)
+Case 02 [direct_call             ]: GT=COLLISION | a1=NO_CONF | a2=PASS | a3=FAIL | CF=DETECTED (Query: 1.85ms)
+Case 03 [direct_call             ]: GT=COLLISION | a1=NO_CONF | a2=PASS | a3=FAIL | CF=DETECTED (Query: 1.52ms)
+Case 04 [direct_call             ]: GT=COLLISION | a1=NO_CONF | a2=PASS | a3=FAIL | CF=DETECTED (Query: 1.55ms)
+Case 05 [two_hops                ]: GT=COLLISION | a1=NO_CONF | a2=PASS | a3=FAIL | CF=DETECTED (Query: 1.25ms)
+Case 06 [two_hops                ]: GT=COLLISION | a1=NO_CONF | a2=PASS | a3=FAIL | CF=DETECTED (Query: 2.04ms)
+Case 07 [two_hops                ]: GT=COLLISION | a1=NO_CONF | a2=PASS | a3=FAIL | CF=DETECTED (Query: 0.68ms)
+Case 08 [two_hops                ]: GT=COLLISION | a1=NO_CONF | a2=PASS | a3=FAIL | CF=DETECTED (Query: 1.30ms)
+Case 09 [three_hops              ]: GT=COLLISION | a1=NO_CONF | a2=PASS | a3=FAIL | CF=DETECTED (Query: 1.66ms)
+Case 10 [three_hops              ]: GT=COLLISION | a1=NO_CONF | a2=PASS | a3=FAIL | CF=DETECTED (Query: 0.64ms)
+Case 11 [three_hops              ]: GT=COLLISION | a1=NO_CONF | a2=PASS | a3=FAIL | CF=DETECTED (Query: 1.59ms)
+Case 12 [three_hops              ]: GT=COLLISION | a1=NO_CONF | a2=PASS | a3=FAIL | CF=DETECTED (Query: 1.47ms)
+Case 13 [four_hops               ]: GT=COLLISION | a1=NO_CONF | a2=PASS | a3=FAIL | CF=DETECTED (Query: 1.71ms)
+Case 14 [four_hops               ]: GT=COLLISION | a1=NO_CONF | a2=PASS | a3=FAIL | CF=DETECTED (Query: 1.05ms)
+Case 15 [four_hops               ]: GT=COLLISION | a1=NO_CONF | a2=PASS | a3=FAIL | CF=DETECTED (Query: 1.45ms)
+Case 16 [four_hops               ]: GT=COLLISION | a1=NO_CONF | a2=PASS | a3=FAIL | CF=DETECTED (Query: 1.34ms)
+Case 17 [self_method             ]: GT=COLLISION | a1=NO_CONF | a2=PASS | a3=FAIL | CF=MISSED   (Query: 1.30ms)
+Case 18 [self_method             ]: GT=COLLISION | a1=NO_CONF | a2=PASS | a3=FAIL | CF=MISSED   (Query: 1.20ms)
+Case 19 [self_method             ]: GT=COLLISION | a1=NO_CONF | a2=PASS | a3=FAIL | CF=MISSED   (Query: 1.55ms)
+Case 20 [self_method             ]: GT=COLLISION | a1=NO_CONF | a2=PASS | a3=FAIL | CF=MISSED   (Query: 0.70ms)
+Case 21 [getattr_call            ]: GT=COLLISION | a1=NO_CONF | a2=PASS | a3=FAIL | CF=MISSED   (Query: 1.29ms)
+Case 22 [getattr_call            ]: GT=COLLISION | a1=NO_CONF | a2=PASS | a3=FAIL | CF=MISSED   (Query: 1.22ms)
+Case 23 [getattr_call            ]: GT=COLLISION | a1=NO_CONF | a2=PASS | a3=FAIL | CF=MISSED   (Query: 1.56ms)
+Case 24 [getattr_call            ]: GT=COLLISION | a1=NO_CONF | a2=PASS | a3=FAIL | CF=MISSED   (Query: 1.01ms)
+Case 25 [alias_call              ]: GT=COLLISION | a1=NO_CONF | a2=PASS | a3=FAIL | CF=MISSED   (Query: 1.62ms)
+Case 26 [alias_call              ]: GT=COLLISION | a1=NO_CONF | a2=PASS | a3=FAIL | CF=MISSED   (Query: 1.33ms)
+Case 27 [alias_call              ]: GT=COLLISION | a1=NO_CONF | a2=PASS | a3=FAIL | CF=MISSED   (Query: 1.18ms)
+Case 28 [alias_call              ]: GT=COLLISION | a1=NO_CONF | a2=PASS | a3=FAIL | CF=MISSED   (Query: 1.36ms)
+Case 29 [dict_dispatch           ]: GT=COLLISION | a1=NO_CONF | a2=PASS | a3=FAIL | CF=MISSED   (Query: 1.57ms)
+Case 30 [dict_dispatch           ]: GT=COLLISION | a1=NO_CONF | a2=PASS | a3=FAIL | CF=MISSED   (Query: 1.44ms)
+Case 31 [dict_dispatch           ]: GT=COLLISION | a1=NO_CONF | a2=PASS | a3=FAIL | CF=MISSED   (Query: 1.35ms)
+Case 32 [dict_dispatch           ]: GT=COLLISION | a1=NO_CONF | a2=PASS | a3=FAIL | CF=MISSED   (Query: 1.37ms)
+Case 33 [import_inside_function  ]: GT=COLLISION | a1=NO_CONF | a2=PASS | a3=FAIL | CF=DETECTED (Query: 1.16ms)
+Case 34 [import_inside_function  ]: GT=COLLISION | a1=NO_CONF | a2=PASS | a3=FAIL | CF=DETECTED (Query: 1.37ms)
+Case 35 [import_inside_function  ]: GT=COLLISION | a1=NO_CONF | a2=PASS | a3=FAIL | CF=DETECTED (Query: 1.59ms)
+Case 36 [import_inside_function  ]: GT=COLLISION | a1=NO_CONF | a2=PASS | a3=FAIL | CF=DETECTED (Query: 1.43ms)
+Case 37 [direct_call             ]: GT=COLLISION | a1=NO_CONF | a2=PASS | a3=FAIL | CF=DETECTED (Query: 1.34ms)
+Case 38 [four_hops               ]: GT=COLLISION | a1=NO_CONF | a2=PASS | a3=FAIL | CF=DETECTED (Query: 0.98ms)
+Case 39 [unrelated_pairs         ]: GT=SAFE      | a1=NO_CONF | a2=PASS | a3=PASS | CF=SAFE     (Query: 1.31ms)
+Case 40 [unrelated_pairs         ]: GT=SAFE      | a1=NO_CONF | a2=PASS | a3=PASS | CF=SAFE     (Query: 1.21ms)
+Case 41 [unrelated_pairs         ]: GT=SAFE      | a1=NO_CONF | a2=PASS | a3=PASS | CF=SAFE     (Query: 1.50ms)
+Case 42 [unrelated_pairs         ]: GT=SAFE      | a1=NO_CONF | a2=PASS | a3=PASS | CF=SAFE     (Query: 1.63ms)
+Case 43 [same_module_disjoint    ]: GT=SAFE      | a1=NO_CONF | a2=PASS | a3=PASS | CF=SAFE     (Query: 1.23ms)
+Case 44 [same_module_disjoint    ]: GT=SAFE      | a1=NO_CONF | a2=PASS | a3=PASS | CF=SAFE     (Query: 1.53ms)
+Case 45 [same_module_disjoint    ]: GT=SAFE      | a1=NO_CONF | a2=PASS | a3=PASS | CF=SAFE     (Query: 1.47ms)
+Case 46 [same_module_disjoint    ]: GT=SAFE      | a1=NO_CONF | a2=PASS | a3=PASS | CF=SAFE     (Query: 1.37ms)
+Case 47 [nearby_no_call          ]: GT=SAFE      | a1=NO_CONF | a2=PASS | a3=PASS | CF=SAFE     (Query: 1.47ms)
+Case 48 [nearby_no_call          ]: GT=SAFE      | a1=NO_CONF | a2=PASS | a3=PASS | CF=SAFE     (Query: 0.94ms)
+Case 49 [nearby_no_call          ]: GT=SAFE      | a1=NO_CONF | a2=PASS | a3=PASS | CF=SAFE     (Query: 1.63ms)
+Case 50 [nearby_no_call          ]: GT=SAFE      | a1=NO_CONF | a2=PASS | a3=PASS | CF=SAFE     (Query: 1.39ms)
+Case 51 [body_edit_only          ]: GT=SAFE      | a1=NO_CONF | a2=PASS | a3=PASS | CF=SAFE     (Query: 1.49ms)
+Case 52 [body_edit_only          ]: GT=SAFE      | a1=NO_CONF | a2=PASS | a3=PASS | CF=SAFE     (Query: 0.91ms)
+Case 53 [body_edit_only          ]: GT=SAFE      | a1=NO_CONF | a2=PASS | a3=PASS | CF=SAFE     (Query: 1.25ms)
+Case 54 [body_edit_only          ]: GT=SAFE      | a1=NO_CONF | a2=PASS | a3=PASS | CF=SAFE     (Query: 1.21ms)
+Case 55 [unused_function_rename  ]: GT=SAFE      | a1=NO_CONF | a2=PASS | a3=PASS | CF=SAFE     (Query: 1.27ms)
+Case 56 [unused_function_rename  ]: GT=SAFE      | a1=NO_CONF | a2=PASS | a3=PASS | CF=SAFE     (Query: 1.56ms)
+Case 57 [unused_function_rename  ]: GT=SAFE      | a1=NO_CONF | a2=PASS | a3=PASS | CF=SAFE     (Query: 1.29ms)
+Case 58 [unused_function_rename  ]: GT=SAFE      | a1=NO_CONF | a2=PASS | a3=PASS | CF=SAFE     (Query: 1.29ms)
+
+============================================================
+BENCHMARK EVALUATION SUMMARY (N = 58)
+============================================================
+Ground Truth: 38 Collisions, 20 Safe
+
+| Detector | When Collision is Known | TP | FP | FN | TN | Precision | Recall |
+|---|---|---|---|---|---|---|---|
+| (a1) Git text conflict only | Merge time (text only) | 0 | 0 | 38 | 20 | 0.0% | 0.0% |
+| (a2) Per-branch repo tests  | Pre-merge (isolated)   | 0 | 0 | 38 | 20 | 0.0% | 0.0% |
+| (a3) Merged-tree repo tests | Post-merge runtime     | 38 | 0 | 0 | 20 | 100.0% | 100.0% |
+| (b) ChronoFork (FalkorDB)   | Claim time (pre-code)  | 22 | 0 | 16 | 20 | 100.0% | 57.9% |
+
+Headline Per-Pattern Recall (ChronoFork):
+| Pattern Group | Pattern | Total | GT Collisions | CF Detected | CF Recall | Status |
+|---|---|---|---|---|---|---|
+| Positive (Collision) | direct_call              | 5     | 5             | 5           | 100%      | DETECTED |
+| Positive (Collision) | two_hops                 | 4     | 4             | 4           | 100%      | DETECTED |
+| Positive (Collision) | three_hops               | 4     | 4             | 4           | 100%      | DETECTED |
+| Positive (Collision) | four_hops                | 5     | 5             | 5           | 100%      | DETECTED |
+| Positive (Collision) | self_method              | 4     | 4             | 0           | 0%        | BLIND SPOT |
+| Positive (Collision) | getattr_call             | 4     | 4             | 0           | 0%        | BLIND SPOT |
+| Positive (Collision) | alias_call               | 4     | 4             | 0           | 0%        | BLIND SPOT |
+| Positive (Collision) | dict_dispatch            | 4     | 4             | 0           | 0%        | BLIND SPOT |
+| Positive (Collision) | import_inside_function   | 4     | 4             | 4           | 100%      | DETECTED |
+| Negative (Safe)      | unrelated_pairs          | 4     | 0             | 0           | 100%      | SAFE (NO FP) |
+| Negative (Safe)      | same_module_disjoint     | 4     | 0             | 0           | 100%      | SAFE (NO FP) |
+| Negative (Safe)      | nearby_no_call           | 4     | 0             | 0           | 100%      | SAFE (NO FP) |
+| Negative (Safe)      | body_edit_only           | 4     | 0             | 0           | 100%      | SAFE (NO FP) |
+| Negative (Safe)      | unused_function_rename   | 4     | 0             | 0           | 100%      | SAFE (NO FP) |
+
+False Positives (Target: 0): 0
+  (Zero False Positives: ChronoFork did not flag any safe change as a collision)
+
+Latency Accounting (ChronoFork):
+  - Collision Query Latency (openCypher evaluation at claim time):
+      Min:    0.64 ms
+      Median: 1.37 ms
+      Max:    2.04 ms
+    * Note: Excludes AST repository parsing, graph ingestion, and claim creation.
+  - AST Ingest Latency: Mean = 8.33 ms
+  - Claim Write Latency: Mean = 1.48 ms
+
+Graph Sizes per Pattern Group:
+  - direct_call             : Avg Nodes = 8.0, Avg CALLS Edges = 1.0
+  - two_hops                : Avg Nodes = 9.0, Avg CALLS Edges = 2.0
+  - three_hops              : Avg Nodes = 10.0, Avg CALLS Edges = 3.0
+  - four_hops               : Avg Nodes = 11.0, Avg CALLS Edges = 4.0
+  - self_method             : Avg Nodes = 9.0, Avg CALLS Edges = 1.0
+  - getattr_call            : Avg Nodes = 8.0, Avg CALLS Edges = 0.0
+  - alias_call              : Avg Nodes = 8.0, Avg CALLS Edges = 0.0
+  - dict_dispatch           : Avg Nodes = 8.0, Avg CALLS Edges = 0.0
+  - import_inside_function  : Avg Nodes = 8.0, Avg CALLS Edges = 1.0
+  - unrelated_pairs         : Avg Nodes = 8.0, Avg CALLS Edges = 0.0
+  - same_module_disjoint    : Avg Nodes = 8.0, Avg CALLS Edges = 0.0
+  - nearby_no_call          : Avg Nodes = 9.0, Avg CALLS Edges = 2.0
+  - body_edit_only          : Avg Nodes = 8.0, Avg CALLS Edges = 1.0
+  - unused_function_rename  : Avg Nodes = 8.0, Avg CALLS Edges = 0.0
+
+============================================================
