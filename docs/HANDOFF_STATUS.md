@@ -112,15 +112,15 @@ docker compose up --build -d
 
 ---
 
-## 4. Current System Status (Phase 6 Complete)
+## 4. Current System Status (Phase 7 Complete)
 
 ### DONE (With Evidence Paths)
-- **Fix 1: Memory Carried Over DOM Reaction**: Label derived strictly from rule/episode count $>0$. Fresh load $\to$ absent (`null`); post-S1 run $\to$ `"Memory state: carried over from previous runs"`. Verified by Playwright in [`docs/evidence/phase6/fixes_1_and_2_stdout.txt`](docs/evidence/phase6/fixes_1_and_2_stdout.txt).
-- **Fix 2: Fail-Loudly Banner & Retake**: Error toast moved to `top-16 right-6 z-50` away from shortcuts. Screenshot captured with backend running and only FalkorDB stopped: [`docs/screens/live-fail-loudly.png`](docs/screens/live-fail-loudly.png). DOM text verified in [`docs/evidence/phase6/fixes_1_and_2_stdout.txt`](docs/evidence/phase6/fixes_1_and_2_stdout.txt).
-- **Fix 3: Benchmark Corrections**: Ground truth defined strictly by merged-tree pytest; (a2) 0% recall by construction; negatives split into intent rule ($N=4$) vs graph reachability ($N=16$); documented 4-hop bound, 8-11 vs 69 node graphs, and `self_method` AST linking limitation with edge target printed. Verified in [`docs/benchmark.md`](docs/benchmark.md).
-- **Fix 4: Absolute Link Sanitization**: All machine-local file URI links across docs/ and README.md converted to repo-relative links; verified 0 remaining occurrences.
-- **Fix 5: Docker Mode & Environment Audit**: Default `DEMO_MODE=false` in `docker-compose.yml`; verified backend container includes `git 2.47.3` and `pytest 9.1.1`; verified `GET /runs` returns 405 and `POST /runs` live mode returns 200 `LIVE_EXECUTED` in [`docs/evidence/phase6/fix5_docker_mode_outputs.txt`](docs/evidence/phase6/fix5_docker_mode_outputs.txt).
-- **README.md Overhaul**: Complete rewrite featuring tagline, 20s explanation, relative screenshot gallery, REAL vs CACHED data provenance, quickstart, graph model (Mermaid), verbatim Cypher queries, unified risk formula, measured numbers only, system limitations, track declarations, and AI disclosure in [`README.md`](README.md).
+- **Phase 7 Submission Checklist**: Created [`docs/SUBMISSION_CHECKLIST.md`](docs/SUBMISSION_CHECKLIST.md) auditing all 11 hackathon criteria: 9 PASS, 0 FAIL, 2 UNKNOWN (demo video link & external blog post link awaiting creator recording/publishing).
+- **Phase 7 Open Source License**: Confirmed existing permissive MIT License in root [`LICENSE`](LICENSE) (Copyright 2026 Vivek C K).
+- **Phase 7 Secret & Environment Scan**: Grepped tracked files for private API keys, tokens, and credentials; verified `.env` is unversioned and ignored by `.gitignore:4:*.env`. Output: 0 secrets.
+- **Phase 7 Dual-Resolution Screenshots & Non-Intersection Assertions**: Re-ran full screenshot suite at both 1440x900 and 1920x1080. Asserted 10 pairwise label non-intersections and 5 label vs A2 chip non-intersections for both resolutions (15 PASS at 1440x900, 15 PASS at 1920x1080). Verified log in [`docs/evidence/phase7/screenshots_resolutions_stdout.txt`](docs/evidence/phase7/screenshots_resolutions_stdout.txt).
+- **Phase 7 Final Full Regression Suite**: Ran all 16 verification scripts, unit tests, benchmark detector, and Playwright screenshot capture in [`scripts/run_final_regression.py`](scripts/run_final_regression.py). All 16 scripts passed with exit code 0. Individual stdout logs saved in [`docs/evidence/phase7/`](docs/evidence/phase7/).
+- **Phase 7 Clean-Clone Docker Test**: Cloned local `SS1` commit into temporary directory, built and started Docker Compose stack, asserted `GET /health` healthy, 69 graph nodes in `repo:taskflow`, 14 replay events in Scenario 1, captured clean-clone screenshot, and verified memory label on initial load is ABSENT (`null`). Verified log in [`docs/evidence/phase7/clean_clone_docker_output.txt`](docs/evidence/phase7/clean_clone_docker_output.txt).
 - **Phase 6 Documentation Pack**:
   - 1-page architecture document: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
   - 15 judge technical Q&A: [`docs/QA_PREP.md`](docs/QA_PREP.md)
@@ -139,4 +139,5 @@ docker compose up --build -d
 ### KNOWN BUGS & LIMITATIONS
 - **Instance Method Linking (`self_method`)**: When code calls `worker = ServiceWorker(); worker.f()`, the AST visitor creates a `CALLS` edge from caller to the Class symbol (`pkg.callee.ServiceWorker`) instead of the method symbol (`ServiceWorker.f`) due to lack of type inference. Documented in [`docs/benchmark.md`](docs/benchmark.md) (1 false negative out of 20 ground-truth calls).
 - **4-Hop Traversal Boundary**: OpenCypher query uses `[:CALLS*1..4]`. Any dependency chains of length $k \ge 5$ are silent by query design.
+
 
