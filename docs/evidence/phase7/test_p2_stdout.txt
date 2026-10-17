@@ -1,0 +1,21 @@
+=== P2 Acceptance Test Starting ===
+
+--- Testing Scenario 1: Hidden Collision ---
+Scenario 1 Collisions detected: 1
+  Type: TRANSITIVE_CALL_COLLISION
+  Agents: agent_1 vs agent_2
+  Symbols: taskflow.config.load_config vs taskflow.worker.execute_job
+  Hops: 4
+  Path: taskflow.worker.execute_job -> taskflow.queue.dequeue_task -> taskflow.auth.validate_token -> taskflow.database.get_connection -> taskflow.config.load_config
+  Policy: SERIALIZE
+  Reason: Agent agent_1 claims taskflow.config.load_config (SIGNATURE_CHANGE, risk=0.8250); Agent agent_2 touches taskflow.worker.execute_job which depends on it via a 4-hop call chain: taskflow.worker.execute_job -> taskflow.queue.dequeue_task -> taskflow.auth.validate_token -> taskflow.database.get_connection -> taskflow.config.load_config. Git would merge cleanly; runtime will break!
+PASSED: Scenario 1 successfully detected 4-hop transitive collision with exact path and SERIALIZE policy!
+Speculative fork simulation on fork:run_test_s1:agent_1:
+  Before risk: 0.825, After risk: 0.825
+  Blast radius: 5 affected tests
+
+--- Testing Scenario 3: Safe Parallelism ---
+Scenario 3 Collisions detected: 0
+PASSED: Scenario 3 reports ZERO collisions, allowing safe parallel execution (PARALLEL_OK)!
+
+>>> P2 ACCEPTANCE TEST PASSED SUCCESSFULLY! <<<

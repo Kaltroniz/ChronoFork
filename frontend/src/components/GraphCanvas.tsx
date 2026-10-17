@@ -1027,18 +1027,20 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
 
       // Layout management:
       if (chainNodeIds.length > 0) {
-        // Requirement 4 & 5: Chain baseline at ~62% of canvas height, equal spacing ~220px
+        // Equal horizontal spacing adapted directly to canvas width (guarantees zero overlap at all viewports)
+        const cyWidth = cy.width() || 1200;
         const cyHeight = cy.height() || 788;
-        const CHAIN_Y = Math.round(cyHeight * 0.62); // ~488px
-        const CHAIN_X_START = 160;
-        const CHAIN_SPACING = chainNodeIds.length > 5 ? 300 : 250;
+        const CHAIN_Y = Math.round(cyHeight * 0.60);
+        const padding = Math.max(65, Math.round(cyWidth * 0.08));
+        const availableW = cyWidth - 2 * padding;
+        const step = availableW / Math.max(chainNodeIds.length - 1, 1);
 
         chainNodeIds.forEach((nid, i) => {
           const node = cy.getElementById(nid);
           if (node.length > 0) {
             node.addClass('chain-node');
-            node.position({
-              x: CHAIN_X_START + i * CHAIN_SPACING,
+            node.renderedPosition({
+              x: Math.round(padding + i * step),
               y: CHAIN_Y
             });
           }
@@ -1050,20 +1052,12 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
           n.addClass('faint-neighbor');
           const isAbove = idx % 2 === 0;
           const anchorIndex = idx % chainNodeIds.length;
-          n.position({
-            x: CHAIN_X_START + anchorIndex * CHAIN_SPACING,
-            y: isAbove ? CHAIN_Y - 150 : CHAIN_Y + 150
+          n.renderedPosition({
+            x: Math.round(padding + anchorIndex * step),
+            y: isAbove ? CHAIN_Y - 110 : CHAIN_Y + 110
           });
         });
 
-        const chainNodes = cy.nodes().filter((n) => chainNodeIds.includes(n.id()));
-        const visibleNeighbors = cy.nodes('.faint-neighbor');
-        const fitElements = chainNodes.union(visibleNeighbors);
-        if (fitElements.length > 0) {
-          cy.fit(fitElements, 120);
-          const panOffsetY = Math.round(CHAIN_Y - (cyHeight / 2));
-          cy.panBy({ x: 0, y: panOffsetY });
-        }
         updateClaimChipPositions();
         if ((window as any).__chronoUpdateFontSizes) {
           (window as any).__chronoUpdateFontSizes();

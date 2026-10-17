@@ -26,7 +26,7 @@ import urllib.request
 import urllib.parse
 
 WORKSPACE_ROOT = "/Users/souhardya/ChronoFork"
-EVIDENCE_DIR = os.path.join(WORKSPACE_ROOT, "docs", "evidence", "phase5")
+EVIDENCE_DIR = os.path.join(WORKSPACE_ROOT, "docs", "evidence", "phase7")
 SCREENS_DIR = os.path.join(WORKSPACE_ROOT, "docs", "screens")
 os.makedirs(EVIDENCE_DIR, exist_ok=True)
 os.makedirs(SCREENS_DIR, exist_ok=True)
@@ -147,6 +147,10 @@ async function capture() {{
 
   console.log('Navigating to http://localhost:5173...');
   await page.goto('http://localhost:5173', {{ waitUntil: 'networkidle' }});
+
+  const memEl = await page.$('[data-testid="memory-state-indicator"]');
+  const memText = memEl ? (await memEl.innerText()).trim() : null;
+  console.log('DOM memory label on first load:', memText !== null ? JSON.stringify(memText) : 'ABSENT (null)');
 
   console.log('Clicking Play the Story button...');
   await page.click('button:has-text("Play the Story")');
