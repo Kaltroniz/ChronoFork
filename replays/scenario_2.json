@@ -1,7 +1,7 @@
 [
   {
     "index": 0,
-    "ts": 1792228063.6033769,
+    "ts": 1792292762.5788448,
     "run_id": "replay_gen_sc2_nomem",
     "agent": "Planner",
     "phase": "PLANNING",
@@ -23,7 +23,7 @@
   },
   {
     "index": 1,
-    "ts": 1792228063.669981,
+    "ts": 1792292762.733599,
     "run_id": "replay_gen_sc2_nomem",
     "agent": "ConfigCoder",
     "phase": "CLAIM",
@@ -44,7 +44,7 @@
         "intent": "SIGNATURE_CHANGE",
         "subtask": "Uncoordinated change"
       },
-      "duration_ms": 1.43,
+      "duration_ms": 10.53,
       "row_count": 1,
       "rows": [
         [
@@ -92,14 +92,14 @@
     "provenance": {
       "graph": {
         "source": "REAL",
-        "captured_at": "2026-10-17T09:07:43.669974+00:00"
+        "captured_at": "2026-10-18T03:06:02.733559+00:00"
       }
     },
     "message": "Memory Coordination OFF: ConfigCoder claims load_config with breaking SIGNATURE_CHANGE."
   },
   {
     "index": 2,
-    "ts": 1792228063.6707149,
+    "ts": 1792292762.7417977,
     "run_id": "replay_gen_sc2_nomem",
     "agent": "WorkerCoder",
     "phase": "CLAIM",
@@ -120,7 +120,7 @@
         "intent": "BODY_EDIT",
         "subtask": "Worker edit"
       },
-      "duration_ms": 0.71,
+      "duration_ms": 8.04,
       "row_count": 1,
       "rows": [
         [
@@ -168,14 +168,14 @@
     "provenance": {
       "graph": {
         "source": "REAL",
-        "captured_at": "2026-10-17T09:07:43.670706+00:00"
+        "captured_at": "2026-10-18T03:06:02.741754+00:00"
       }
     },
     "message": "WorkerCoder declared CLAIM on taskflow.worker.execute_job with intent BODY_EDIT in worker.py."
   },
   {
     "index": 3,
-    "ts": 1792228063.681654,
+    "ts": 1792292762.969837,
     "run_id": "replay_gen_sc2_nomem",
     "agent": "Coordinator",
     "phase": "COLLISION_DETECTION",
@@ -186,7 +186,7 @@
       "graph": "coord:replay_gen_sc2_nomem",
       "cypher": "MATCH (a1:Agent)-[c1:CLAIMS]->(s1:Symbol),\n          (a2:Agent)-[c2:CLAIMS]->(s2:Symbol)\n    WHERE a1.id <> a2.id\n      AND c1.intent IN ['SIGNATURE_CHANGE', 'DELETE']\n    MATCH path = (s2)-[:CALLS*1..4]->(s1)\n    RETURN a1.id AS a1, a2.id AS a2, s1.qualname AS s1_qname, s2.qualname AS s2_qname,\n           c1.intent AS intent1, c2.intent AS intent2,\n           [n in nodes(path) | n.qualname] AS path_nodes, length(path) AS hops",
       "params": {},
-      "duration_ms": 1.47,
+      "duration_ms": 11.29,
       "row_count": 1,
       "rows": [
         [
@@ -271,24 +271,24 @@
         "taskflow.database.get_connection",
         "taskflow.config.load_config"
       ],
-      "risk_score": 0.825,
+      "risk_score": 0.854,
       "risk_inputs": {
         "pagerank": 0.054412,
-        "betweenness": 26.0,
+        "betweenness": 34.0,
         "max_pagerank": 0.054412,
-        "max_betweenness": 40.0,
+        "max_betweenness": 48.0,
         "norm_pagerank": 1.0,
-        "norm_betweenness": 0.65,
-        "formula": "0.5 * 1.000000 + 0.5 * 0.6500 = 0.8250"
+        "norm_betweenness": 0.7083,
+        "formula": "0.5 * 1.000000 + 0.5 * 0.7083 = 0.854"
       },
       "policy": "SERIALIZE",
-      "reason": "Agent agent_1 claims taskflow.config.load_config (SIGNATURE_CHANGE, risk=0.8250); Agent agent_2 touches taskflow.worker.execute_job which depends on it via a 4-hop call chain: taskflow.worker.execute_job -> taskflow.queue.dequeue_task -> taskflow.auth.validate_token -> taskflow.database.get_connection -> taskflow.config.load_config. Git would merge cleanly; runtime will break!"
+      "reason": "Agent agent_1 claims taskflow.config.load_config (SIGNATURE_CHANGE, risk=0.854); Agent agent_2 touches taskflow.worker.execute_job which depends on it via a 4-hop call chain: taskflow.worker.execute_job -> taskflow.queue.dequeue_task -> taskflow.auth.validate_token -> taskflow.database.get_connection -> taskflow.config.load_config. Git would merge cleanly; runtime will break!"
     },
     "memory_write": null,
     "provenance": {
       "graph": {
         "source": "REAL",
-        "captured_at": "2026-10-17T09:07:43.681650+00:00"
+        "captured_at": "2026-10-18T03:06:02.969756+00:00"
       }
     },
     "message": "COLLISION RE-OCCURS! Without memory, agents collide on the transitive call chain."

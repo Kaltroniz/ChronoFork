@@ -126,7 +126,7 @@ graph TD
         Run -->|HAS_AGENT| A1
         Run -->|HAS_AGENT| A2
         A2 -->|"COLLIDES_WITH {hops: 4, policy: 'SERIALIZE'}"| A1
-        A2 -->|"BLOCKED_BY {target, risk: 0.8250}"| A1
+        A2 -->|"BLOCKED_BY {target, risk: 0.854}"| A1
         A1 -->|"HANDED_OFF_TO {reason}"| A2
     end
 
@@ -190,7 +190,7 @@ RETURN node.qualname AS qualname, score ORDER BY score DESC
 ```
 *Unified Risk Formula* ([`algorithms.py:53-56`](backend/app/algorithms.py#L53-L56)):
 $$\text{Risk}(S) = 0.5 \times \frac{\text{PageRank}(S)}{\max(\text{PageRank})} + 0.5 \times \frac{\text{Betweenness}(S)}{\max(\text{Betweenness})}$$
-For `taskflow.config.load_config`: PageRank = 0.0561 (norm 1.0000), Betweenness = 26.0 (norm 0.6500) $\to \mathbf{0.8250}$.
+For `taskflow.config.load_config`: PageRank = 0.0561 (norm 1.0000), Betweenness = 34.0 (max 48.0, norm 0.7083) $\to \mathbf{0.854}$.
 *Policy Rule*: Any collision where Agent 1 claims `SIGNATURE_CHANGE` or `DELETE` **forces policy `SERIALIZE_CALLEE_FIRST`** regardless of risk threshold, ensuring the callee change lands before callers adapt.
 
 ### 3. Procedural Memory Recall
@@ -208,22 +208,24 @@ ORDER BY r.confidence DESC
 
 ## 📈 Measured Performance & Benchmarks
 
+All metrics documented here derive strictly from `docs/NUMBERS.md` and underlying raw logs.
+
 ### 1. FalkorDB Query Latency on `repo:taskflow` (69 Symbols, 29 Calls, 16 Tests)
-*Measured over 20 real runs (`docs/evidence/phase2/falkordb_bench_stdout.txt`):*
-- **`graph.copy`**: Min = 55.41 ms, **Median = 108.32 ms**, Max = 112.08 ms
-- **`algo.pageRank`**: Min = 1.20 ms, **Median = 1.36 ms**, Max = 1.99 ms
-- **`algo.betweenness`**: Min = 1.39 ms, **Median = 1.80 ms**, Max = 2.60 ms
-- **Collision Detection Query**: Min = 0.61 ms, **Median = 0.76 ms**, Max = 2.44 ms
+*Measured over real execution runs (`docs/evidence/phase2/falkordb_bench_stdout.txt`, `docs/evidence/phase8/benchmark_detection_stdout.txt`):*
+- **`graph.copy`**: Range = **~55-112 ms** (Min = 55.41 ms, **Median = 108.32 ms**, Max = 112.08 ms)
+- **`algo.pageRank`**: Range = **~1-2 ms** (Min = 1.20 ms, **Median = 1.36 ms**, Max = 1.99 ms)
+- **`algo.betweenness`**: Range = **~1-3 ms** (Min = 1.39 ms, **Median = 1.80 ms**, Max = 2.60 ms)
+- **Collision Detection Query**: Range = **~1-2 ms** (Min = 1.13 ms, **Median = 1.97 ms**, Max = 6.06 ms)
 
 ### 2. Collision Detection Benchmark ($N = 58$ Seeded Cases)
-*Ground truth established strictly by merged-tree `pytest` execution (`docs/evidence/phase3b/benchmark_stdout.txt`):*
+*Ground truth established strictly by merged-tree `pytest` execution (`docs/evidence/phase8/benchmark_detection_stdout.txt`):*
 
 | Detector | When Collision is Known | Precision | Recall | Median Latency |
 |---|---|:---:|:---:|:---:|
 | **(a1) Git text conflict only** | Merge time (text only) | 0.0% | 0.0% | N/A |
 | **(a2) Per-branch repo tests** | Pre-merge (isolated branch) | 0.0% | 0.0%* | N/A |
-| **(a3) Merged-tree repo tests** | Post-merge (runtime CI) | 100.0% | 100.0% | ~150 ms |
-| **(b) ChronoFork (FalkorDB)** | **Claim time (pre-code)** | **100.0%** | **57.9%** | **1.37 ms** |
+| **(a3) Merged-tree repo tests** | Post-merge (runtime CI) | 100.0% | 100.0% | ~0.44-1.1s pytest-internal (~1.5-2.0s wall time) |
+| **(b) ChronoFork (FalkorDB)** | **Claim time (pre-code)** | **100.0%** | **57.9%** | **~1-2 ms (1.97 ms)** |
 
 *\*Note: (a2) is 0% recall by construction because tests on an isolated branch never execute cross-branch unmerged changes.*
 
@@ -231,6 +233,10 @@ ORDER BY r.confidence DESC
 - Standard static call chains (`direct_call`, `two_hops`, `three_hops`, `four_hops`, `import_inside_function`): **100% Recall** (22/22 detected).
 - Safe concurrent changes (`unrelated_pairs`, `same_module_disjoint`, `nearby_no_call`, `body_edit_only`, `unused_function_rename`): **100% Specificity** (20/20 safe, **Zero False Positives**).
 - Dynamic metaprogramming (`self_method`, `getattr_call`, `alias_call`, `dict_dispatch`): **0% Recall** (Documented static AST blind spots).
+
+### 3. Real Verification Pytest Timings
+- **Naive Git Merge**: **5 FAILED**, 7 PASSED in **0.44s** (pytest-internal duration; **~1.48s** wall clock duration).
+- **ChronoFork Serialized**: **12 PASSED**, 0 FAILED in **1.09s** (pytest-internal duration; **~1.7s** wall clock duration).
 
 ---
 
@@ -240,7 +246,7 @@ ORDER BY r.confidence DESC
 2. **Dynamic Metaprogramming**: Dynamic Python patterns (`getattr`, dictionary dispatch tables, variable aliasing) cannot be resolved by static AST visitors without runtime dataflow.
 3. **Instance Method Linking**: In `worker = ServiceWorker(); worker.f()`, the static visitor links the call to the class `ServiceWorker` rather than the method symbol `ServiceWorker.f` without receiver type inference.
 4. **Signature Breaks Only**: Benchmark ground truth evaluates signature incompatibilities (`TypeError`). Semantic state invariants without signature changes are not detected.
-5. **FalkorDB Cloud & Standalone MCP**: The system runs against local/containerized FalkorDB. FalkorDB Cloud deployment and a standalone deployed MCP server are **NOT DONE**.
+5. **Fork Simulation Scope**: Speculative fork simulation (`fork:<run_id>:<agent_id>`) creates an isolated graph copy (`graph.copy`) used strictly to evaluate blast radius and identify affected upstream dependents in isolation before filesystem edits occur. Because it is an isolated structural copy used for blast radius calculation, it does not apply the patch to the graph schema, so the measured architectural risk score remains identical before and after simulation (`risk before == after`, 0.854).
 
 ---
 

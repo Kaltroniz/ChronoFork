@@ -68,16 +68,20 @@ class LLMProvider:
             You are a lead software architect. Decompose this coding task into 2 subtasks for parallel AI coding agents:
             TASK: {user_task}
             AVAILABLE SYMBOLS: {repo_symbols[:15]}
-            Return JSON list: [{{ "agent_id": "agent_1", "agent_name": "Name", "role": "Role", "claim_symbol": "symbol.qualname", "intent": "SIGNATURE_CHANGE|BODY_EDIT" }}]
+            Return JSON list: [{{"agent_id": "agent_1", "agent_name": "Name", "role": "Role", "claim_symbol": "symbol.qualname", "intent": "SIGNATURE_CHANGE|BODY_EDIT"}}]
             """
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={self.api_key}"
-            payload = {"contents": [{"parts": [{"text": prompt}]}]}
-            res = httpx.post(url, json=payload, timeout=10.0)
-            if res.status_code == 200:
-                raw = res.json()["candidates"][0]["content"]["parts"][0]["text"]
-                # Parse JSON
-                clean = raw.strip().replace("```json", "").replace("```", "")
-                return json.loads(clean)
+            models = ["gemini-2.0-flash", "gemini-1.5-flash"]
+            for model_name in models:
+                try:
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={self.api_key}"
+                    payload = {"contents": [{"parts": [{"text": prompt}]}]}
+                    res = httpx.post(url, json=payload, timeout=10.0)
+                    if res.status_code == 200:
+                        raw = res.json()["candidates"][0]["content"]["parts"][0]["text"]
+                        clean = raw.strip().replace("```json", "").replace("```", "").strip()
+                        return json.loads(clean)
+                except Exception:
+                    continue
         except Exception as e:
             print(f"Live LLM call error (falling back to deterministic synthesis): {e}")
 
@@ -105,22 +109,38 @@ class LLMProvider:
             Rewrite the code so it safely accesses ConfigObject attributes (`cfg.env`, `cfg.timeout`, `cfg.auth_secret`) or falls back to dict access.
             Return ONLY the raw Python code. Do not wrap in markdown or explanations.
             """
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={self.api_key}"
-            payload = {"contents": [{"parts": [{"text": prompt}]}]}
-            res = httpx.post(url, json=payload, timeout=12.0)
-            if res.status_code == 200:
-                raw = res.json()["candidates"][0]["content"]["parts"][0]["text"]
-                cleaned = raw.strip()
-                if cleaned.startswith("```python"):
-                    cleaned = cleaned[len("```python"):].strip()
-                if cleaned.startswith("```"):
-                    cleaned = cleaned[len("```"):].strip()
-                if cleaned.endswith("```"):
-                    cleaned = cleaned[:-3].strip()
-                return cleaned
+            models = ["gemini-2.0-flash", "gemini-1.5-flash"]
+            for model_name in models:
+                try:
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={self.api_key}"
+                    payload = {"contents": [{"parts": [{"text": prompt}]}]}
+                    res = httpx.post(url, json=payload, timeout=12.0)
+                    if res.status_code == 200:
+                        raw = res.json()["candidates"][0]["content"]["parts"][0]["text"]
+                        cleaned = raw.strip()
+                        if cleaned.startswith("```python"):
+                            cleaned = cleaned[len("```python"):].strip()
+                        if cleaned.startswith("```"):
+                            cleaned = cleaned[len("```"):].strip()
+                        if cleaned.endswith("```"):
+                            cleaned = cleaned[:-3].strip()
+                        return cleaned
+                except Exception:
+                    continue
         except Exception as ex:
             print(f"Gemini live patch generation exception: {ex}")
         return None
+
+    def get_status(self) -> Dict[str, Any]:
+        """Returns the configuration and readiness status of the LLM provider."""
+        has_key = bool(self.api_key and len(self.api_key.strip()) > 8)
+        return {
+            "provider": self.provider,
+            "configured": has_key,
+            "models_supported": ["gemini-2.0-flash", "gemini-1.5-flash"],
+            "live_mode_available": has_key,
+            "mode": "live-gemini" if has_key else "deterministic-fallback"
+        }
 
 
 llm_provider = LLMProvider()

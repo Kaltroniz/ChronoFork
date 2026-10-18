@@ -313,10 +313,18 @@ export const App: React.FC = () => {
   // Expose test automation hooks on window in dev
   useEffect(() => {
     (window as any).__chronoSetIndex = (idx: number) => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
       setIsPaused(true);
+      setHeroDismissed(false);
+      setZeroProofDismissed(false);
       setCurrentIndex(idx);
     };
     (window as any).__chronoStartScenario = (scId: number) => {
+      setHeroDismissed(false);
+      setZeroProofDismissed(false);
       return startScenario(scId, false);
     };
     (window as any).__chronoGetState = () => ({

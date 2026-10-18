@@ -108,13 +108,23 @@ ChronoFork agents don't guess — they traverse connected graph structures at ev
    RETURN collect(DISTINCT caller.qualname) AS dependent_callers,
           collect(DISTINCT direct_test.qualname) + collect(DISTINCT transitive_test.qualname) AS affected_tests
    ```
-   Within 1.13 ms (median 0.76 ms), the agent knows that altering `load_config` impacts 7 callers across 4 modules and threatens 5 unit test suites.
+1. **Reverse Impact Analysis**:
+   When an agent targets `config.load_config`, FalkorDB executes a reverse traversal along incoming `CALLS` and `TESTED_BY` edges:
+   ```cypher
+   MATCH (target:Symbol {qualname: $qualname})
+   OPTIONAL MATCH path = (caller:Symbol)-[:CALLS*1..4]->(target)
+   OPTIONAL MATCH (target)<-[:TESTED_BY]-(direct_test:Test)
+   OPTIONAL MATCH (caller)<-[:TESTED_BY]-(transitive_test:Test)
+   RETURN collect(DISTINCT caller.qualname) AS dependent_callers,
+          collect(DISTINCT direct_test.qualname) + collect(DISTINCT transitive_test.qualname) AS affected_tests
+   ```
+   Within a sub-2 ms range (**~1-2 ms**, median 1.97 ms; see `docs/evidence/phase8/benchmark_detection_stdout.txt` and `docs/NUMBERS.md`), the agent knows that altering `load_config` impacts 7 callers across 4 modules and threatens 5 unit test suites.
 
 2. **Centrality-Driven Risk Scoring**:
-   ChronoFork combines PageRank ($PR$) and Betweenness ($BW$) into a normalized risk metric ($0.0 \le \text{Risk} \le 1.0$). If a symbol's risk exceeds $0.50$, the Coordinator refuses optimistic parallel merges and elevates the coordination policy to `SERIALIZE`.
+   ChronoFork combines PageRank ($PR$) and Betweenness ($BW$) into a normalized risk metric ($0.0 \le \text{Risk} \le 1.0$). For `taskflow.config.load_config`, $PR = 0.056058$ (normalized 1.0) and $BW = 34.0$ / Max $48.0$ (normalized 0.7083), yielding Risk = $0.5 \times 1.0 + 0.5 \times 0.7083 = \mathbf{0.854}$. Because $0.854 \ge 0.50$, the Coordinator refuses optimistic parallel merges and elevates the coordination policy to `SERIALIZE`.
 
 3. **Speculative Fork Simulation**:
-   Using `fork:<run_id>:<agent_id>`, an agent parses its proposed patch with Python's AST parser, computes the updated SHA-256 signature hash, compares before and after risk scores, and streams telemetry to the operator before touching the file system.
+   Using `fork:<run_id>:<agent_id>`, ChronoFork creates an isolated graph copy (`graph.copy` in **~55-112 ms**) to evaluate blast radius and identify affected upstream dependents in isolation before filesystem edits occur. Because the fork is an isolated structural copy used specifically for impact projection rather than applying AST modifications to the graph schema, the measured architectural risk score remains identical before and after simulation (`risk before == after`, 0.854).
 
 ---
 
@@ -124,7 +134,7 @@ ChronoFork agents don't guess — they traverse connected graph structures at ev
 At run start, FalkorDB clones the repository into `coord:<run_id>`. Coordination entities (`:Run`, `:Agent`) attach directly to the AST code `:Symbol` nodes via `[:CLAIMS]` edges.
 
 When Agent 1 claims `load_config` and Agent 2 claims `worker.execute_job`, the Coordinator detects the 4-hop call path and evaluates the policy:
-- `load_config` Risk = $0.8250 \ge 0.50$ $\implies$ **Policy: SERIALIZE**.
+- `load_config` Risk = $\mathbf{0.854} \ge 0.50$ $\implies$ **Policy: SERIALIZE**.
 - FalkorDB writes an explicit blocking edge:
   `(:WorkerCoder)-[:BLOCKED_BY]->(:ConfigCoder)`
 
@@ -170,32 +180,51 @@ To prove this memory actively dictates agent behavior, the ChronoFork UI include
 
 ## Real Execution: Proving Git's Blind Spot
 
-We refused to present scripted results or mocked pytest strings. Every scenario in ChronoFork executes real code, real Git merges, and real subprocess pytests in isolated workspaces:
+Agent patches in the demonstration are scripted; git merge, pytest execution, and FalkorDB graph queries are real. Replay mode serves cached events captured directly from these real runs in isolated sandboxes:
 
-| Coordination Strategy | Git Merge Status | Real Pytest Verification | Outcome |
-| :--- | :---: | :---: | :---: |
-| **Naive Git Merge** | `0 line conflicts` (Exit 0) | **5 FAILED**, 7 PASSED | 💥 **Silent Production Crash** |
-| **ChronoFork Serialized** | Callee-First Graph Order | **12 PASSED**, 0 FAILED | ✅ **Clean Zero-Defect Production** |
+| Coordination Strategy | Git Merge Status | Real Pytest Verification | Pytest-Internal Time | Wall Clock Time | Outcome |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **Naive Git Merge** | `0 line conflicts` (Exit 0) | **5 FAILED**, 7 PASSED | **0.44s** | **~1.48s** | 💥 **Silent Production Crash** |
+| **ChronoFork Serialized** | Callee-First Graph Order | **12 PASSED**, 0 FAILED | **1.09s** | **~1.7s** | ✅ **Clean Zero-Defect Production** |
 
+```text
+============================= test session starts =============================
+platform win32 -- Python 3.13.2, pytest-9.1.1, pluggy-1.6.0
+rootdir: C:\Users\Acer\AppData\Local\Temp\chronofork_naive_git_e8_ga7rr
+plugins: anyio-4.15.1
+collecting ... collected 12 items
+
+tests/test_auth.py::test_extract_claims PASSED                           [  8%]
+tests/test_auth.py::test_validate_token_valid FAILED                     [ 16%]
+tests/test_auth.py::test_validate_token_invalid FAILED                   [ 25%]
+tests/test_config.py::test_get_default_config PASSED                     [ 33%]
+tests/test_config.py::test_load_config_default FAILED                    [ 41%]
+tests/test_config.py::test_compute_config_signature PASSED               [ 50%]
+tests/test_reports.py::test_calculate_metrics_summary PASSED             [ 58%]
+tests/test_reports.py::test_generate_summary PASSED                      [ 66%]
+tests/test_reports.py::test_format_as_markdown PASSED                    [ 75%]
+tests/test_reports.py::test_schedule_report_generation PASSED            [ 83%]
+tests/test_worker.py::test_execute_job_authorized FAILED                 [ 91%]
+tests/test_worker.py::test_execute_job_unauthorized FAILED               [100%]
+
+================================== FAILURES ===================================
+__________________________ test_validate_token_valid __________________________
+    conn = get_connection(path=path)
+    ...
+>   "db_url": f"sqlite:///taskflow_{cfg['env']}.db",
+E   TypeError: 'ConfigObject' object is not subscriptable
+taskflow\database.py:15: TypeError
+
+=========================== short test summary info ===========================
+FAILED tests/test_auth.py::test_validate_token_valid - TypeError: 'ConfigObject' object is not subscriptable
+FAILED tests/test_auth.py::test_validate_token_invalid - TypeError: 'ConfigObject' object is not subscriptable
+FAILED tests/test_config.py::test_load_config_default - assert False
+FAILED tests/test_worker.py::test_execute_job_authorized - TypeError: 'ConfigObject' object is not subscriptable
+FAILED tests/test_worker.py::test_execute_job_unauthorized - TypeError: 'ConfigObject' object is not subscriptable
+======================== 5 failed, 7 passed in 0.44s =========================
 ```
-============================= test session starts ==============================
-rootdir: /tmp/chronofork_naive_git_sandbox
-tests/test_auth.py::test_validate_token_valid FAILED                     [  8%]
-tests/test_auth.py::test_validate_token_invalid FAILED                   [ 16%]
-tests/test_config.py::test_get_default_config PASSED                     [ 25%]
-tests/test_config.py::test_load_config_default FAILED                    [ 33%]
-tests/test_config.py::test_compute_config_signature PASSED               [ 41%]
-tests/test_database.py::test_get_connection FAILED                       [ 50%]
-tests/test_database.py::test_save_and_get_result PASSED                  [ 58%]
-tests/test_models.py::test_create_job_result PASSED                      [ 66%]
-tests/test_queue.py::test_dequeue_task_unauthorized PASSED               [ 75%]
-tests/test_queue.py::test_dequeue_task_authorized FAILED                 [ 83%]
-tests/test_worker.py::test_execute_job_unauthorized PASSED               [ 91%]
-tests/test_worker.py::test_execute_job_completed FAILED                  [100%]
-========================= 5 failed, 7 passed in 0.17s =========================
-```
 
-In the ChronoFork console, the **Verifier Tab** displays this exact comparison side-by-side: Naive Git merge fails 5 tests in 0.17s, whereas ChronoFork's serialized merge passes all 12 tests in 0.12s.
+In the ChronoFork console, the **Verdict Tab** displays this exact comparison side-by-side: Naive Git merge fails 5 tests in **0.44s** (pytest-internal duration; **~1.48s** total wall clock time including git operations), whereas ChronoFork's serialized merge passes all 12 tests in **1.09s** (pytest-internal duration; **~1.7s** total wall clock time) (see `docs/NUMBERS.md` and `docs/evidence/phase9/naive_merge_pytest_output.txt`).
 
 ---
 
@@ -203,10 +232,10 @@ In the ChronoFork console, the **Verifier Tab** displays this exact comparison s
 
 ChronoFork features a high-performance dark console built with **React 19**, **Cytoscape.js**, and **TailwindCSS**:
 
-1. **Persistent Agent Halos**: Claimed nodes maintain vibrant glow halos (`agent_1` blue, `agent_2` amber) across the entire run so operators can visualize agent territorial blast radii simultaneously.
-2. **Compound Module Clustering**: Symbols are grouped into visual container clusters corresponding to their Python files (`taskflow.config`, `taskflow.worker`, etc.).
-3. **Hop-by-Hop Collision Animation**: When a collision is uncovered, the canvas animates each hop of the path sequentially in pulsing red.
-4. **Live Cypher Telemetry Inspector**: Every single query executed against FalkorDB is captured with its exact latency in milliseconds, parameter payload, row count, and returned row previews.
+1. **Claim Rings & Chips**: Claimed nodes display colored agent boundary rings (`A1` blue, `A2` amber) and compact intent chips (`A1 · SIGNATURE_CHANGE`).
+2. **Compound Module Containers**: Symbols are grouped into visual container clusters corresponding to their Python files (`taskflow.config`, `taskflow.worker`, etc.).
+3. **Auto-Docked Collision Cards**: When a collision is detected, an auto-docking hero split card displays the 4-hop call path, docking after 1.5s to keep the graph view unobstructed.
+4. **Live Cypher Inspector & Timeline**: Every query executed against FalkorDB is captured with latency in milliseconds, parameter payload, row count, and returned records, synchronized with the step-by-step event timeline.
 
 ---
 
@@ -228,15 +257,15 @@ External AI coding agents running in Cursor, Claude Desktop, or custom orchestra
 
 ## Benchmarks & Verification (Measured Numbers Only)
 
-All performance benchmarks are taken from saved test and execution logs on `repo:taskflow` (69 symbols, 29 `CALLS`, 16 `TESTED_BY` edges):
+All performance benchmarks are taken from saved test and execution logs on `repo:taskflow` (69 symbols, 29 `CALLS`, 16 `TESTED_BY` edges) and documented in `docs/NUMBERS.md`:
 
-- **Graph Cloning (`graph.copy`)**: Min = 55.41 ms, **Median = 108.32 ms**, Max = 112.08 ms (`docs/evidence/phase2/falkordb_bench_stdout.txt`)
-- **PageRank Centrality (`algo.pageRank`)**: Min = 1.20 ms, **Median = 1.36 ms**, Max = 1.99 ms
-- **Betweenness Centrality (`algo.betweenness`)**: Min = 1.39 ms, **Median = 1.80 ms**, Max = 2.60 ms
-- **Variable-Length Path Traversal (`CALLS*1..4`)**: Min = 0.61 ms, **Median = 0.76 ms**, Max = 2.44 ms
-- **Real Subprocess Pytest (Naive Git Merge)**: 5 failed, 7 passed in 0.17s (`docs/evidence/phase0/verify_item1_stdout.txt`)
-- **Real Subprocess Pytest (ChronoFork Verifier)**: 12 passed in 0.12s (`docs/evidence/phase0/verify_item1_stdout.txt`)
-- **Collision Detection Benchmark ($N = 58$ Cases)**: Precision 100.0%, Recall 57.9% overall (100% on standard static call chains, 22/22; 100% specificity on safe cases, 20/20 with 0 false positives), Median Decision Time = 1.37 ms (`docs/evidence/phase3b/benchmark_stdout.txt`)
+- **Graph Cloning (`graph.copy`)**: Range = **~55-112 ms** (Min 55.41 ms, **Median 108.32 ms**, Max 112.08 ms; `docs/evidence/phase2/falkordb_bench_stdout.txt`)
+- **PageRank Centrality (`algo.pageRank`)**: Range = **~1-2 ms** (Min 1.20 ms, **Median 1.36 ms**, Max 1.99 ms)
+- **Betweenness Centrality (`algo.betweenness`)**: Range = **~1-3 ms** (Min 1.39 ms, **Median 1.80 ms**, Max 2.60 ms)
+- **Variable-Length Path Traversal (`CALLS*1..4`)**: Range = **~1-2 ms** (Min 1.13 ms, **Median 1.97 ms**, Max 6.06 ms; `docs/evidence/phase8/benchmark_detection_stdout.txt`)
+- **Real Subprocess Pytest (Naive Git Merge)**: 5 failed, 7 passed in **0.44s** (pytest-internal duration; **~1.48s** wall clock; `docs/evidence/phase9/naive_merge_pytest_output.txt`)
+- **Real Subprocess Pytest (ChronoFork Verifier)**: 12 passed in **1.09s** (pytest-internal duration; **~1.7s** wall clock; `docs/evidence/phase9/regenerate_replays_stdout.txt`)
+- **Collision Detection Benchmark ($N = 58$ Cases)**: Precision **100.0%**, Recall **57.9%** overall (100% on standard static call chains, 22/22; 100% specificity on safe cases, 20/20 with 0 false positives), Median Decision Time = **1.97 ms** (`docs/evidence/phase8/benchmark_detection_stdout.txt`)
 
 ---
 

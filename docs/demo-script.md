@@ -10,61 +10,62 @@
 ## 🎬 Shot List & Narrative Breakdown
 
 ### Shot 1: The Problem — Git's Silent Blind Spot (0:00 – 0:35 | 35s)
-- **UI View**: Split screen: VS Code showing `taskflow/config.py` on the left (`load_config` changed to return a custom object) and `taskflow/worker.py` on the right (`execute_job` calling queue/auth/db/config). A terminal window shows `git merge agent-1-config agent-2-worker`:
-  ```text
-  Merge made by the 'ort' strategy.
-  0 line conflicts detected — Clean merge!
-  ```
-  Followed immediately by `pytest`:
-  ```text
-  FAILED tests/test_worker.py::test_execute_job_completed - TypeError: 'ConfigObject' object is not subscriptable
-  5 failed, 7 passed in 0.17s
-  ```
+- **UI View**: Full ChronoFork console at `http://localhost:5173`. Open the bottom drawer to the **Verdict panel** comparing **Naive Git Merge** against **ChronoFork Coordination**:
+  - **Left (Naive Git Merge)**: Shows `git merge` succeeded cleanly with 0 line conflicts ("Merge made by the 'ort' strategy"), but CI verification immediately crashed:
+    ```text
+    FAILED tests/test_worker.py::test_execute_job_completed - TypeError: 'ConfigObject' object is not subscriptable
+    5 failed, 7 passed in 0.17s
+    ```
+  - **Right (ChronoFork Coordination)**: Shows callee-first serialization policy, dependency handoff, and verification passing:
+    ```text
+    12 PASSED in 0.12s
+    ```
 - **Voiceover**:
-  > "When multiple autonomous AI agents code in parallel on the same repo, Git only checks for direct line conflicts.
-  > Here, Agent 1 changes the signature of `load_config`, while Agent 2 edits `execute_job` 4 call hops away.
-  > Because they touched different files, Git merges cleanly with zero line conflicts.
-  > But when CI runs, production crashes! `execute_job` calls `dequeue_task`, calls `validate_token`, calls `get_connection`, calls `load_config`.
+  > "When multiple autonomous AI agents code in parallel on the same repository, Git only checks for direct line conflicts in identical files.
+  > Here in our taskflow service, Agent 1 altered the return signature of `load_config`, while Agent 2 modified `execute_job` 4 call hops away.
+  > Because they touched separate files, Git merged them cleanly with zero line conflicts.
+  > But when CI ran, production broke: 5 tests failed with `TypeError`.
   > Git catches line conflicts. ChronoFork catches the ones Git can't see."
 
 ---
 
-### Shot 2: ChronoFork Architecture & Live UI Console (0:35 – 1:05 | 30s)
-- **UI View**: Full browser window at `http://localhost:5173`.
-  - **Left Rail**: Brand title *"ChronoFork — Graph Hacks 2026"*, Track badges, Mode selector (*Replay* / *Live*), Scenario cards 1–4, and *Run Swarm* action button.
-  - **Center Canvas**: Cytoscape.js dark-mode AST graph of `repo:taskflow` (69 symbols, grouped into compound module containers like `taskflow.config`, `taskflow.worker`).
-  - **Right Panel**: Tabs for *Activity Log* and *Cypher Inspector*.
+### Shot 2: ChronoFork Architecture & Console Tour (0:35 – 1:05 | 30s)
+- **UI View**:
+  - **Top Bar**: Tagline, compact provenance pills (`GRAPH`, `GIT`, `PYTEST`, `LLM` showing `CACHED` or `REAL` data sources), and single-line *Reset Demo* button.
+  - **Left Rail**: Scenario cards (Scenario 1 Hidden Collision, Scenario 2 Memory Avoidance, Scenario 3 Safe Parallel), *Play the Story* button, timeline scrubber, and Replay/Live mode toggle.
+  - **Center Canvas**: Interactive Cytoscape.js code property graph of `repo:taskflow` (69 symbols grouped into compound module containers like `taskflow.config`, `taskflow.worker`).
+  - **Right Panel**: **Cypher Inspector** tab recording every openCypher query, row count, execution latency, and payload parameters.
 - **Voiceover**:
-  > "Meet ChronoFork. Instead of dumb text files, ChronoFork compiles the repository AST into FalkorDB as a live property graph of symbols, calls, imports, and test suites.
-  > Every symbol is continuously analyzed with native FalkorDB algorithms: `algo.pageRank` and `algo.betweenness`.
-  > On the right, our live Cypher Inspector records every single openCypher query, execution latency in milliseconds, row counts, and payload parameters."
+  > "Meet ChronoFork. Instead of raw text files, ChronoFork compiles the repository AST into FalkorDB as a live property graph of symbols, calls, imports, and test suites.
+  > Agents declare their intent on the graph before writing code.
+  > On the right, our live Cypher Inspector records every single openCypher query, execution latency, row count, and parameter payload in real time."
 
 ---
 
 ### Shot 3: Scenario 1 — Multi-Hop Detection & Callee-First Resolution (1:05 – 1:45 | 40s)
 - **UI View**:
-  - Click Scenario 1 (**Hidden Collision**). Click **Run Swarm** (or press `Space`).
-  - Cytoscape canvas: Agent 1 claims `taskflow.config.load_config` (`SIGNATURE_CHANGE`, blue glowing halo). Agent 2 claims `taskflow.worker.execute_job` (`BODY_EDIT`, amber glowing halo).
-  - FalkorDB executes transitive traversal: `MATCH path = (s2)-[:CALLS*1..4]->(s1)`.
-  - The 4-hop call path lights up sequentially with pulsing red halos across the 4 modules.
-  - Open bottom drawer to **Verifier Tab**:
-    - **Naive Git Merge**: shows real subprocess pytest failure (5 failed, 7 passed in 0.17s).
-    - **ChronoFork Coordination**: `load_config` risk = 0.8250 forces `SERIALIZE_CALLEE_FIRST`. Graph writes `(:Agent)-[:BLOCKED_BY]->(:Agent)` and `[:HANDED_OFF_TO]`.
-    - Real subprocess verifier pytest runs: **12 passed in 0.12s!**
+  - Click Scenario 1 (**Hidden Collision**). Click **Play the Story** (or use the timeline controls).
+  - Canvas: Agent 1 claims `taskflow.config.load_config` (`SIGNATURE_CHANGE`, blue ring + elevated chip). Agent 2 claims `taskflow.worker.execute_job` (`BODY_EDIT`, amber ring + elevated chip).
+  - Cypher Inspector: FalkorDB executes transitive traversal: `MATCH path = (s2)-[:CALLS*1..4]->(s1)`.
+  - Collision HeroSplit card appears: highlights the 4-hop call path across modules (`worker.py` $\to$ `queue.py` $\to$ `auth.py` $\to$ `database.py` $\to$ `config.py`) and auto-docks after 1.5 seconds.
+  - Latency displayed: about a millisecond (1.6 ms on screen).
+  - Bottleneck Risk displayed: **0.854** (normalized 0.5 PageRank + 0.5 Betweenness).
+  - Bottom drawer Verdict panel confirms: callee-first serialization order (`load_config` $\to$ `execute_job`) and 12 passed tests.
 - **Voiceover**:
   > "In Scenario 1, Agent 1 claims `load_config` with a breaking signature change. Agent 2 claims `execute_job`.
-  > In 0.76 milliseconds, FalkorDB traverses 4 call hops and flags the collision before a single line of code is written.
-  > To prove the danger, ChronoFork runs an isolated Git experiment: Git merges with zero conflicts, but pytest crashes with 5 failures.
-  > ChronoFork calculates the bottleneck risk — 0.8250 — and forces callee-first serialization. ConfigCoder lands its contract first, hands off execution to WorkerCoder via a graph edge, and the Verifier runs real pytest: all 12 test suites pass!"
+  > In about a millisecond (1.6 ms on screen), FalkorDB traverses 4 call hops and flags the collision before a single line of code is written.
+  > ChronoFork calculates the bottleneck risk — 0.854 — from FalkorDB's native PageRank and Betweenness algorithms, and enforces callee-first serialization.
+  > ConfigCoder lands its contract first, hands off execution to WorkerCoder via a graph edge, and the Verifier runs real pytest: all 12 test suites pass!"
 
 ---
 
 ### Shot 4: Scenario 2 & Cross-Run Episodic Memory (1:45 – 2:15 | 30s)
 - **UI View**:
   - Click Scenario 2 (**Memory Avoidance**).
-  - Show the **Memory ON / Memory OFF** toggle in the Left Rail.
-  - Run with **Memory ON**: Agent 1 queries `mem:taskflow`, recalls the procedural rule learned from Run 1 with 95% confidence, and automatically adapts its claim from `SIGNATURE_CHANGE` to `BODY_EDIT` (preserving backward compatibility). Transitive collision query returns 0 rows!
-  - Flip the toggle to **Memory OFF** and rerun: without memory recall, Agent 1 claims `SIGNATURE_CHANGE` again, and the 4-hop collision warning reappears immediately.
+  - Highlight the **Memory ON / Memory OFF** toggle in the Left Rail.
+  - Run with **Memory ON**: Agent 1 queries `mem:taskflow`, recalls `rule_cfg_worker_transitive` learned from Run 1 with 95% confidence, and automatically adapts its claim from `SIGNATURE_CHANGE` to `BODY_EDIT` (preserving backward compatibility).
+  - Cypher Inspector shows 0 collision rows returned.
+  - Flip toggle to **Memory OFF** and rerun: without memory recall, Agent 1 repeats the breaking `SIGNATURE_CHANGE`, and the 4-hop collision warning returns immediately.
 - **Voiceover**:
   > "Now for Track 2: Cross-run episodic memory in `mem:taskflow`.
   > From the first run, ChronoFork stored an `Episode` and forged a `ProceduralRule`.
@@ -75,23 +76,21 @@
 
 ### Shot 5: Live Mode Proof — Fail Loudly Without Fallback (2:15 – 2:40 | 25s)
 - **UI View**:
-  - Switch Mode toggle in top-left from **Replay** to **Live**.
-  - Open terminal side-by-side: `docker stop chronofork-falkordb-1`.
+  - Run the application with `DEMO_MODE=false docker compose up`.
+  - In the UI, switch Mode toggle from **Replay** to **Live**.
+  - Simulate an unreachable database (stop the FalkorDB container or disconnect the network).
   - Click **Run Swarm** in the UI.
-  - The UI immediately surfaces an explicit red error toast banner at top-right:
-    `Execution error: Live run execution failed (FalkorDB connection refused or offline): Error 61 connecting to 127.0.0.1:6379. Connection refused. Dismiss`
-  - Zero events play; no fake mock fallback is triggered.
-  - Terminal: `docker start chronofork-falkordb-1`. Click **Run Swarm** again $\to$ live run succeeds with real FalkorDB timestamps and green `REAL` badges.
+  - The UI immediately surfaces an explicit red error toast banner at top-right indicating the database is unreachable. Zero events play; no fake mock fallback is triggered.
+  - Restart the FalkorDB container and click **Run Swarm** again $\to$ live execution proceeds immediately with real FalkorDB timestamps and green `REAL` provenance badges.
 - **Voiceover**:
-  > "ChronoFork does not fake anything. If we switch to Live mode and stop the FalkorDB container, clicking Run Swarm fails loudly with an explicit HTTP 503 error toast.
-  > There is zero fallback to cached data or decorative mocks. FalkorDB is the required engine; if it goes down, the swarm halts.
-  > Restarting the container resumes live execution with real FalkorDB query execution."
+  > "ChronoFork does not fake anything. If we run with `DEMO_MODE=false` and the database service is offline or unreachable, clicking Run Swarm halts immediately with a clear error notification.
+  > There is zero fallback to cached data or decorative mocks. FalkorDB is the required engine; if it goes down, the swarm halts loudly.
+  > Restoring the database resumes live execution with real queries, real git branches, and real test execution."
 
 ---
 
 ### Shot 6: Wrap-up & Hackathon Summary (2:40 – 2:50 | 10s)
-- **UI View**: Return to full UI dashboard displaying Scenario 3 (Safe Parallel disjoint execution with green `PARALLEL_OK` status) and GitHub repo link.
+- **UI View**: Display Scenario 3 (**Safe Parallel**) with two disjoint neighborhoods in Agent 2 and Agent 3 colors, the docked SAFE card, and the GitHub repository link.
 - **Voiceover**:
   > "ChronoFork: Multi-agent coordination powered by FalkorDB graph algorithms, multi-hop Cypher queries, and episodic memory.
   > Git catches line conflicts. ChronoFork catches the ones Git can't see."
-

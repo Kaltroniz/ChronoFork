@@ -161,7 +161,7 @@ export const ResultStrip: React.FC<ResultStripProps> = ({
     ? collision.policy
     : (detectEvent && !collision ? 'PARALLEL_OK' : '—');
   const risk = collision?.risk_score !== undefined
-    ? collision.risk_score.toFixed(2)
+    ? collision.risk_score.toFixed(3)
     : '—';
 
   const gitOccurred = Boolean(gitCompEvent);
@@ -337,7 +337,7 @@ export const ResultStrip: React.FC<ResultStripProps> = ({
                           </>
                         ) : (
                           <div className="text-tally text-[var(--text-dim)] font-mono">
-                            PENDING
+                            —
                           </div>
                         )}
                       </div>
@@ -359,16 +359,16 @@ export const ResultStrip: React.FC<ResultStripProps> = ({
                         </>
                       ) : (
                         <div className="text-[var(--text-faint)] text-[13px]">
-                          Awaiting git comparison phase...
+                          —
                         </div>
                       )}
                     </div>
                   </div>
 
-                  {/* ChronoFork Column: Gated until VERIFICATION event */}
+                  {/* ChronoFork Column: Gated until VERIFICATION event (or detectEvent in Scenario 3) */}
                   <div
                     className={`p-4 rounded-[8px] border bg-[var(--bg-2)] flex flex-col justify-between transition-colors ${
-                      verificationOccurred
+                      (currentScenario === 3 ? Boolean(detectEvent) : verificationOccurred)
                         ? 'border-[var(--clear)]'
                         : 'border-[var(--line)] opacity-80'
                     }`}
@@ -377,14 +377,14 @@ export const ResultStrip: React.FC<ResultStripProps> = ({
                       <div className="flex items-center justify-between mb-2">
                         <span
                           className={`text-eyebrow ${
-                            verificationOccurred ? 'text-[var(--clear)]' : 'text-[var(--text-dim)]'
+                            (currentScenario === 3 ? Boolean(detectEvent) : verificationOccurred) ? 'text-[var(--clear)]' : 'text-[var(--text-dim)]'
                           }`}
                         >
                           ChronoFork Coordinated
                         </span>
                         <span
                           className={`cf-chip ${
-                            verificationOccurred
+                            (currentScenario === 3 ? Boolean(detectEvent) : verificationOccurred)
                               ? 'text-[var(--clear)] border-[var(--clear)]'
                               : 'text-[var(--text-dim)]'
                           }`}
@@ -393,7 +393,7 @@ export const ResultStrip: React.FC<ResultStripProps> = ({
                         </span>
                       </div>
 
-                      <div className="my-2">
+                      <div className="my-2" data-testid="verdict-chronofork-status">
                         {verificationOccurred && verifierData?.passedCount !== undefined ? (
                           <>
                             <div className="text-tally text-[var(--clear)]">
@@ -403,13 +403,13 @@ export const ResultStrip: React.FC<ResultStripProps> = ({
                               {verifierData.failedCount ? `${verifierData.failedCount} FAILED` : '0 FAILED'}
                             </div>
                           </>
-                        ) : currentScenario === 3 ? (
+                        ) : currentScenario === 3 && detectEvent ? (
                           <div className="text-[14px] text-[var(--clear)] font-mono py-2 font-semibold">
                             SAFE · PARALLEL OK
                           </div>
                         ) : (
                           <div className="text-tally text-[var(--text-dim)] font-mono">
-                            PENDING
+                            —
                           </div>
                         )}
                       </div>
@@ -444,9 +444,13 @@ export const ResultStrip: React.FC<ResultStripProps> = ({
                             ? `Real pytest duration: ${verifierData.durationSeconds.toFixed(2)}s`
                             : 'Execution verified clean.'}
                         </div>
+                      ) : currentScenario === 3 && detectEvent ? (
+                        <div className="text-[13px] text-[var(--clear)]">
+                          Parallel execution authorized (no ordering constraint)
+                        </div>
                       ) : (
                         <div className="text-[13px] text-[var(--text-faint)]">
-                          Awaiting coordinated verification phase...
+                          —
                         </div>
                       )}
                     </div>
@@ -469,13 +473,13 @@ export const ResultStrip: React.FC<ResultStripProps> = ({
                 <div className="p-3 rounded-[8px] bg-[var(--bg-2)] border border-[var(--line)]">
                   <span className="text-eyebrow block mb-1">Centrality Risk (Before)</span>
                   <span className="text-[var(--text)] font-semibold">
-                    {forkData?.beforeRisk !== undefined ? forkData.beforeRisk.toFixed(4) : '—'}
+                    {forkData?.beforeRisk !== undefined ? forkData.beforeRisk.toFixed(3) : '—'}
                   </span>
                 </div>
                 <div className="p-3 rounded-[8px] bg-[var(--bg-2)] border border-[var(--line)]">
                   <span className="text-eyebrow block mb-1">Centrality Risk (After)</span>
                   <span className="text-[var(--text)] font-semibold">
-                    {forkData?.afterRisk !== undefined ? forkData.afterRisk.toFixed(4) : '—'}
+                    {forkData?.afterRisk !== undefined ? forkData.afterRisk.toFixed(3) : '—'}
                   </span>
                 </div>
               </div>
@@ -611,34 +615,64 @@ export const ResultStrip: React.FC<ResultStripProps> = ({
                   </div>
                 </div>
 
-                {/* Column 2: Run 2 (Memory Recall) */}
-                <div className="p-4 rounded-[8px] border border-[var(--clear)] bg-[var(--bg-2)] space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-eyebrow text-[var(--clear)]">Run 2 · Adaptive Memory Recall</span>
-                    <span className="cf-chip text-[var(--clear)] border-[var(--clear)]">ADAPTED</span>
+                {/* Column 2: Run 2 (Memory Recall) - Gated until RECALL / ADAPTATION events */}
+                {events.some(
+                  (e) =>
+                    e.phase === 'MEMORY_RECALL' ||
+                    e.phase === 'MEMORY_ADAPTATION' ||
+                    e.tool === 'recall_memory' ||
+                    (e.phase === 'CLAIM' && e.agent === 'ConfigCoder' && e.params?.intent === 'BODY_EDIT')
+                ) ? (
+                  <div className="p-4 rounded-[8px] border border-[var(--clear)] bg-[var(--bg-2)] space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-eyebrow text-[var(--clear)]">Run 2 · Adaptive Memory Recall</span>
+                      <span className="cf-chip text-[var(--clear)] border-[var(--clear)]">ADAPTED</span>
+                    </div>
+                    <div>
+                      <span className="text-[var(--text-dim)]">Adapted Intent:</span>
+                      <span className="ml-2 font-bold text-[var(--clear)]">BODY_EDIT</span>
+                    </div>
+                    <div>
+                      <span className="text-[var(--text-dim)]">Collision:</span>
+                      <span className="ml-2 font-bold text-[var(--clear)]">NO (0 collisions)</span>
+                    </div>
+                    <div>
+                      <span className="text-[var(--text-dim)]">Confidence:</span>
+                      <span className="ml-2 font-bold text-[var(--accent)]">
+                        {memWrite?.confidence !== undefined
+                          ? `${Math.round(memWrite.confidence * 100)}%`
+                          : memoryData?.rules?.[0]?.confidence !== undefined
+                          ? `${Math.round(memoryData.rules[0].confidence * 100)}%`
+                          : '95%'}
+                      </span>
+                    </div>
+                    <div className="pt-2 text-[13px] font-sans text-[var(--clear)] border-t border-[var(--line)]">
+                      Procedural rule advised non-breaking body edits; 0 collisions occurred; executed in parallel.
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-[var(--text-dim)]">Adapted Intent:</span>
-                    <span className="ml-2 font-bold text-[var(--clear)]">BODY_EDIT</span>
+                ) : (
+                  <div className="p-4 rounded-[8px] border border-[var(--line)] bg-[var(--bg-2)] space-y-2 opacity-80">
+                    <div className="flex items-center justify-between">
+                      <span className="text-eyebrow text-[var(--text-dim)]">Run 2 · Adaptive Memory Recall</span>
+                      <span className="cf-chip text-[var(--text-dim)]">—</span>
+                    </div>
+                    <div>
+                      <span className="text-[var(--text-dim)]">Adapted Intent:</span>
+                      <span className="ml-2 font-bold text-[var(--text-dim)]">—</span>
+                    </div>
+                    <div>
+                      <span className="text-[var(--text-dim)]">Collision:</span>
+                      <span className="ml-2 font-bold text-[var(--text-dim)]">—</span>
+                    </div>
+                    <div>
+                      <span className="text-[var(--text-dim)]">Confidence:</span>
+                      <span className="ml-2 font-bold text-[var(--text-dim)]">—</span>
+                    </div>
+                    <div className="pt-2 text-[13px] font-sans text-[var(--text-faint)] border-t border-[var(--line)]">
+                      —
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-[var(--text-dim)]">Collision:</span>
-                    <span className="ml-2 font-bold text-[var(--clear)]">NO (0 collisions)</span>
-                  </div>
-                  <div>
-                    <span className="text-[var(--text-dim)]">Confidence:</span>
-                    <span className="ml-2 font-bold text-[var(--accent)]">
-                      {memWrite?.confidence !== undefined
-                        ? `${Math.round(memWrite.confidence * 100)}%`
-                        : memoryData?.rules?.[0]?.confidence !== undefined
-                        ? `${Math.round(memoryData.rules[0].confidence * 100)}%`
-                        : '95%'}
-                    </span>
-                  </div>
-                  <div className="pt-2 text-[13px] font-sans text-[var(--clear)] border-t border-[var(--line)]">
-                    Procedural rule advised non-breaking body edits; 0 collisions occurred; executed in parallel.
-                  </div>
-                </div>
+                )}
               </div>
             </div>
           )}

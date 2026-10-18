@@ -95,7 +95,7 @@ export const ProvenanceStrip: React.FC<ProvenanceStripProps> = ({ activeEvent, m
           ? formatProvenanceTimestamp(capturedIso)
           : (activeEvent?.ts ? formatProvenanceTimestamp(new Date(activeEvent.ts * 1000)) : '');
 
-        const badgeText = mode === 'replay' ? `CACHED · ${capturedDate || 'run'}` : 'REAL';
+        const badgeText = mode === 'replay' ? 'CACHED' : 'REAL';
         const tooltipText = mode === 'replay'
           ? `REPLAY · captured ${capturedDate || capturedIso || timestampStr} from a real execution`
           : `Live Execution · ${capturedDate || timestampStr}`;
@@ -103,15 +103,15 @@ export const ProvenanceStrip: React.FC<ProvenanceStripProps> = ({ activeEvent, m
         return (
           <div
             key={pill.key}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-[6px] border border-[var(--line)] bg-[var(--bg-1)] font-mono text-[13px] transition-colors cursor-help"
+            className="flex items-center gap-1.5 px-2 py-0.5 rounded-[4px] border border-[var(--line)] bg-[var(--bg-1)] font-mono text-[13px] transition-colors cursor-help shrink-0 whitespace-nowrap leading-tight"
             title={`${pill.label} [${state}]: ${tooltipText}`}
           >
             <span
-              className="w-2 h-2 rounded-full inline-block"
+              className="w-1.5 h-1.5 rounded-full inline-block shrink-0"
               style={{ backgroundColor: config.dotColor }}
             />
-            <span className="text-[var(--text-dim)] font-semibold">{pill.label}</span>
-            <span style={{ color: config.textColor }}>{badgeText}</span>
+            <span className="text-[var(--text-dim)] font-semibold whitespace-nowrap">{pill.label}</span>
+            <span className="whitespace-nowrap font-medium" style={{ color: config.textColor }}>{badgeText}</span>
           </div>
         );
       })}

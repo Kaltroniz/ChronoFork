@@ -140,7 +140,7 @@ def execute_scenario_1(run_id: str = "run_scenario_1", mode: str = "replay") -> 
         },
         message=(
             f"Speculative fork simulation on fork:{run_id}:agent_1: "
-            f"Centrality risk = {sim_1['after']['risk_score']:.4f}. "
+            f"Centrality risk = {sim_1['after']['risk_score']:.3f}. "
             f"Blast radius: {len(sim_1['blast_radius'])} callers affected across 4 modules."
         )
     )
@@ -214,7 +214,7 @@ def execute_scenario_1(run_id: str = "run_scenario_1", mode: str = "replay") -> 
         node_ids=c["path_nodes"] if c else [],
         execution_data={"merge_order": merge_order},
         message=(
-            f"POLICY: SERIALIZE (load_config centrality risk = {c['risk_score']:.4f} >= 0.50). "
+            f"POLICY: SERIALIZE (load_config centrality risk = {c['risk_score']:.3f} >= 0.50). "
             f"FalkorDB wrote (:WorkerCoder)-[:BLOCKED_BY]->(:ConfigCoder). "
             f"Callee-first merge order: 1. {merge_order[0]['symbol']} (Callee), 2. {merge_order[1]['symbol']} (Caller)."
         )

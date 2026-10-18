@@ -300,6 +300,5 @@ def execute_job(job_id: str, token: str) -> dict:
         "naive_pytest_passed": pytest_res["passed_count"],
         "naive_pytest_failed": pytest_res["failed_count"],
         "duration_seconds": pytest_res.get("duration_seconds", 0.18),
-        "pytest_duration": pytest_res.get("duration_seconds", 0.18),
-        "pytest_output": pytest_res["output"][:1200]
+        "pytest_output": pytest_res["output"]
     }

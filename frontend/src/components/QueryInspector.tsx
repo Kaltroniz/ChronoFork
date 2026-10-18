@@ -205,7 +205,7 @@ export const QueryInspector: React.FC<QueryInspectorProps> = ({ activeEvent }) =
             Policy: <span className="font-bold text-[var(--breach)]">{collision.policy}</span>
             {collision.risk_score !== undefined && (
               <span className="ml-3 text-[var(--text-dim)]">
-                (Risk score: {collision.risk_score.toFixed(2)})
+                (Risk score: {collision.risk_score.toFixed(3)})
               </span>
             )}
           </div>

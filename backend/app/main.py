@@ -380,3 +380,278 @@ def ingest_repo(req: IngestRequest):
     cg = parse_repository(resolved_path, req.repo_name)
     stats = ingest_code_graph_to_falkordb(cg, falkor_client)
     return stats
+
+
+# ---------------------------------------------------------------------------
+# Live Gemini Mode Status & Diagnostic
+# ---------------------------------------------------------------------------
+from backend.app.agents.llm import llm_provider
+
+
+@app.get("/api/llm/status")
+def get_llm_status():
+    """Returns the operational status and supported models for Live Gemini mode."""
+    return llm_provider.get_status()
+
+
+# ---------------------------------------------------------------------------
+# MCP over HTTP (JSON-RPC 2.0 Endpoint for External Agents)
+# ---------------------------------------------------------------------------
+from backend.app.mcp_tools import (
+    get_impact as mcp_get_impact,
+    rank_risk as mcp_rank_risk,
+    claim_symbols as mcp_claim_symbols,
+    detect_collisions as mcp_detect_collisions,
+    recall_memory as mcp_recall_memory,
+    fork_graph as mcp_fork_graph,
+    record_episode as mcp_record_episode,
+)
+
+MCP_TOOLS_MANIFEST = [
+    {
+        "name": "get_impact",
+        "description": "Computes multi-hop impact traversal over reverse CALLS edges plus affected tests.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "repo": {"type": "string", "description": "Repository name (e.g. 'taskflow')"},
+                "symbol_qualname": {"type": "string", "description": "Qualified symbol name"},
+                "max_depth": {"type": "integer", "default": 4, "description": "Max call hops to traverse"}
+            },
+            "required": ["repo", "symbol_qualname"]
+        }
+    },
+    {
+        "name": "rank_risk",
+        "description": "Runs PageRank and Betweenness on FalkorDB to calculate symbol risk rankings.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "repo": {"type": "string", "description": "Repository name"}
+            },
+            "required": ["repo"]
+        }
+    },
+    {
+        "name": "claim_symbols",
+        "description": "Registers an agent's claim with intent (SIGNATURE_CHANGE, BODY_EDIT, DELETE, ADD).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "run_id": {"type": "string"},
+                "agent_id": {"type": "string"},
+                "symbol_qualname": {"type": "string"},
+                "intent": {"type": "string", "enum": ["SIGNATURE_CHANGE", "BODY_EDIT", "DELETE", "ADD"]},
+                "subtask": {"type": "string"}
+            },
+            "required": ["run_id", "agent_id", "symbol_qualname", "intent"]
+        }
+    },
+    {
+        "name": "detect_collisions",
+        "description": "Executes native Cypher query across all claims to detect transitive collisions.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "run_id": {"type": "string"}
+            },
+            "required": ["run_id"]
+        }
+    },
+    {
+        "name": "recall_memory",
+        "description": "Recalls procedural rules and past episodes linked to symbols.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "repo": {"type": "string"},
+                "candidate_symbols": {"type": "array", "items": {"type": "string"}}
+            },
+            "required": ["repo", "candidate_symbols"]
+        }
+    },
+    {
+        "name": "fork_graph",
+        "description": "Creates a speculative per-agent graph fork.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "run_id": {"type": "string"},
+                "agent_id": {"type": "string"},
+                "repo": {"type": "string"}
+            },
+            "required": ["run_id", "agent_id", "repo"]
+        }
+    },
+    {
+        "name": "record_episode",
+        "description": "Records an execution episode and updates procedural rules with confidence.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "repo": {"type": "string"},
+                "run_id": {"type": "string"},
+                "task": {"type": "string"},
+                "outcome": {"type": "string"},
+                "summary": {"type": "string"},
+                "involved_symbols": {"type": "array", "items": {"type": "string"}},
+                "rule_learned": {"type": "object"}
+            },
+            "required": ["repo", "run_id", "task", "outcome", "summary", "involved_symbols"]
+        }
+    }
+]
+
+
+@app.get("/mcp")
+def mcp_info():
+    """Information endpoint for the Model Context Protocol over HTTP interface."""
+    return {
+        "status": "online",
+        "protocol": "mcp-http",
+        "protocolVersion": "2024-11-05",
+        "serverInfo": {"name": "chronofork-coordination-server", "version": "1.0.0"},
+        "tools_count": len(MCP_TOOLS_MANIFEST),
+        "endpoint": "/mcp"
+    }
+
+
+@app.post("/mcp")
+async def mcp_rpc_handler(request_data: Dict[str, Any]):
+    """Standard Model Context Protocol (MCP) JSON-RPC 2.0 handler over HTTP."""
+    msg_id = request_data.get("id")
+    method = request_data.get("method")
+    params = request_data.get("params", {})
+
+    if method == "initialize":
+        return {
+            "jsonrpc": "2.0",
+            "id": msg_id,
+            "result": {
+                "protocolVersion": "2024-11-05",
+                "capabilities": {"tools": {}},
+                "serverInfo": {"name": "chronofork-coordination-server", "version": "1.0.0"}
+            }
+        }
+
+    if method in ("notifications/initialized", "ping"):
+        return {"jsonrpc": "2.0", "id": msg_id, "result": {}}
+
+    if method == "tools/list":
+        return {
+            "jsonrpc": "2.0",
+            "id": msg_id,
+            "result": {"tools": MCP_TOOLS_MANIFEST}
+        }
+
+    if method == "tools/call":
+        tool_name = params.get("name")
+        tool_args = params.get("arguments", {})
+
+        try:
+            if tool_name == "get_impact":
+                res = mcp_get_impact(
+                    repo=tool_args.get("repo", "taskflow"),
+                    symbol_qualname=tool_args.get("symbol_qualname", ""),
+                    max_depth=int(tool_args.get("max_depth", 4))
+                )
+            elif tool_name == "rank_risk":
+                res = mcp_rank_risk(repo=tool_args.get("repo", "taskflow"))
+            elif tool_name == "claim_symbols":
+                res = mcp_claim_symbols(
+                    run_id=tool_args.get("run_id", ""),
+                    agent_id=tool_args.get("agent_id", ""),
+                    symbol_qualname=tool_args.get("symbol_qualname", ""),
+                    intent=tool_args.get("intent", "BODY_EDIT"),
+                    subtask=tool_args.get("subtask", "")
+                )
+            elif tool_name == "detect_collisions":
+                res = mcp_detect_collisions(run_id=tool_args.get("run_id", ""))
+            elif tool_name == "recall_memory":
+                res = mcp_recall_memory(
+                    repo=tool_args.get("repo", "taskflow"),
+                    candidate_symbols=tool_args.get("candidate_symbols", [])
+                )
+            elif tool_name == "fork_graph":
+                res = mcp_fork_graph(
+                    run_id=tool_args.get("run_id", ""),
+                    agent_id=tool_args.get("agent_id", ""),
+                    repo=tool_args.get("repo", "taskflow")
+                )
+            elif tool_name == "record_episode":
+                res = mcp_record_episode(
+                    repo=tool_args.get("repo", "taskflow"),
+                    run_id=tool_args.get("run_id", ""),
+                    task=tool_args.get("task", ""),
+                    outcome=tool_args.get("outcome", "SUCCESS"),
+                    summary=tool_args.get("summary", ""),
+                    involved_symbols=tool_args.get("involved_symbols", []),
+                    rule_learned=tool_args.get("rule_learned")
+                )
+            else:
+                return {
+                    "jsonrpc": "2.0",
+                    "id": msg_id,
+                    "error": {"code": -32601, "message": f"Method or tool '{tool_name}' not found"}
+                }
+
+            return {
+                "jsonrpc": "2.0",
+                "id": msg_id,
+                "result": {
+                    "content": [{"type": "text", "text": json.dumps(res, indent=2)}]
+                }
+            }
+        except Exception as e:
+            return {
+                "jsonrpc": "2.0",
+                "id": msg_id,
+                "error": {"code": -32603, "message": f"Tool execution failed: {e}"}
+            }
+
+    return {
+        "jsonrpc": "2.0",
+        "id": msg_id,
+        "error": {"code": -32601, "message": f"Unrecognized JSON-RPC method: {method}"}
+    }
+
+
+# ---------------------------------------------------------------------------
+# Public Hosting & Static SPA Frontend Mounting
+# ---------------------------------------------------------------------------
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
+DIST_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "dist"))
+
+if os.path.isdir(DIST_DIR):
+    assets_dir = os.path.join(DIST_DIR, "assets")
+    if os.path.isdir(assets_dir):
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+
+    @app.get("/{full_path:path}")
+    async def serve_spa_frontend(full_path: str):
+        """Serves compiled frontend assets and falls back to index.html for SPA routes."""
+        # Never intercept API or MCP endpoints
+        if (
+            full_path.startswith("api/")
+            or full_path.startswith("runs")
+            or full_path.startswith("graph/")
+            or full_path.startswith("memory/")
+            or full_path.startswith("collisions/")
+            or full_path.startswith("health")
+            or full_path.startswith("mcp")
+            or full_path.startswith("repos")
+        ):
+            raise HTTPException(status_code=404, detail="API route not found")
+
+        file_path = os.path.join(DIST_DIR, full_path)
+        if full_path and os.path.isfile(file_path):
+            return FileResponse(file_path)
+
+        index_path = os.path.join(DIST_DIR, "index.html")
+        if os.path.isfile(index_path):
+            return FileResponse(index_path)
+
+        raise HTTPException(status_code=404, detail="Frontend index.html not found")
+

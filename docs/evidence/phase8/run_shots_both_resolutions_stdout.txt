@@ -1,0 +1,80 @@
+
+================================================================
+RUNNING SCREENSHOT & NON-INTERSECTION SUITE AT 1440x900
+================================================================
+[1440x900] Capturing 01-idle.png...
+[1440x900] Triggering Scenario 1...
+
+--- [1440x900] ASSERTING EVENT 7 CHAIN LABELS & CHIPS ---
+[1440x900] Chain Node Labels:
+  [0] execute_job: bbox=[x1: 1, x2: 95, y1: 294, y2: 318]
+  [1] dequeue_task: bbox=[x1: 155.5, x2: 262.5, y1: 294, y2: 318]
+  [2] validate_token: bbox=[x1: 315, x2: 425, y1: 294, y2: 318]
+  [3] get_connection: bbox=[x1: 472.5, x2: 589.5, y1: 294, y2: 318]
+  [4] load_config: bbox=[x1: 646.5, x2: 737.5, y1: 294, y2: 318]
+[1440x900] Claim Chips:
+  [Chip 0] "A1 Â· SIGNATURE_CHANGE": bbox=[x1: 601.1, x2: 782.9, y1: 179.5, y2: 205]
+  [Chip 1] "A2 Â· BODY_EDIT": bbox=[x1: -15.6, x2: 111.6, y1: 179.5, y2: 205]
+
+[1440x900] Pairwise Non-Intersection Assertions:
+  ASSERTION PASSED: [execute_job] and [dequeue_task] do NOT intersect (gap = 60.5px)
+  ASSERTION PASSED: [execute_job] and [validate_token] do NOT intersect (gap = 220px)
+  ASSERTION PASSED: [execute_job] and [get_connection] do NOT intersect (gap = 377.5px)
+  ASSERTION PASSED: [execute_job] and [load_config] do NOT intersect (gap = 551.5px)
+  ASSERTION PASSED: [dequeue_task] and [validate_token] do NOT intersect (gap = 52.5px)
+  ASSERTION PASSED: [dequeue_task] and [get_connection] do NOT intersect (gap = 210px)
+  ASSERTION PASSED: [dequeue_task] and [load_config] do NOT intersect (gap = 384px)
+  ASSERTION PASSED: [validate_token] and [get_connection] do NOT intersect (gap = 47.5px)
+  ASSERTION PASSED: [validate_token] and [load_config] do NOT intersect (gap = 221.5px)
+  ASSERTION PASSED: [get_connection] and [load_config] do NOT intersect (gap = 57px)
+  ASSERTION PASSED: Label [execute_job] and [A2 chip] do NOT intersect (vertical gap = 89px)
+  ASSERTION PASSED: Label [dequeue_task] and [A2 chip] do NOT intersect (vertical gap = 89px)
+  ASSERTION PASSED: Label [validate_token] and [A2 chip] do NOT intersect (vertical gap = 89px)
+  ASSERTION PASSED: Label [get_connection] and [A2 chip] do NOT intersect (vertical gap = 89px)
+  ASSERTION PASSED: Label [load_config] and [A2 chip] do NOT intersect (vertical gap = 89px)
+[1440x900] Capturing Scenario 2 (06-memory-run-compare.png)...
+[1440x900] Capturing Scenario 3 (07-zero-path-proof.png)...
+
+ðŸŒŸ All assertions passed at 1440x900!
+
+================================================================
+RUNNING SCREENSHOT & NON-INTERSECTION SUITE AT 1920x1080
+================================================================
+[1920x1080] Capturing 01-idle.png...
+[1920x1080] Triggering Scenario 1...
+
+--- [1920x1080] ASSERTING EVENT 7 CHAIN LABELS & CHIPS ---
+[1920x1080] Chain Node Labels:
+  [0] execute_job: bbox=[x1: 1, x2: 95, y1: 402, y2: 426]
+  [1] dequeue_task: bbox=[x1: 275.5, x2: 382.5, y1: 402, y2: 426]
+  [2] validate_token: bbox=[x1: 555, x2: 665, y1: 402, y2: 426]
+  [3] get_connection: bbox=[x1: 832.5, x2: 949.5, y1: 402, y2: 426]
+  [4] load_config: bbox=[x1: 1126.5, x2: 1217.5, y1: 402, y2: 426]
+[1920x1080] Claim Chips:
+  [Chip 0] "A1 Â· SIGNATURE_CHANGE": bbox=[x1: 1081.1, x2: 1262.9, y1: 287.5, y2: 313]
+  [Chip 1] "A2 Â· BODY_EDIT": bbox=[x1: -15.6, x2: 111.6, y1: 287.5, y2: 313]
+
+[1920x1080] Pairwise Non-Intersection Assertions:
+  ASSERTION PASSED: [execute_job] and [dequeue_task] do NOT intersect (gap = 180.5px)
+  ASSERTION PASSED: [execute_job] and [validate_token] do NOT intersect (gap = 460px)
+  ASSERTION PASSED: [execute_job] and [get_connection] do NOT intersect (gap = 737.5px)
+  ASSERTION PASSED: [execute_job] and [load_config] do NOT intersect (gap = 1031.5px)
+  ASSERTION PASSED: [dequeue_task] and [validate_token] do NOT intersect (gap = 172.5px)
+  ASSERTION PASSED: [dequeue_task] and [get_connection] do NOT intersect (gap = 450px)
+  ASSERTION PASSED: [dequeue_task] and [load_config] do NOT intersect (gap = 744px)
+  ASSERTION PASSED: [validate_token] and [get_connection] do NOT intersect (gap = 167.5px)
+  ASSERTION PASSED: [validate_token] and [load_config] do NOT intersect (gap = 461.5px)
+  ASSERTION PASSED: [get_connection] and [load_config] do NOT intersect (gap = 177px)
+  ASSERTION PASSED: Label [execute_job] and [A2 chip] do NOT intersect (vertical gap = 89px)
+  ASSERTION PASSED: Label [dequeue_task] and [A2 chip] do NOT intersect (vertical gap = 89px)
+  ASSERTION PASSED: Label [validate_token] and [A2 chip] do NOT intersect (vertical gap = 89px)
+  ASSERTION PASSED: Label [get_connection] and [A2 chip] do NOT intersect (vertical gap = 89px)
+  ASSERTION PASSED: Label [load_config] and [A2 chip] do NOT intersect (vertical gap = 89px)
+[1920x1080] Capturing Scenario 2 (06-memory-run-compare.png)...
+[1920x1080] Capturing Scenario 3 (07-zero-path-proof.png)...
+
+ðŸŒŸ All assertions passed at 1920x1080!
+
+================================================================
+ðŸŽ‰ SCREENSHOT SUITE COMPLETED FOR BOTH 1440x900 AND 1920x1080
+================================================================

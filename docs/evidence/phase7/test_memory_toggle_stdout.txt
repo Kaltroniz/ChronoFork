@@ -1,9 +1,2 @@
---- 1. Testing Scenario 2 with MEMORY ON ---
-Memory ON: 1 adaptations, 0 collisions
-PASSED: Memory ON successfully recalled rule and avoided collision!
-
---- 2. Testing Scenario 2 with MEMORY OFF ---
-Memory OFF: 1 collisions detected!
-PASSED: Memory OFF demonstrates the collision returns when memory is disabled!
-
->>> MEMORY ON/OFF TOGGLE VERIFICATION PASSED WITH FLYING COLORS! <<<
+'.venv' is not recognized as an internal or external command,
+operable program or batch file.

@@ -1,0 +1,20 @@
+CHRONOFORK VISUAL ASSETS MANIFEST
+Build Timestamp: 2026-10-18T03:19:47.855Z
+Generated from: scripts/run_phase9_ui_suite.cjs
+Total Assets: 14 (11 screenshots + 3 video clips)
+
+Files:
+  - 01-idle.png (204244 bytes, modified: 2026-10-18T03:18:50.405Z)
+  - 02-claims.png (234784 bytes, modified: 2026-10-18T03:18:51.192Z)
+  - 03-collision-hero.png (271502 bytes, modified: 2026-10-18T03:18:51.889Z)
+  - 04-git-vs-chronofork.png (271491 bytes, modified: 2026-10-18T03:18:52.496Z)
+  - 05-resolution-handoff.png (238813 bytes, modified: 2026-10-18T03:18:53.297Z)
+  - 06-memory-run-compare.png (287458 bytes, modified: 2026-10-18T03:18:55.346Z)
+  - 07-zero-path-proof.png (278800 bytes, modified: 2026-10-18T03:18:57.112Z)
+  - 08-receipt.png (247831 bytes, modified: 2026-10-18T03:18:59.131Z)
+  - 09-focus-view-4hop.png (289629 bytes, modified: 2026-10-18T03:19:00.840Z)
+  - clean-clone-story.png (189515 bytes, modified: 2026-10-18T03:19:03.638Z)
+  - live-fail-loudly.png (189655 bytes, modified: 2026-10-18T03:19:04.096Z)
+  - scenario1.webm (7554274 bytes, modified: 2026-10-18T03:19:24.061Z)
+  - scenario2.webm (4095385 bytes, modified: 2026-10-18T03:19:35.362Z)
+  - scenario3.webm (2909260 bytes, modified: 2026-10-18T03:19:45.431Z)

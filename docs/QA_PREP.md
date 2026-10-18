@@ -1,12 +1,12 @@
 # ChronoFork — Judge & Technical QA Preparation
 
-This document contains 15 technical questions and rigorous, verified answers prepared for hackathon judges, technical reviewers, and architectural deep-dives.
+This document contains 16 technical questions and rigorous, verified answers prepared for hackathon judges, technical reviewers, and architectural deep-dives.
 
 ---
 
 ### Q1: Why use a graph database like FalkorDB? Why couldn't this be done with PostgreSQL or a document store?
 **Answer**:
-1. **Arbitrary-Depth Transitive Traversal**: Finding whether Agent 2's target calls Agent 1's target across intermediate functions requires variable-length path traversal `(caller)-[:CALLS*1..4]->(target)`. In relational SQL, this requires recursive Common Table Expressions (CTEs) with multiple self-joins that become computationally prohibitive and unindexable as depth grows. In FalkorDB, openCypher evaluates this 4-hop chain in **0.76 ms** on the 69-node repository graph.
+1. **Arbitrary-Depth Transitive Traversal**: Finding whether Agent 2's target calls Agent 1's target across intermediate functions requires variable-length path traversal `(caller)-[:CALLS*1..4]->(target)`. In relational SQL, this requires recursive Common Table Expressions (CTEs) with multiple self-joins that become computationally prohibitive and unindexable as depth grows. In FalkorDB, openCypher evaluates this 4-hop chain in **about a millisecond (1.6 ms on screen)** on the 69-node repository graph.
 2. **Native In-Memory Graph Algorithms**: PageRank and Betweenness Centrality determine whether a symbol is an architectural bottleneck. Running these on SQL tables requires exporting the adjacency matrix to an external compute engine (e.g. NetworkX) on every claim. FalkorDB executes `algo.pageRank` in **1.36 ms** and `algo.betweenness` in **1.80 ms** directly in Redis memory.
 3. **Unified Code and Swarm Model**: In FalkorDB, coordination entities (`:Agent`, `:Run`) connect directly to code AST symbols (`:Symbol`) via `[:CLAIMS]` edges. A single query traverses from Agent $\to$ Claim $\to$ Symbol $\to$ CALLS chain $\to$ Symbol $\to$ Claim $\to$ Agent, returning the entire causal chain in a single graph transaction.
 
@@ -34,7 +34,7 @@ RETURN a1.id AS a1, a2.id AS a2, s1.qualname AS s1_qname, s2.qualname AS s2_qnam
 ### Q3: Why does ChronoFork copy the graph per run (`GRAPH.COPY`) instead of operating on a single graph?
 **Answer**:
 - **Isolation of Swarm State**: The baseline code structure in `repo:<name>` must remain pristine. Each swarm execution clones the graph into `coord:<run_id>` via FalkorDB's native `GRAPH.COPY` (median latency **108.32 ms**).
-- **Concurrency & Blast Radius**: Multiple runs or speculative forks (`fork:<run_id>:<agent_id>`) can mutate claims, test candidate patches, and record speculative blast radius without risking race conditions or polluting persistent repository data.
+- **Concurrency & Blast Radius**: Multiple runs or speculative forks (`fork:<run_id>:<agent_id>`) can mutate claims, test candidate patches, and record speculative blast radius without risking race conditions or polluting persistent repository data. Note on fork simulation: speculative fork simulation creates an isolated graph copy (`graph.copy`) used strictly to evaluate blast radius and identify affected upstream dependents in isolation before filesystem edits occur. Because it is an isolated structural copy used for blast radius calculation, it does not apply the patch to the graph schema, so the measured architectural risk score remains identical before and after simulation (`risk before == after`, 0.854).
 
 ---
 
@@ -42,7 +42,7 @@ RETURN a1.id AS a1, a2.id AS a2, s1.qualname AS s1_qname, s2.qualname AS s2_qnam
 **Answer**:
 From [`backend/app/algorithms.py:53-56`](backend/app/algorithms.py#L53-L56), risk is a normalized blend of structural dependency scarcity (PageRank) and bridge centrality (Betweenness):
 $$\text{Risk}(S) = 0.5 \times \frac{\text{PageRank}(S)}{\max(\text{PageRank})} + 0.5 \times \frac{\text{Betweenness}(S)}{\max(\text{Betweenness})}$$
-- For `taskflow.config.load_config`, raw PageRank is 0.0561 (normalized 1.0000) and raw Betweenness is 26.0 (normalized 0.6500), yielding Risk = $0.5(1.0) + 0.5(0.65) = \mathbf{0.8250}$.
+- For `taskflow.config.load_config`, raw PageRank is 0.056058 (normalized 1.0000) and raw Betweenness is 34.0 (max 48.0, normalized 0.7083), yielding Risk = $0.5(1.0) + 0.5(0.7083) = \mathbf{0.854}$ (formatted as 0.854 across the UI and documented in `docs/NUMBERS.md`).
 - **Policy Enforcement**: If Agent 1's intent is `SIGNATURE_CHANGE` or `DELETE`, ChronoFork's coordinator **forces policy `SERIALIZE_CALLEE_FIRST` regardless of the risk threshold**, because altering a callee's interface will break caller execution irrespective of centrality.
 
 ---
@@ -51,7 +51,7 @@ $$\text{Risk}(S) = 0.5 \times \frac{\text{PageRank}(S)}{\max(\text{PageRank})} +
 **Answer**:
 - Managed exclusively by `backend/app/memory.py:update_rule_confidence`.
 - Procedural rules are initialized with an initial prior confidence of `0.85`.
-- On verified execution success (`pytest` passes), confidence increases by `+0.10` and saturates at a ceiling of `0.99`.
+- On verified execution success (`pytest` passes), confidence increases by `+0.10` and **saturates at a ceiling of `0.99`**.
 - On failure, confidence decreases by `-0.20`, clamped to a minimum floor of `0.10`.
 - In Scenario 1, the rule is learned with confidence `0.85` and boosted to `0.95`. In Scenario 2, the rule is recalled, prevents collision, and rises to `0.99`.
 
@@ -78,7 +78,7 @@ As documented in [`docs/benchmark.md`](docs/benchmark.md):
 ### Q8: What happens if FalkorDB is shut down during execution?
 **Answer**:
 ChronoFork **fails loudly with zero mock fallbacks**:
-- When FalkorDB is stopped, calling `POST /runs` in live mode, `GET /graph/taskflow`, or `GET /collisions/test_run` returns HTTP **`503 Service Unavailable`** with body `{"detail": "FalkorDB connection refused or offline: Error 61 connecting to 127.0.0.1:6379"}`.
+- When FalkorDB is stopped, calling `POST /runs` in live mode, `GET /graph/taskflow`, or `GET /collisions/test_run` returns HTTP **`503 Service Unavailable`** with body `{"detail": "FalkorDB connection refused or offline: ... failure to connect ..."}`.
 - The frontend renders an explicit red error toast banner. No stale mock graphs are rendered. Verified via Playwright in [`docs/screens/live-fail-loudly.png`](docs/screens/live-fail-loudly.png).
 
 ---
@@ -118,10 +118,11 @@ ChronoFork **fails loudly with zero mock fallbacks**:
 
 ---
 
-### Q13: What does `DEMO_MODE` do in configuration?
+### Q13: What does `DEMO_MODE` disable in configuration?
 **Answer**:
-- Configurable via `.env` or Docker Compose environment: `DEMO_MODE=true`.
-- In `DEMO_MODE`, the backend enforces replay mode across all endpoints, blocking accidental live runs and external API invocations to guarantee deterministic exhibition during conference presentations or judge evaluations.
+Configurable via `.env` or Docker Compose environment: `DEMO_MODE=true` (which is default for production safety):
+1. **Live Subprocess Execution**: In `POST /runs`, `DEMO_MODE=true` forces execution to `replay` mode (`req_mode = "replay" if demo_mode else req.mode`), disabling live Git branch creation, live subprocess merges, and live `pytest` invocations on the host.
+2. **Arbitrary Repository Ingestion**: In `POST /repos`, `DEMO_MODE=true` returns HTTP **`403 Forbidden`** (`"Repository upload and ingestion is disabled in Demo Mode."`), completely disabling arbitrary directory tree parsing and FalkorDB graph ingestion from external requests.
 
 ---
 
@@ -136,7 +137,18 @@ ChronoFork **fails loudly with zero mock fallbacks**:
 
 ---
 
-### Q15: What tools were used to build ChronoFork, and what did the human team personally verify?
+### Q15: What does Rule 3 mean here?
+**Answer**:
+"Rule 3" has two specific technical contexts in the ChronoFork codebase and hackathon submission:
+1. **FalkorDB openCypher Query Rule 3 (from [`docs/falkordb-verified.md`](falkordb-verified.md))**:
+   *"ShortestPath constraint: Do not assign `p = shortestPath(...)` directly in `MATCH`; use `WITH shortestPath(...) AS p` or `CALL algo.SPpaths`."*
+   FalkorDB's openCypher implementation enforces that `shortestPath` cannot be bound as an inline variable pattern in the initial `MATCH` clause without planner syntax errors. For transitive collision detection, ChronoFork adheres to this by using variable-length path traversal `MATCH path = (s2)-[:CALLS*1..4]->(s1)`, which compiles directly into native sparse matrix-matrix multiplication in FalkorDB.
+2. **Hackathon Submission Rule 3 (from [`docs/SUBMISSION_CHECKLIST.md`](SUBMISSION_CHECKLIST.md))**:
+   Item 3 of the submission requirements mandates publishing every Cypher query verbatim with technical justification explaining why a graph database is necessary over relational SQL or vector stores (transitive traversal, native C-level centrality algorithms, and unified coordination property graph).
+
+---
+
+### Q16: What tools were used to build ChronoFork, and what did the human team personally verify?
 **Answer**:
 - **Google Antigravity**: Used for autonomous codebase implementation, Playwright end-to-end verification, test suite authoring, and Docker containerization.
 - **Anthropic Claude**: Used for initial design review, architectural planning, and benchmark methodology design.

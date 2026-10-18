@@ -1,0 +1,5 @@
+Total events emitted: 14
+Git Merge Pytest: failed=5 passed=7 duration=1.45s
+Impact Event Callers: ['taskflow.database.get_connection', 'tests.test_config.test_load_config_default', 'taskflow.auth.validate_token', 'taskflow.queue.dequeue_task', 'tests.test_auth.test_validate_token_invalid', 'tests.test_auth.test_validate_token_valid', 'taskflow.worker.execute_job']
+Verifier Pytest: passed=12 failed=0 duration=1.77s
+Verifier Message: Verifier executed pytest on merged workspace: 12 passed in 1.77s. All 12 test suites passing!

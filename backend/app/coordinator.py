@@ -138,7 +138,7 @@ def detect_collisions(run_id: str) -> List[Dict[str, Any]]:
             "max_betweenness": round(max_bw, 4),
             "norm_pagerank": round(pr_norm, 6),
             "norm_betweenness": round(bw_norm, 4),
-            "formula": f"0.5 * {pr_norm:.6f} + 0.5 * {bw_norm:.4f} = {risk:.4f}"
+            "formula": f"0.5 * {pr_norm:.6f} + 0.5 * {bw_norm:.4f} = {risk:.3f}"
         }
         collisions.append({
             "type": "DIRECT_COLLISION",
@@ -153,7 +153,7 @@ def detect_collisions(run_id: str) -> List[Dict[str, Any]]:
             "risk_score": risk,
             "risk_inputs": risk_inputs,
             "policy": CollisionPolicy.SERIALIZE,
-            "reason": f"Direct claim overlap on {sym} ({intent1} vs {intent2}, risk={risk:.4f})"
+            "reason": f"Direct claim overlap on {sym} ({intent1} vs {intent2}, risk={risk:.3f})"
         })
 
     # Query 2: Transitive call chain collision (1 to 4 CALLS hops)
@@ -178,7 +178,7 @@ def detect_collisions(run_id: str) -> List[Dict[str, Any]]:
         bw_raw = bw_scores.get(s1_q, 0.0)
         pr_norm = pr_raw / max_pr
         bw_norm = bw_raw / max_bw
-        risk_a = round(0.5 * pr_norm + 0.5 * bw_norm, 4)
+        risk_a = round(0.5 * pr_norm + 0.5 * bw_norm, 3)
         risk_inputs = {
             "pagerank": round(pr_raw, 6),
             "betweenness": round(bw_raw, 4),
@@ -186,7 +186,7 @@ def detect_collisions(run_id: str) -> List[Dict[str, Any]]:
             "max_betweenness": round(max_bw, 4),
             "norm_pagerank": round(pr_norm, 6),
             "norm_betweenness": round(bw_norm, 4),
-            "formula": f"0.5 * {pr_norm:.6f} + 0.5 * {bw_norm:.4f} = {risk_a:.4f}"
+            "formula": f"0.5 * {pr_norm:.6f} + 0.5 * {bw_norm:.4f} = {risk_a:.3f}"
         }
 
         # CENTRALITY RISK DRIVES DECISION:
@@ -210,7 +210,7 @@ def detect_collisions(run_id: str) -> List[Dict[str, Any]]:
             "risk_inputs": risk_inputs,
             "policy": policy,
             "reason": (
-                f"Agent {a1} claims {s1_q} ({intent1}, risk={risk_a:.4f}); "
+                f"Agent {a1} claims {s1_q} ({intent1}, risk={risk_a:.3f}); "
                 f"Agent {a2} touches {s2_q} which depends on it via a {hops}-hop call chain: "
                 f"{' -> '.join(path_nodes)}. Git would merge cleanly; runtime will break!"
             )

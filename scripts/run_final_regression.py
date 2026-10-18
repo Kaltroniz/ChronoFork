@@ -11,26 +11,28 @@ import sys
 import subprocess
 
 WORKSPACE_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-EVIDENCE_DIR = os.path.join(WORKSPACE_ROOT, "docs", "evidence", "phase7")
+EVIDENCE_DIR = os.path.join(WORKSPACE_ROOT, "docs", "evidence", sys.argv[1] if len(sys.argv) > 1 else "phase8")
 os.makedirs(EVIDENCE_DIR, exist_ok=True)
 
+PYTHON = sys.executable
+
 SCRIPTS = [
-    ("verify_item1", ".venv/bin/python scripts/verify_item1.py"),
-    ("verify_item3", ".venv/bin/python scripts/verify_item3.py"),
-    ("verify_item4", ".venv/bin/python scripts/verify_item4.py"),
-    ("verify_item8", ".venv/bin/python scripts/verify_item8.py"),
-    ("verify_item9", ".venv/bin/python scripts/verify_item9.py"),
-    ("verify_scenarios_2_3_4", ".venv/bin/python scripts/verify_scenarios_2_3_4.py"),
-    ("test_p1", ".venv/bin/python scripts/test_p1.py"),
-    ("test_p2", ".venv/bin/python scripts/test_p2.py"),
-    ("test_p3", ".venv/bin/python scripts/test_p3.py"),
-    ("test_p4", ".venv/bin/python scripts/test_p4.py"),
-    ("test_p6", ".venv/bin/python scripts/test_p6.py"),
-    ("test_all_scenarios", ".venv/bin/python scripts/test_all_scenarios.py"),
-    ("test_api_execution", ".venv/bin/python scripts/test_api_execution.py"),
-    ("test_memory_toggle", ".venv/bin/python scripts/test_memory_toggle.py"),
-    ("benchmark_detection", ".venv/bin/python scripts/benchmark_detection.py"),
-    ("run_shots_both_resolutions", "NODE_PATH=./frontend/node_modules node scripts/run_shots_both_resolutions.cjs"),
+    ("verify_item1", f'"{PYTHON}" scripts/verify_item1.py'),
+    ("verify_item3", f'"{PYTHON}" scripts/verify_item3.py'),
+    ("verify_item4", f'"{PYTHON}" scripts/verify_item4.py'),
+    ("verify_item8", f'"{PYTHON}" scripts/verify_item8.py'),
+    ("verify_item9", f'"{PYTHON}" scripts/verify_item9.py'),
+    ("verify_scenarios_2_3_4", f'"{PYTHON}" scripts/verify_scenarios_2_3_4.py'),
+    ("test_p1", f'"{PYTHON}" scripts/test_p1.py'),
+    ("test_p2", f'"{PYTHON}" scripts/test_p2.py'),
+    ("test_p3", f'"{PYTHON}" scripts/test_p3.py'),
+    ("test_p4", f'"{PYTHON}" scripts/test_p4.py'),
+    ("test_p6", f'"{PYTHON}" scripts/test_p6.py'),
+    ("test_all_scenarios", f'"{PYTHON}" scripts/test_all_scenarios.py'),
+    ("test_api_execution", f'"{PYTHON}" scripts/test_api_execution.py'),
+    ("test_memory_toggle", f'"{PYTHON}" scripts/test_memory_toggle.py'),
+    ("benchmark_detection", f'"{PYTHON}" scripts/benchmark_detection.py'),
+    ("run_shots_both_resolutions", "node scripts/run_shots_both_resolutions.cjs"),
 ]
 
 
@@ -57,7 +59,7 @@ def extract_assertion_value(name: str, stdout: str) -> str:
 
 def main():
     print("================================================================================")
-    print("PHASE 7 FINAL REGRESSION EXECUTION")
+    print("FINAL REGRESSION EXECUTION")
     print("================================================================================\n")
 
     results = []
@@ -68,6 +70,7 @@ def main():
 
         env = dict(os.environ)
         env["PYTHONPATH"] = WORKSPACE_ROOT
+        env["NODE_PATH"] = os.path.join(WORKSPACE_ROOT, "frontend", "node_modules")
 
         res = subprocess.run(
             cmd,

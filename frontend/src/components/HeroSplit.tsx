@@ -21,20 +21,20 @@ export const HeroSplit: React.FC<HeroSplitProps> = ({
   onDismiss,
   dismissed
 }) => {
-  const [isCollapsed, setIsCollapsed] = useState<boolean>(true);
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
 
   const collision = getCollision(activeEvent);
 
   // Requirement 4: Expanded at first render of collision event, auto-docks after 1.5s
   useEffect(() => {
-    if (activeEvent?.phase === 'COLLISION_DETECTION' && collision) {
+    if (collision) {
       setIsCollapsed(false);
       const timer = setTimeout(() => {
         setIsCollapsed(true);
       }, 1500);
       return () => clearTimeout(timer);
     }
-  }, [activeEvent?.phase, activeEvent?.index, Boolean(collision)]);
+  }, [activeEvent, Boolean(collision)]);
 
   if (!collision || dismissed) return null;
 
@@ -47,7 +47,7 @@ export const HeroSplit: React.FC<HeroSplitProps> = ({
   const gitData = getGitComparisonData(gitEvent);
 
   const hops = typeof collision.hops === 'number' ? collision.hops : undefined;
-  const risk = typeof collision.risk_score === 'number' ? collision.risk_score.toFixed(2) : undefined;
+  const risk = typeof collision.risk_score === 'number' ? collision.risk_score.toFixed(3) : undefined;
   const pathNodes = Array.isArray(collision.path_nodes) ? collision.path_nodes : [];
 
   const knownNodes = new Set<string>();
@@ -84,12 +84,12 @@ export const HeroSplit: React.FC<HeroSplitProps> = ({
 
   return (
     <div
-      className="absolute top-4 left-6 z-30 w-[780px] max-w-[94%] max-h-[230px] overflow-y-auto cf-scrollbar cf-floating-card p-3.5 transition-opacity duration-200 shadow-2xl select-none"
+      className="absolute top-4 left-6 z-30 w-[780px] max-w-[94%] max-h-[280px] h-auto overflow-y-auto cf-scrollbar cf-floating-card p-2 transition-opacity duration-200 shadow-2xl select-none"
       role="alert"
       aria-label="Collision Detection Split View"
     >
       {/* Top Header Row with zero-overlap grid: Title on left, Policy + Risk + Controls on right */}
-      <div className="flex items-center justify-between pb-2 mb-2 border-b border-[var(--line)]">
+      <div className="flex items-center justify-between pb-1 mb-1 border-b border-[var(--line)]">
         <div className="flex items-center gap-2">
           <span className="w-2.5 h-2.5 rounded-full bg-[var(--breach)] animate-pulse inline-block" />
           <span className="text-eyebrow text-[var(--breach)] font-semibold">
@@ -128,14 +128,14 @@ export const HeroSplit: React.FC<HeroSplitProps> = ({
       <div
         className={`grid ${
           gitData ? 'grid-cols-2 divide-x divide-[var(--line)]' : 'grid-cols-1'
-        } gap-6`}
+        } gap-4`}
       >
         {/* LEFT COLUMN: Git merge */}
         {gitData && (
-          <div className="flex flex-col justify-between pr-4 space-y-3">
+          <div className="flex flex-col justify-between pr-3 space-y-1">
             <div>
-              <div className="text-eyebrow mb-1">Git Merge</div>
-              <div className="flex items-center gap-2 text-[14px] text-[var(--text)] font-medium">
+              <div className="text-eyebrow mb-0.5">Git Merge</div>
+              <div className="flex items-center gap-2 text-[13px] text-[var(--text)] font-medium">
                 <span className="w-2 h-2 rounded-full bg-[var(--clear)] inline-block" />
                 <span>
                   {gitData.conflictsCount !== undefined
@@ -145,41 +145,41 @@ export const HeroSplit: React.FC<HeroSplitProps> = ({
               </div>
             </div>
 
-            <div className="p-3 rounded-[6px] bg-[var(--bg-2)] border border-[var(--line)]">
-              <span className="text-eyebrow block mb-1">Runtime Test Result</span>
-              <div className="text-[18px] font-mono font-bold text-[var(--breach)]">
+            <div className="p-1.5 rounded-[6px] bg-[var(--bg-2)] border border-[var(--line)]">
+              <span className="text-eyebrow block mb-0.5">Runtime Test Result</span>
+              <div className="text-[15px] font-mono font-bold text-[var(--breach)]">
                 {gitData.pytestFailed !== undefined && gitData.pytestPassed !== undefined
                   ? `${gitData.pytestFailed} FAILED · ${gitData.pytestPassed} PASSED`
                   : 'Tests Failed at Runtime'}
               </div>
-              <div className="text-[13px] text-[var(--text-dim)] mt-1 font-mono">
+              <div className="text-[12px] text-[var(--text-dim)] mt-0.5 font-mono">
                 {gitData.durationSeconds !== undefined
                   ? `duration: ${gitData.durationSeconds.toFixed(2)}s`
                   : 'exit code: 1'}
               </div>
             </div>
 
-            <div className="text-[13px] text-[var(--text-dim)] italic font-sans">
+            <div className="text-[12px] text-[var(--text-dim)] italic font-sans">
               Git merged clean branches with no text conflicts; runtime crashed on missing contract.
             </div>
           </div>
         )}
 
         {/* RIGHT COLUMN: ChronoFork */}
-        <div className="flex flex-col justify-between pl-2 space-y-3">
+        <div className="flex flex-col justify-between pl-2 space-y-1">
           <div>
             <div className="text-eyebrow text-[var(--breach)] font-semibold">ChronoFork Detection</div>
-            <div className="text-[13px] text-[var(--text-dim)] mt-0.5">1 transitive collision detected across call path</div>
+            <div className="text-[12px] text-[var(--text-dim)] mt-0.5">1 transitive collision detected across call path</div>
           </div>
 
-          <div className="my-1">
-            <div className="text-hero text-[var(--breach)]">
+          <div className="my-0.5">
+            <div className="text-[20px] font-bold font-mono text-[var(--breach)]">
               {hops !== undefined ? `${hops} HOPS` : 'COLLISION'}
             </div>
           </div>
 
           <div>
-            <div className="text-eyebrow mb-1.5">Dependency Call Chain</div>
+            <div className="text-eyebrow mb-0.5">Dependency Call Chain</div>
             {/* Horizontal chip path with -> connectors, wrapping to two rows if needed */}
             <div className="flex flex-wrap items-center gap-1.5 max-w-full">
               {pathNodes.map((nodeName, idx) => {

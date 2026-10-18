@@ -15,24 +15,41 @@ class FalkorClient:
         username: Optional[str] = None,
         password: Optional[str] = None,
         ssl: Optional[bool] = None,
+        url: Optional[str] = None,
     ):
-        self.host = host or os.getenv("FALKORDB_HOST", "127.0.0.1")
-        self.port = port or int(os.getenv("FALKORDB_PORT", "6379"))
-        self.username = username or os.getenv("FALKORDB_USERNAME", None)
-        self.password = password or os.getenv("FALKORDB_PASSWORD", None)
-        
-        ssl_env = os.getenv("FALKORDB_SSL", "false").lower() in ("true", "1", "yes")
-        self.ssl = ssl if ssl is not None else ssl_env
+        falkor_url = url or os.getenv("FALKORDB_URL", "")
+        # Also check if host was passed as a complete connection url
+        if not falkor_url and host and ("://" in host):
+            falkor_url = host
 
-        conn_kwargs: Dict[str, Any] = {"host": self.host, "port": self.port}
-        if self.password:
-            conn_kwargs["password"] = self.password
-        if self.username:
-            conn_kwargs["username"] = self.username
-        if self.ssl:
-            conn_kwargs["ssl"] = True
+        if falkor_url:
+            self.url = falkor_url
+            self.db = FalkorDB.from_url(falkor_url)
+            self.host = "cloud"
+            self.port = 0
+            self.username = None
+            self.password = None
+            self.ssl = "rediss://" in falkor_url or "ssl=true" in falkor_url.lower()
+        else:
+            self.url = None
+            self.host = host or os.getenv("FALKORDB_HOST", "127.0.0.1")
+            self.port = port or int(os.getenv("FALKORDB_PORT", "6379"))
+            self.username = username or os.getenv("FALKORDB_USERNAME", None)
+            self.password = password or os.getenv("FALKORDB_PASSWORD", None)
+            
+            ssl_env = os.getenv("FALKORDB_SSL", "false").lower() in ("true", "1", "yes")
+            self.ssl = ssl if ssl is not None else ssl_env
 
-        self.db = FalkorDB(**conn_kwargs)
+            conn_kwargs: Dict[str, Any] = {"host": self.host, "port": self.port}
+            if self.password:
+                conn_kwargs["password"] = self.password
+            if self.username:
+                conn_kwargs["username"] = self.username
+            if self.ssl:
+                conn_kwargs["ssl"] = True
+
+            self.db = FalkorDB(**conn_kwargs)
+
         self.last_trace: Optional[Dict[str, Any]] = None
         self._tool_traces: Dict[str, Dict[str, Any]] = {}
 

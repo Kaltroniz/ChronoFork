@@ -56,14 +56,14 @@ export const ZeroPathProof: React.FC<ZeroPathProofProps> = ({
     (e) => e.phase === 'MEMORY_ADAPTATION' || (e.phase === 'COLLISION_DETECTION' && (e.execution_data?.path_rows_count ?? 0) > 0)
   );
 
-  // Auto-compact after 3s like the hero (only for disjoint subgraphs proof)
+  // Auto-compact after 1.5s like the hero (only for disjoint subgraphs proof)
   useEffect(() => {
     setIsCollapsed(false);
     if (!shouldShow || isMemoryAdapted) return;
 
     const timer = setTimeout(() => {
       setIsCollapsed(true);
-    }, 3000);
+    }, 1500);
 
     return () => clearTimeout(timer);
   }, [activeEvent, shouldShow, isMemoryAdapted]);
@@ -113,7 +113,7 @@ export const ZeroPathProof: React.FC<ZeroPathProofProps> = ({
 
   return (
     <div
-      className="absolute top-4 left-1/2 -translate-x-1/2 z-30 w-[640px] max-w-[94%] cf-floating-card border border-[var(--clear)] p-5 transition-opacity duration-200 shadow-2xl select-none"
+      className="absolute top-4 left-1/2 -translate-x-1/2 z-30 w-[640px] max-w-[94%] max-h-[280px] h-auto overflow-y-auto cf-scrollbar cf-floating-card border border-[var(--clear)] p-4 transition-opacity duration-200 shadow-2xl select-none"
       role="status"
       aria-label="Zero Path Proof"
     >

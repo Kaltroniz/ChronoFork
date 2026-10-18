@@ -1,5 +1,2 @@
-Scenario 2 Cold Start Event: Cold Start: No prior rules found in mem:taskflow. Running unguided cold start without prior memory.
-Scenario 2 Memory Hit: MEMORY HIT! ConfigCoder recalled ProceduralRule 'load_config signature changes break transitive caller worker.execute_job (4 hops via database, auth, queue)' with 95% confidence. Recommended intent: BODY_EDIT. Advice: Serialize execution or provide backward-compatible dict access/default kwargs when modifying load_config..
-Scenario 2 Intent Adaptation: Memory-Driven Adaptation: Rule 'rule_cfg_worker_transitive' recommends intent 'BODY_EDIT' instead of breaking SIGNATURE_CHANGE. Preserving signature compatibility!
-Scenario 3 Pytest: Parallel merges validated. Real pytest: 12 passed in 0.13s.
-Scenario 4 Pytest: Analytics tests verified in isolated workspace: 1 passed in 0.13s. Clean multi-tenant repository isolation confirmed.
+'.venv' is not recognized as an internal or external command,
+operable program or batch file.

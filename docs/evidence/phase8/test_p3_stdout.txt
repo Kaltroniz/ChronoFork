@@ -1,0 +1,20 @@
+=== P3 Acceptance Test Starting ===
+
+--- Step 1: Recording Episode from Scenario 1 ---
+Recorded Episode ID: ep_1792265904_67dafd, Learned Rule ID: rule_cfg_worker_transitive
+
+--- Step 2: Verification of Rule Confidence Update ---
+Confidence after successful merge: 0.90 (rises from 0.80 -> 0.90)
+
+--- Step 3: Scenario 2 Memory Recall upfront ---
+Recalled 1 rule(s) and 1 episode(s).
+  Recalled Rule ID: rule_cfg_worker_transitive
+  Rule: load_config signature changes break transitive caller worker.execute_job (4 hops via database, auth, queue)
+  Advice: Serialize execution: Agent modifying load_config must complete and merge before worker edits proceed.
+  Confidence: 90%
+  Trigger Symbol: taskflow.config.load_config
+
+PASSED: Scenario 2 recalled past lesson upfront with high confidence (90%)!
+Behavior changed: Agents serialize upfront without suffering runtime failure.
+
+>>> P3 ACCEPTANCE TEST PASSED SUCCESSFULLY! <<<

@@ -1,5 +1,2 @@
-Replay Mode Response: {'run_id': 'run_1792233133937', 'status': 'REPLAY_CACHED', 'scenario': 1, 'mode': 'replay', 'cached': True, 'events_count': 14}
-Replay Latency: 7.7ms (Instant!)
-Streamed 15 event lines from cache successfully!
-
-Item 4 Status: VERIFIED & PASSING!
+'.venv' is not recognized as an internal or external command,
+operable program or batch file.

@@ -176,7 +176,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
             intent: claim.intent,
             agentName: claim.agentName,
             x: pos.x,
-            y: pos.y - outerH / 2 - 8 - indexOnNode * 26
+            y: pos.y - outerH / 2 - 30 - indexOnNode * 26
           });
         });
       }
@@ -540,9 +540,26 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
             'z-index': 1
           }
         },
-        // Label collision avoidance: hide lower-priority overlapping label (Requirement 5)
+        // Chain nodes: 44px, compact 11px label so adjacent gap is always >= 24px even at narrow viewports
         {
-          selector: 'node.hide-label',
+          selector: 'node.chain-node, node.chain-node.focus-node, node.chain-node.resolved-signal-node, node.chain-node.collision-breach-node, node.chain-node.collision-hop-node, node.chain-node.migrated-clear-node, node.chain-node.resolved-clear-node',
+          style: {
+            'width': 44,
+            'height': 44,
+            'label': 'data(name)',
+            'color': '#F0F2F5',
+            'font-size': 11,
+            'font-weight': 600,
+            'font-family': 'Inter, system-ui, sans-serif',
+            'text-valign': 'bottom',
+            'text-margin-y': 4,
+            'text-outline-width': 1,
+            'text-outline-color': '#0B0E13'
+          }
+        },
+        // Label collision avoidance & hide parent module labels when chain active
+        {
+          selector: 'node:parent.hide-label, node.hide-label',
           style: {
             'label': ''
           }
@@ -703,9 +720,8 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
       const zoom = cy.zoom();
       if (!zoom || zoom <= 0) return;
       const baseFont = Math.min(16 / zoom, Math.max(13 / zoom, 13 / zoom));
-      const chainFont = Math.min(16 / zoom, Math.max(13 / zoom, 14 / zoom));
+      const chainFont = Math.min(12 / zoom, Math.max(11 / zoom, 11 / zoom));
       const parentFont = Math.min(16 / zoom, Math.max(13 / zoom, 16 / zoom));
-
       cy.batch(() => {
         cy.nodes(':visible').not('.chain-node').not(':parent').style('font-size', baseFont);
         cy.nodes(':visible:parent').style('font-size', parentFont);
@@ -713,11 +729,14 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
           'font-size': chainFont,
           'color': '#FFFFFF',
           'text-outline-color': '#0B0E13',
-          'text-outline-width': 3
+          'text-outline-width': 1
         });
       });
 
       updateLabelCollisionAvoidance();
+      if (activeChainNodeIdsRef.current.length > 0) {
+        cy.nodes(':parent').addClass('hide-label');
+      }
     };
 
     initialLayout.on('layoutstop', () => {
@@ -751,7 +770,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
           fileLine: data.path ? `${data.path}:${data.lineno}` : '—',
           pagerank: typeof data.pagerank === 'number' ? data.pagerank.toFixed(4) : '—',
           betweenness: typeof data.betweenness === 'number' ? data.betweenness.toFixed(4) : '—',
-          risk: typeof data.risk_score === 'number' ? data.risk_score.toFixed(4) : '—'
+          risk: typeof data.risk_score === 'number' ? data.risk_score.toFixed(3) : '—'
         });
       }
     });
@@ -810,14 +829,41 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
           cyRef.current.fit(undefined, 60);
         } else {
           const currentChainIds = activeChainNodeIdsRef.current;
-          const chainNodes = cyRef.current.nodes().filter((n) => currentChainIds.includes(n.id()));
-          const visibleNeighbors = cyRef.current.nodes('.faint-neighbor');
-          const fitElements = chainNodes.union(visibleNeighbors);
-          if (fitElements.length > 0) {
-            cyRef.current.fit(fitElements, 120);
+          if (currentChainIds.length > 0) {
+            cyRef.current.stop();
+            cyRef.current.zoom(1);
+            cyRef.current.pan({ x: 0, y: 0 });
+            const cyW = cyRef.current.width() || 1200;
             const cyH = cyRef.current.height() || 788;
-            const targetY = Math.round(cyH * 0.62);
-            cyRef.current.panBy({ x: 0, y: Math.round(targetY - (cyH / 2)) });
+            const CHAIN_Y = Math.round(cyH * 0.60);
+            let claimChipW = 160;
+            const renderedChips = containerRef.current?.parentElement?.querySelectorAll('.cf-claim-chip');
+            if (renderedChips && renderedChips.length > 0) {
+              renderedChips.forEach((el) => {
+                const w = el.getBoundingClientRect().width;
+                if (w > claimChipW) claimChipW = w;
+              });
+            }
+            const pad = Math.max(110, Math.round(claimChipW / 2 + 16));
+            const spacing = (cyW - 2 * pad) / 4;
+            currentChainIds.forEach((nid, i) => {
+              const node = cyRef.current.getElementById(nid);
+              if (node.length > 0) {
+                node.renderedPosition({
+                  x: Math.round(pad + i * spacing),
+                  y: CHAIN_Y
+                });
+              }
+            });
+            const visibleNonChain = cyRef.current.nodes(':visible').not('.chain-node').not(':parent');
+            visibleNonChain.forEach((n: any, idx: number) => {
+              const isAbove = idx % 2 === 0;
+              const anchorIndex = idx % currentChainIds.length;
+              n.renderedPosition({
+                x: Math.round(pad + anchorIndex * spacing),
+                y: isAbove ? CHAIN_Y - 110 : CHAIN_Y + 110
+              });
+            });
           } else {
             const visibleNodes = cyRef.current.nodes().not('.hidden-node').not(':parent');
             if (visibleNodes.length > 0) {
@@ -1028,19 +1074,31 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
       // Layout management:
       if (chainNodeIds.length > 0) {
         // Equal horizontal spacing adapted directly to canvas width (guarantees zero overlap at all viewports)
+        cy.zoom(1);
+        cy.pan({ x: 0, y: 0 });
         const cyWidth = cy.width() || 1200;
         const cyHeight = cy.height() || 788;
         const CHAIN_Y = Math.round(cyHeight * 0.60);
-        const padding = Math.max(65, Math.round(cyWidth * 0.08));
-        const availableW = cyWidth - 2 * padding;
-        const step = availableW / Math.max(chainNodeIds.length - 1, 1);
+        let claimChipWidth = 160;
+        const renderedChips = containerRef.current?.parentElement?.querySelectorAll('.cf-claim-chip');
+        if (renderedChips && renderedChips.length > 0) {
+          renderedChips.forEach((el) => {
+            const w = el.getBoundingClientRect().width;
+            if (w > claimChipWidth) claimChipWidth = w;
+          });
+        }
+        const pad = Math.max(110, Math.round(claimChipWidth / 2 + 16));
+        const spacing = (cyWidth - 2 * pad) / 4;
+
+        // Hide parent module labels when chain is active so chips never cover module labels
+        cy.nodes(':parent').addClass('hide-label');
 
         chainNodeIds.forEach((nid, i) => {
           const node = cy.getElementById(nid);
           if (node.length > 0) {
             node.addClass('chain-node');
             node.renderedPosition({
-              x: Math.round(padding + i * step),
+              x: Math.round(pad + i * spacing),
               y: CHAIN_Y
             });
           }
@@ -1053,7 +1111,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
           const isAbove = idx % 2 === 0;
           const anchorIndex = idx % chainNodeIds.length;
           n.renderedPosition({
-            x: Math.round(padding + anchorIndex * step),
+            x: Math.round(pad + anchorIndex * spacing),
             y: isAbove ? CHAIN_Y - 110 : CHAIN_Y + 110
           });
         });
@@ -1063,6 +1121,8 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
           (window as any).__chronoUpdateFontSizes();
         }
       } else if (currentScenario === 3) {
+        cy.nodes(':parent').removeClass('hide-label');
+        cy.nodes('.chain-node').removeClass('chain-node');
         // Scenario 3: two disjoint neighborhoods separated by visible gap (from real event execution_data)
         const detectEvent = eventsUpToNow.find((e) => e.phase === 'COLLISION_DETECTION');
         const s3A2Ids: string[] = detectEvent?.execution_data?.neighborhood_a2 || [];
@@ -1099,6 +1159,8 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
           (window as any).__chronoUpdateFontSizes();
         }
       } else {
+        cy.nodes(':parent').removeClass('hide-label');
+        cy.nodes('.chain-node').removeClass('chain-node');
         // Scenario 2 / other layout
         if (lastLaidOutClaimIdsRef.current !== claimedIdsList) {
           lastLaidOutClaimIdsRef.current = claimedIdsList;
@@ -1119,8 +1181,10 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
           } as any);
 
           focusLayout.on('layoutstop', () => {
-            cy.fit(visibleNodes, 120);
-            cy.panBy({ x: 0, y: -20 });
+            if (activeChainNodeIdsRef.current.length === 0) {
+              cy.fit(visibleNodes, 120);
+              cy.panBy({ x: 0, y: -20 });
+            }
             updateClaimChipPositions();
             if ((window as any).__chronoUpdateFontSizes) {
               (window as any).__chronoUpdateFontSizes();
@@ -1422,17 +1486,14 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
           <span>TESTED_BY</span>
         </div>
 
-        {/* Scenario 3: Explicit legend entries for A2 and A3 distinct neighborhood colors */}
-        {currentScenario === 3 && (
+        {/* Scenario 3: Explicit legend entries for A2 and A3 distinct neighborhood colors only after claims */}
+        {currentScenario === 3 && claimsByAgent.has('A2') && claimsByAgent.has('A3') && (
           <>
             <div className="w-[1px] h-3 bg-[var(--line)]" />
             <div className="flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded-full bg-[#E0A458] border border-[var(--line)]" />
-              <span className="text-[var(--text)] font-semibold">A2 Neighborhood</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#4FB286] border border-[var(--line)]" />
-              <span className="text-[var(--text)] font-semibold">A3 Neighborhood</span>
+              <span className="w-2.5 h-2.5 rounded-full bg-[#4FB286] border border-[var(--line)] -ml-0.5" />
+              <span className="text-[var(--text)] font-semibold">A2/A3 Neighborhood</span>
             </div>
           </>
         )}

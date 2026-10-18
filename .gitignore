@@ -37,4 +37,5 @@ replays/live_*.json
 
 # Local Review Pack (never push to git)
 phase7_review_pack/
+scratch/
 
