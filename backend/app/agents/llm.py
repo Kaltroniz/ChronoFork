@@ -4,10 +4,30 @@ import json
 from typing import Dict, Any, Optional
 
 
+# Auto-load .env file if present
+_env_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".env"))
+if os.path.exists(_env_path):
+    try:
+        with open(_env_path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    k, v = line.split("=", 1)
+                    k = k.strip()
+                    v = v.strip().strip("\"'")
+                    if k not in os.environ:
+                        os.environ[k] = v
+    except Exception:
+        pass
+
+
 class LLMProvider:
     def __init__(self):
         self.provider = os.getenv("LLM_PROVIDER", "gemini").lower()
-        self.api_key = (
+
+    @property
+    def api_key(self) -> str:
+        return (
             os.getenv("GEMINI_API_KEY") or
             os.getenv("ANTHROPIC_API_KEY") or
             os.getenv("OPENAI_API_KEY") or
@@ -70,7 +90,7 @@ class LLMProvider:
             AVAILABLE SYMBOLS: {repo_symbols[:15]}
             Return JSON list: [{{"agent_id": "agent_1", "agent_name": "Name", "role": "Role", "claim_symbol": "symbol.qualname", "intent": "SIGNATURE_CHANGE|BODY_EDIT"}}]
             """
-            models = ["gemini-2.0-flash", "gemini-1.5-flash"]
+            models = ["gemini-3.5-flash-lite", "gemini-flash-latest", "gemini-3.8-flash", "gemini-2.0-flash"]
             for model_name in models:
                 try:
                     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={self.api_key}"
@@ -109,7 +129,7 @@ class LLMProvider:
             Rewrite the code so it safely accesses ConfigObject attributes (`cfg.env`, `cfg.timeout`, `cfg.auth_secret`) or falls back to dict access.
             Return ONLY the raw Python code. Do not wrap in markdown or explanations.
             """
-            models = ["gemini-2.0-flash", "gemini-1.5-flash"]
+            models = ["gemini-3.5-flash-lite", "gemini-flash-latest", "gemini-3.8-flash", "gemini-2.0-flash"]
             for model_name in models:
                 try:
                     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={self.api_key}"
@@ -137,7 +157,7 @@ class LLMProvider:
         return {
             "provider": self.provider,
             "configured": has_key,
-            "models_supported": ["gemini-2.0-flash", "gemini-1.5-flash"],
+            "models_supported": ["gemini-3.5-flash-lite", "gemini-flash-latest", "gemini-3.8-flash"],
             "live_mode_available": has_key,
             "mode": "live-gemini" if has_key else "deterministic-fallback"
         }
