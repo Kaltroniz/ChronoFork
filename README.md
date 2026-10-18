@@ -2,15 +2,17 @@
 
 > **"Git catches line conflicts. ChronoFork catches the ones Git can't see."**
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-34.230.70.144-brightgreen.svg)](http://34.230.70.144/)
+[![Live Demo (HTTPS)](https://img.shields.io/badge/Live%20Demo-HTTPS%20Online-brightgreen.svg)](https://cut-employees-altered-consent.trycloudflare.com)
+[![Direct AWS](https://img.shields.io/badge/Direct%20AWS-34.230.70.144-blue.svg)](http://34.230.70.144/)
 [![FalkorDB](https://img.shields.io/badge/FalkorDB-latest-red.svg)](https://docs.falkordb.com)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-teal.svg)](https://fastapi.tiangolo.com)
 [![React](https://img.shields.io/badge/React-19-blue.svg)](https://react.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.4-blue.svg)](https://www.typescriptlang.org)
 [![Docker Compose](https://img.shields.io/badge/Docker-Compose-2496ED.svg)](https://docker.com)
 
-> 🌐 **Live Public Deployment (AWS)**: [http://34.230.70.144/](http://34.230.70.144/)  
-> 🔌 **Live MCP-Compatible Endpoint**: `POST http://34.230.70.144/mcp` (Read-only in Demo Mode)  
+> 🔒 **Live HTTPS Deployment (Recommended)**: [https://cut-employees-altered-consent.trycloudflare.com](https://cut-employees-altered-consent.trycloudflare.com) (SSL Secured, Works in all browsers)  
+> 🌐 **Direct AWS Deployment (HTTP)**: [http://34.230.70.144/](http://34.230.70.144/) (Requires explicit `http://` in modern browsers)  
+> 🔌 **Live MCP Endpoint**: `POST https://cut-employees-altered-consent.trycloudflare.com/mcp` or `POST http://34.230.70.144/mcp`  
 > 📝 **Hackathon Blog Post**: [`docs/blog-post.md`](docs/blog-post.md)  
 > 📊 **Single Source of Truth Metrics**: [`docs/NUMBERS.md`](docs/NUMBERS.md)
 
@@ -61,11 +63,12 @@ ChronoFork treats data integrity with complete transparency:
 
 ## 🚀 Quickstart & Live Demo
 
-### 🌐 Live Public Deployment (AWS)
+### 🌐 Live Public Deployment
 You can try the live multi-agent coordination console immediately without running any local servers:
-- **Interactive UI Console**: [http://34.230.70.144/](http://34.230.70.144/)
-- **Health Check & Graphs**: [http://34.230.70.144/health](http://34.230.70.144/health)
-- **MCP-Compatible Endpoint**: `POST http://34.230.70.144/mcp` (Read-only tools: `get_impact`, `rank_risk`, `recall_memory`)
+- 🔒 **Interactive UI (HTTPS - Recommended)**: [https://cut-employees-altered-consent.trycloudflare.com](https://cut-employees-altered-consent.trycloudflare.com)
+- 🌐 **Direct AWS EC2 (HTTP)**: [http://34.230.70.144/](http://34.230.70.144/) *(Note: Type `http://` explicitly if your browser defaults to HTTPS)*
+- 💓 **Health Check**: [https://cut-employees-altered-consent.trycloudflare.com/health](https://cut-employees-altered-consent.trycloudflare.com/health) or `http://34.230.70.144/health`
+- 🔌 **MCP-Compatible Endpoint**: `POST https://cut-employees-altered-consent.trycloudflare.com/mcp` (Read-only tools: `get_impact`, `rank_risk`, `recall_memory`)
 
 > [!WARNING]
 > **Deployment Security (`DEMO_MODE`)**:
