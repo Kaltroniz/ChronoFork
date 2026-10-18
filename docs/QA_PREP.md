@@ -134,7 +134,7 @@ Configurable via `.env` or Docker Compose environment: `DEMO_MODE=true` (which i
   - `graph`: FalkorDB query execution timestamp.
   - `git`: Real Git branch/merge execution timestamp.
   - `pytest`: Real test execution timestamp.
-  - `llm`: LLM model execution timestamp (omitted when deterministic).
+  - `llm`: LLM model execution timestamp (implemented; falls back to the scripted patch).
 - `captured_at` represents the actual timestamp of event emission. In replay mode, the UI displays `CACHED` alongside these capture dates.
 
 ---

@@ -90,7 +90,7 @@ class LLMProvider:
             AVAILABLE SYMBOLS: {repo_symbols[:15]}
             Return JSON list: [{{"agent_id": "agent_1", "agent_name": "Name", "role": "Role", "claim_symbol": "symbol.qualname", "intent": "SIGNATURE_CHANGE|BODY_EDIT"}}]
             """
-            models = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-flash-latest", "gemini-2.0-flash"]
+            models = ["gemini-flash-latest", "gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.0-flash"]
             headers = {"x-goog-api-key": self.api_key, "Content-Type": "application/json"}
             for model_name in models:
                 try:
@@ -129,22 +129,21 @@ class LLMProvider:
             Rewrite the code so it safely accesses ConfigObject attributes (`cfg.env`, `cfg.timeout`, `cfg.auth_secret`) or falls back to dict access.
             Return ONLY the raw Python code. Do not wrap in markdown or explanations.
             """
-            models = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-flash-latest", "gemini-2.0-flash"]
+            models = ["gemini-flash-latest", "gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.0-flash"]
             headers = {"x-goog-api-key": self.api_key, "Content-Type": "application/json"}
             for model_name in models:
                 try:
                     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent"
                     payload = {"contents": [{"parts": [{"text": prompt}]}]}
-                    res = httpx.post(url, headers=headers, json=payload, timeout=12.0)
+                    res = httpx.post(url, headers=headers, json=payload, timeout=25.0)
                     if res.status_code == 200:
                         raw = res.json()["candidates"][0]["content"]["parts"][0]["text"]
-                        cleaned = raw.strip()
-                        if cleaned.startswith("```python"):
-                            cleaned = cleaned[len("```python"):].strip()
-                        if cleaned.startswith("```"):
-                            cleaned = cleaned[len("```"):].strip()
-                        if cleaned.endswith("```"):
-                            cleaned = cleaned[:-3].strip()
+                        if "```python" in raw:
+                            cleaned = raw.split("```python", 1)[1].split("```", 1)[0].strip()
+                        elif "```" in raw:
+                            cleaned = raw.split("```", 1)[1].split("```", 1)[0].strip()
+                        else:
+                            cleaned = raw.strip()
                         return cleaned
                 except Exception:
                     continue
