@@ -269,4 +269,6 @@ Multi-agent software engineering cannot scale with 1970s line-based diff tools. 
 By placing FalkorDB at the center of the agent swarm, **ChronoFork bridges the gap between text files and semantic reality**.
 
 - **Repository**: [github.com/Kaltroniz/ChronoFork](https://github.com/Kaltroniz/ChronoFork)
+- **Live Interactive Console (AWS)**: [http://34.230.70.144/](http://34.230.70.144/)
+- **Live MCP Endpoint**: `POST http://34.230.70.144/mcp` (Read-only tools: `get_impact`, `rank_risk`, `recall_memory`)
 - **Tagline**: *"Git catches line conflicts. ChronoFork catches the ones Git can't see."*

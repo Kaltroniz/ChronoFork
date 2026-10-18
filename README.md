@@ -2,11 +2,17 @@
 
 > **"Git catches line conflicts. ChronoFork catches the ones Git can't see."**
 
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-34.230.70.144-brightgreen.svg)](http://34.230.70.144/)
 [![FalkorDB](https://img.shields.io/badge/FalkorDB-latest-red.svg)](https://docs.falkordb.com)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-teal.svg)](https://fastapi.tiangolo.com)
 [![React](https://img.shields.io/badge/React-19-blue.svg)](https://react.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.4-blue.svg)](https://www.typescriptlang.org)
 [![Docker Compose](https://img.shields.io/badge/Docker-Compose-2496ED.svg)](https://docker.com)
+
+> 🌐 **Live Public Deployment (AWS)**: [http://34.230.70.144/](http://34.230.70.144/)  
+> 🔌 **Live MCP-Compatible Endpoint**: `POST http://34.230.70.144/mcp` (Read-only in Demo Mode)  
+> 📝 **Hackathon Blog Post**: [`docs/blog-post.md`](docs/blog-post.md)  
+> 📊 **Single Source of Truth Metrics**: [`docs/NUMBERS.md`](docs/NUMBERS.md)
 
 ---
 
@@ -53,18 +59,24 @@ ChronoFork treats data integrity with complete transparency:
 
 ---
 
-## 🚀 Quickstart
+## 🚀 Quickstart & Live Demo
+
+### 🌐 Live Public Deployment (AWS)
+You can try the live multi-agent coordination console immediately without running any local servers:
+- **Interactive UI Console**: [http://34.230.70.144/](http://34.230.70.144/)
+- **Health Check & Graphs**: [http://34.230.70.144/health](http://34.230.70.144/health)
+- **MCP-Compatible Endpoint**: `POST http://34.230.70.144/mcp` (Read-only tools: `get_impact`, `rank_risk`, `recall_memory`)
 
 > [!WARNING]
 > **Deployment Security (`DEMO_MODE`)**:
-> `docker-compose.yml` defaults to **`DEMO_MODE=true`** (`DEMO_MODE=${DEMO_MODE:-true}`) for safe public and shared hosting.
-> In live mode (`DEMO_MODE=false`), the backend executes real subprocess Git commands and real `pytest` in temporary workspaces. For any public deployment, `DEMO_MODE` **MUST remain `true`** to restrict execution to verified cached replays and prevent untrusted subprocess execution.
-> To enable live Git/pytest execution locally:
+> The public AWS deployment and `docker-compose.yml` run with **`DEMO_MODE=true`** (`DEMO_MODE=${DEMO_MODE:-true}`) for safe public hosting (cached deterministic replays, read-only MCP queries, memory resets disabled).
+> In live mode (`DEMO_MODE=false`), the backend executes live subprocess Git commands and real `pytest` in temporary workspaces.
+> To run locally with live Git/pytest execution:
 > ```bash
 > DEMO_MODE=false docker compose up --build -d
 > ```
 
-### Option A: Complete Docker Compose Deployment (Recommended)
+### Option A: Complete Docker Compose Deployment (Local)
 Runs containerized FalkorDB, FastAPI backend with auto-seed, and production Nginx frontend:
 ```bash
 docker compose up --build -d
@@ -218,21 +230,21 @@ All metrics documented here derive strictly from `docs/NUMBERS.md` and underlyin
 - **Collision Detection Query**: Range = **~1-2 ms** (Min = 1.13 ms, **Median = 1.97 ms**, Max = 6.06 ms)
 
 ### 2. Collision Detection Benchmark ($N = 58$ Seeded Cases)
-*Ground truth established strictly by merged-tree `pytest` execution (`docs/evidence/phase8/benchmark_detection_stdout.txt`):*
+*Ground truth established strictly by merged-tree `pytest` execution (`docs/evidence/phase3b/benchmark_results.json`, [`docs/NUMBERS.md`](docs/NUMBERS.md)):*
 
 | Detector | When Collision is Known | Precision | Recall | Median Latency |
 |---|---|:---:|:---:|:---:|
-| **(a1) Git text conflict only** | Merge time (text only) | 0.0% | 0.0% | N/A |
-| **(a2) Per-branch repo tests** | Pre-merge (isolated branch) | 0.0% | 0.0%* | N/A |
-| **(a3) Merged-tree repo tests** | Post-merge (runtime CI) | 100.0% | 100.0% | ~0.44-1.1s pytest-internal (~1.5-2.0s wall time) |
-| **(b) ChronoFork (FalkorDB)** | **Claim time (pre-code)** | **100.0%** | **57.9%** | **~1-2 ms (1.97 ms)** |
+| **(a1) Git text conflict only** | Merge time (text only) | *not measured* | *not measured* | N/A |
+| **(a2) Per-branch repo tests** | Pre-merge (isolated branch) | *not measured* | *not measured* | N/A |
+| **(a3) Merged-tree repo tests** | Post-merge (runtime CI) | 100.0% | 100.0% (38/38) | ~0.44s pytest-internal (~1.48s wall time) |
+| **(b) ChronoFork (FalkorDB)** | **Claim time (pre-code)** | **100.0%** | **57.9%** (22/38 overall, 100% static) | **~1-2 ms (1.97 ms)** |
 
-*\*Note: (a2) is 0% recall by construction because tests on an isolated branch never execute cross-branch unmerged changes.*
+> *Note*: Git merge conflicts and per-branch tests were not measured across the benchmark suite; ChronoFork flags the cross-file dependency at claim time before code exists, forcing contract changes and caller migrations to land together.
 
 **Headline Per-Pattern Recall**:
 - Standard static call chains (`direct_call`, `two_hops`, `three_hops`, `four_hops`, `import_inside_function`): **100% Recall** (22/22 detected).
 - Safe concurrent changes (`unrelated_pairs`, `same_module_disjoint`, `nearby_no_call`, `body_edit_only`, `unused_function_rename`): **100% Specificity** (20/20 safe, **Zero False Positives**).
-- Dynamic metaprogramming (`self_method`, `getattr_call`, `alias_call`, `dict_dispatch`): **0% Recall** (Documented static AST blind spots).
+- Dynamic metaprogramming (`instance_method`, `getattr_call`, `alias_call`, `dict_dispatch`): **0% Recall** (Documented static AST blind spots; in `instance_method`, methods register at module-level names in the AST so qualname lookup misses).
 
 ### 3. Real Verification Pytest Timings
 - **Naive Git Merge**: **5 FAILED**, 7 PASSED in **0.44s** (pytest-internal duration; **~1.48s** wall clock duration).
