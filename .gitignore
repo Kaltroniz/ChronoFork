@@ -39,3 +39,11 @@ replays/live_*.json
 phase7_review_pack/
 scratch/
 
+# Internal docs & codebase dumps (kept locally, not in git repo)
+ALL_CODE_AND_PROJECT_EXPLANATION.md
+docs/QA_PREP.md
+docs/SUBMISSION_CHECKLIST.md
+docs/HANDOFF_STATUS.md
+docs/falkordb-verified.md
+docs/demo-script.md
+
