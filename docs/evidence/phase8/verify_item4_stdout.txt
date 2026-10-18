@@ -1,5 +1,7 @@
-Replay Mode Response: {'run_id': 'run_1792265884100', 'status': 'REPLAY_CACHED', 'scenario': 1, 'mode': 'replay', 'cached': True, 'events_count': 14}
-Replay Latency: 84.6ms (Instant!)
+HTTP Request: POST http://testserver/runs "HTTP/1.1 200 OK"
+HTTP Request: GET http://testserver/runs/run_1792299547646/events?delay_ms=0 "HTTP/1.1 200 OK"
+Replay Mode Response: {'run_id': 'run_1792299547646', 'status': 'REPLAY_CACHED', 'scenario': 1, 'mode': 'replay', 'cached': True, 'events_count': 14}
+Replay Latency: 105.4ms (Instant!)
 Streamed 15 event lines from cache successfully!
 
 Item 4 Status: VERIFIED & PASSING!
