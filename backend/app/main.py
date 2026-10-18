@@ -20,6 +20,7 @@ from fastapi import FastAPI, Query, BackgroundTasks, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+from redis.exceptions import ConnectionError as RedisConnectionError
 
 from backend.app.falkor_client import falkor_client
 from backend.app.event_stream import event_bus
@@ -35,6 +36,9 @@ from backend.app.scenario_runner import (
 )
 
 REPLAYS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "replays"))
+DEMO_MODE = os.getenv("DEMO_MODE", "false").lower() in ("true", "1", "yes")
+MCP_READ_ONLY = {"get_impact", "rank_risk", "recall_memory"}
+ALLOWED_REPOS = {"taskflow", "analytics"}
 
 
 def get_replay_path(scenario: int, memory_enabled: bool) -> str:
@@ -73,11 +77,15 @@ async def startup_event():
 
 @app.get("/health")
 def health_check():
-    graphs = falkor_client.list_graphs()
+    try:
+        graphs = falkor_client.list_graphs()
+    except Exception as ex:
+        raise HTTPException(status_code=503, detail=f"FalkorDB unreachable: {ex}")
     return {
         "status": "healthy",
         "falkordb_connected": True,
-        "active_graphs": graphs
+        "active_graphs": graphs,
+        "demo_mode": DEMO_MODE
     }
 
 
@@ -91,13 +99,12 @@ class RunRequest(BaseModel):
 
 
 @app.post("/runs")
-async def start_run(req: RunRequest):
+def start_run(req: RunRequest):
     """Initiates a coordination run or scenario replay."""
     run_id = req.run_id or f"run_{int(time.time() * 1000)}"
-    demo_mode = os.getenv("DEMO_MODE", "false").lower() in ("true", "1", "yes")
 
     # In DEMO_MODE, force replay mode
-    req_mode = "replay" if demo_mode else req.mode
+    req_mode = "replay" if DEMO_MODE else req.mode
     cache_file = get_replay_path(req.scenario or 1, req.memory_enabled)
 
     # 1. Mode = Replay: Serve from cache instantly
@@ -136,10 +143,15 @@ async def start_run(req: RunRequest):
             events = execute_scenario_4(run_id)
         else:
             events = execute_scenario_1(run_id, mode=req_mode)
-    except Exception as ex:
+    except (RedisConnectionError, ConnectionError, OSError) as ex:
         raise HTTPException(
             status_code=503,
-            detail=f"Live run execution failed (FalkorDB connection refused or offline): {ex}"
+            detail=f"FalkorDB connection refused or offline: {ex}"
+        )
+    except Exception as ex:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Run failed: {type(ex).__name__}: {ex}"
         )
 
     # Save to live run record (canonical scenario_N.json are written only by scripts/regenerate_replays.py)
@@ -162,11 +174,14 @@ async def start_run(req: RunRequest):
 
 
 @app.get("/runs/{run_id}/events")
-async def get_run_events(run_id: str, delay_ms: int = Query(default=500)):
+async def get_run_events(run_id: str, delay_ms: int = Query(default=500, ge=0, le=5000)):
     """
     SSE stream endpoint. Replays buffered events from index 0 with requested delay_ms pacing.
     Guarantees no events are dropped due to connection timing.
     """
+    if run_id not in event_bus._buffers:
+        raise HTTPException(status_code=404, detail="Unknown run_id")
+
     return StreamingResponse(
         event_bus.stream_events(run_id, delay_ms=delay_ms),
         media_type="text/event-stream",
@@ -178,25 +193,15 @@ async def get_run_events(run_id: str, delay_ms: int = Query(default=500)):
     )
 
 
-@app.get("/collisions/{run_id}")
-def get_collisions(run_id: str):
-    """Detect multi-hop collisions for a run coordination graph."""
-    try:
-        from backend.app.coordinator import detect_collisions
-        return {"run_id": run_id, "collisions": detect_collisions(run_id)}
-    except Exception as ex:
-        raise HTTPException(
-            status_code=503,
-            detail=f"FalkorDB connection refused or offline: {ex}"
-        )
-
-
 @app.get("/graph/{graph_name}")
 def get_graph_data(graph_name: str):
     """
     Returns nodes and edges formatted for Cytoscape.js.
     Supports parent module clustering and centrality risk scores.
     """
+    if not graph_name.startswith("repo:"):
+        graph_name = f"repo:{graph_name}"
+
     try:
         graphs = falkor_client.list_graphs()
     except Exception as ex:
@@ -206,10 +211,7 @@ def get_graph_data(graph_name: str):
         )
 
     if graph_name not in graphs:
-        if f"repo:{graph_name}" in graphs:
-            graph_name = f"repo:{graph_name}"
-        else:
-            raise HTTPException(status_code=404, detail=f"Graph '{graph_name}' not found.")
+        raise HTTPException(status_code=404, detail=f"Graph '{graph_name}' not found.")
 
     try:
         g = falkor_client.get_graph(graph_name)
@@ -353,6 +355,8 @@ def get_memory_data(repo_name: str):
 @app.post("/memory/{repo_name}/reset")
 def reset_repo_memory(repo_name: str):
     """Resets memory graph for the repository to enable clean demo runs."""
+    if DEMO_MODE:
+        raise HTTPException(status_code=403, detail="Memory reset is disabled in Demo Mode.")
     reset_memory(repo_name)
     return {"status": "SUCCESS", "message": f"Memory graph mem:{repo_name} has been reset."}
 
@@ -366,8 +370,7 @@ class IngestRequest(BaseModel):
 def ingest_repo(req: IngestRequest):
     """Parses and ingests a repository into FalkorDB with path sanitization."""
     # Disable /repos endpoint completely when DEMO_MODE is active
-    demo_mode = os.getenv("DEMO_MODE", "false").lower() in ("true", "1", "yes")
-    if demo_mode:
+    if DEMO_MODE:
         raise HTTPException(status_code=403, detail="Repository upload and ingestion is disabled in Demo Mode.")
 
     # Sanitize path to prevent arbitrary directory traversal
@@ -549,6 +552,19 @@ async def mcp_rpc_handler(request_data: Dict[str, Any]):
     if method == "tools/call":
         tool_name = params.get("name")
         tool_args = params.get("arguments", {})
+
+        if DEMO_MODE and tool_name not in MCP_READ_ONLY:
+            return {
+                "jsonrpc": "2.0",
+                "id": msg_id,
+                "error": {"code": -32001, "message": "Write tools are disabled in Demo Mode (read-only)"}
+            }
+        if tool_args.get("repo", "taskflow") not in ALLOWED_REPOS:
+            return {
+                "jsonrpc": "2.0",
+                "id": msg_id,
+                "error": {"code": -32602, "message": "Unknown repo"}
+            }
 
         try:
             if tool_name == "get_impact":

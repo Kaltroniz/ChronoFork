@@ -34,6 +34,7 @@ interface ResultStripProps {
   onResetMemory: () => void;
   onSelectNode?: (nodeId: string) => void;
   currentScenario?: number;
+  sc1CollisionRef?: { intent: string; hops: number } | null;
 }
 
 async function generateSha256(text: string): Promise<string> {
@@ -59,7 +60,8 @@ export const ResultStrip: React.FC<ResultStripProps> = ({
   onToggleMemory,
   onResetMemory,
   onSelectNode,
-  currentScenario = 1
+  currentScenario = 1,
+  sc1CollisionRef
 }) => {
   const [activeTab, setActiveTab] = useState<'verdict' | 'fork' | 'memory' | 'receipt'>('verdict');
   const [confirmReset, setConfirmReset] = useState<boolean>(false);
@@ -170,6 +172,10 @@ export const ResultStrip: React.FC<ResultStripProps> = ({
   const isVerifiedClean =
     verifierData?.success ||
     (verifierData?.passedCount !== undefined && (verifierData?.failedCount ?? 0) === 0);
+
+  const hasAdaptation = events.some((e) => e.phase === 'MEMORY_ADAPTATION');
+  const run2Collision = events.some((e) => Boolean(e.collision));
+  const a1Claim = events.find((e) => e.phase === 'CLAIM' && agentLabel(e).id === 'A1');
 
   const handleApproveMerge = async () => {
     const payload = JSON.stringify({
@@ -590,19 +596,21 @@ export const ResultStrip: React.FC<ResultStripProps> = ({
 
               {/* Two-Column Comparison */}
               <div className="grid grid-cols-2 gap-6">
-                {/* Column 1: Run 1 (Cold Start / No Memory) */}
+                {/* Column 1: Reference: Scenario 1 (cached) */}
                 <div className="p-4 rounded-[8px] border border-[var(--line)] bg-[var(--bg-2)] space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-eyebrow">Run 1 · Cold Start (Memory Empty)</span>
+                    <span className="text-eyebrow">Reference: Scenario 1 (cached)</span>
                     <span className="cf-chip text-[var(--signal)]">UNCONSTRAINED</span>
                   </div>
                   <div>
                     <span className="text-[var(--text-dim)]">Claimed Intent:</span>
-                    <span className="ml-2 font-bold text-[var(--breach)]">SIGNATURE_CHANGE</span>
+                    <span className="ml-2 font-bold text-[var(--breach)]">{sc1CollisionRef?.intent ?? '—'}</span>
                   </div>
                   <div>
                     <span className="text-[var(--text-dim)]">Collision:</span>
-                    <span className="ml-2 font-bold text-[var(--breach)]">YES (4 hops)</span>
+                    <span className="ml-2 font-bold text-[var(--breach)]">
+                      {sc1CollisionRef ? `YES (${sc1CollisionRef.hops} hops)` : '—'}
+                    </span>
                   </div>
                   <div>
                     <span className="text-[var(--text-dim)]">Rule Recalled:</span>
@@ -615,14 +623,8 @@ export const ResultStrip: React.FC<ResultStripProps> = ({
                   </div>
                 </div>
 
-                {/* Column 2: Run 2 (Memory Recall) - Gated until RECALL / ADAPTATION events */}
-                {events.some(
-                  (e) =>
-                    e.phase === 'MEMORY_RECALL' ||
-                    e.phase === 'MEMORY_ADAPTATION' ||
-                    e.tool === 'recall_memory' ||
-                    (e.phase === 'CLAIM' && e.agent === 'ConfigCoder' && e.params?.intent === 'BODY_EDIT')
-                ) ? (
+                {/* Column 2: Run 2 (Memory Recall) - Gated on hasAdaptation */}
+                {hasAdaptation ? (
                   <div className="p-4 rounded-[8px] border border-[var(--clear)] bg-[var(--bg-2)] space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-eyebrow text-[var(--clear)]">Run 2 · Adaptive Memory Recall</span>
@@ -630,11 +632,11 @@ export const ResultStrip: React.FC<ResultStripProps> = ({
                     </div>
                     <div>
                       <span className="text-[var(--text-dim)]">Adapted Intent:</span>
-                      <span className="ml-2 font-bold text-[var(--clear)]">BODY_EDIT</span>
+                      <span className="ml-2 font-bold text-[var(--clear)]">{a1Claim?.params?.intent ?? '—'}</span>
                     </div>
                     <div>
                       <span className="text-[var(--text-dim)]">Collision:</span>
-                      <span className="ml-2 font-bold text-[var(--clear)]">NO (0 collisions)</span>
+                      <span className="ml-2 font-bold text-[var(--clear)]">{run2Collision ? 'YES' : 'NO (0 collisions)'}</span>
                     </div>
                     <div>
                       <span className="text-[var(--text-dim)]">Confidence:</span>
@@ -643,7 +645,7 @@ export const ResultStrip: React.FC<ResultStripProps> = ({
                           ? `${Math.round(memWrite.confidence * 100)}%`
                           : memoryData?.rules?.[0]?.confidence !== undefined
                           ? `${Math.round(memoryData.rules[0].confidence * 100)}%`
-                          : '95%'}
+                          : '—'}
                       </span>
                     </div>
                     <div className="pt-2 text-[13px] font-sans text-[var(--clear)] border-t border-[var(--line)]">

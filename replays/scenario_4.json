@@ -1,7 +1,7 @@
 [
   {
     "index": 0,
-    "ts": 1792292772.7560353,
+    "ts": 1792318122.5737572,
     "run_id": "replay_gen_sc4",
     "agent": "Planner",
     "phase": "PLANNING",
@@ -22,7 +22,7 @@
   },
   {
     "index": 1,
-    "ts": 1792292772.803429,
+    "ts": 1792318122.6742349,
     "run_id": "replay_gen_sc4",
     "agent": "TelemetryCoder",
     "phase": "RECALL",
@@ -30,10 +30,10 @@
     "cypher": "MATCH (s:Symbol)<-[:INVOLVED]-(r:ProceduralRule)\n    WHERE s.qualname IN $qnames\n    RETURN DISTINCT r.id AS id, r.rule AS rule, r.advice AS advice, r.confidence AS confidence, r.samples AS samples, s.qualname AS trigger_symbol, r.recommended_intent AS recommended_intent\n    ORDER BY r.confidence DESC",
     "params": {
       "qnames": [
-        "tests.test_analytics.test_aggregate",
-        "analytics.collector.collect_datapoint",
         "analytics.aggregator.aggregate_stream",
-        "tests.test_analytics.test_collect"
+        "tests.test_analytics.test_aggregate",
+        "tests.test_analytics.test_collect",
+        "analytics.collector.collect_datapoint"
       ]
     },
     "trace": {
@@ -41,13 +41,13 @@
       "cypher": "MATCH (s:Symbol)<-[:INVOLVED]-(r:ProceduralRule)\n    WHERE s.qualname IN $qnames\n    RETURN DISTINCT r.id AS id, r.rule AS rule, r.advice AS advice, r.confidence AS confidence, r.samples AS samples, s.qualname AS trigger_symbol, r.recommended_intent AS recommended_intent\n    ORDER BY r.confidence DESC",
       "params": {
         "qnames": [
-          "tests.test_analytics.test_aggregate",
-          "analytics.collector.collect_datapoint",
           "analytics.aggregator.aggregate_stream",
-          "tests.test_analytics.test_collect"
+          "tests.test_analytics.test_aggregate",
+          "tests.test_analytics.test_collect",
+          "analytics.collector.collect_datapoint"
         ]
       },
-      "duration_ms": 2.75,
+      "duration_ms": 1.18,
       "row_count": 0,
       "rows": [],
       "header": [
@@ -93,14 +93,14 @@
     "provenance": {
       "graph": {
         "source": "REAL",
-        "captured_at": "2026-10-18T03:06:12.803407+00:00"
+        "captured_at": "2026-10-18T10:08:42.674217+00:00"
       }
     },
     "message": "Memory recall for mem:analytics returned 0 items. Strictly isolated from taskflow memory."
   },
   {
     "index": 2,
-    "ts": 1792292772.8088963,
+    "ts": 1792318122.6759512,
     "run_id": "replay_gen_sc4",
     "agent": "TelemetryCoder",
     "phase": "CLAIM",
@@ -121,7 +121,7 @@
         "intent": "BODY_EDIT",
         "subtask": "Add high-precision timestamp"
       },
-      "duration_ms": 5.37,
+      "duration_ms": 1.65,
       "row_count": 1,
       "rows": [
         [
@@ -169,14 +169,14 @@
     "provenance": {
       "graph": {
         "source": "REAL",
-        "captured_at": "2026-10-18T03:06:12.808868+00:00"
+        "captured_at": "2026-10-18T10:08:42.675931+00:00"
       }
     },
     "message": "TelemetryCoder claimed analytics.collector.collect_datapoint in repo:analytics."
   },
   {
     "index": 3,
-    "ts": 1792292775.745039,
+    "ts": 1792318123.8691223,
     "run_id": "replay_gen_sc4",
     "agent": "Verifier",
     "phase": "VERIFICATION",
@@ -185,12 +185,13 @@
     "params": {},
     "trace": null,
     "execution_data": {
-      "success": false,
-      "exit_code": 1,
-      "passed_count": 1,
-      "failed_count": 1,
-      "duration_seconds": 2.6,
-      "output": "============================= test session starts =============================\nplatform win32 -- Python 3.13.2, pytest-9.1.1, pluggy-1.6.0 -- C:\\Users\\Acer\\AppData\\Local\\Programs\\Python\\Python313\\python.exe\ncachedir: .pytest_cache\nrootdir: C:\\Users\\Acer\\AppData\\Local\\Temp\\chronofork_ws_tcly8ws8\\replay_gen_sc4_agent_4\nplugins: anyio-4.15.1\ncollecting ... collected 2 items\n\ntests/test_analytics.py::test_collect FAILED                             [ 50%]\ntests/test_analytics.py::test_aggregate PASSED                           [100%]\n\n================================== FAILURES ===================================\n________________________________ test_collect _________________________________\n\n    def test_collect():\n        pt = collect_datapoint(\"test\", 10.5)\n>       assert pt[\"source\"] == \"test\"\n               ^^^^^^^^^^^^\nE       KeyError: 'source'\n\ntests\\test_analytics.py:8: KeyError\n=========================== short test summary info ===========================\nFAILED tests/test_analytics.py::test_collect - KeyError: 'source'\n========================= 1 failed, 1 passed in 0.26s =========================\n",
+      "success": true,
+      "exit_code": 0,
+      "passed_count": 2,
+      "failed_count": 0,
+      "duration_seconds": 1.16,
+      "pytest_seconds": 0.09,
+      "output": "============================= test session starts =============================\nplatform win32 -- Python 3.13.2, pytest-9.1.1, pluggy-1.6.0 -- C:\\Users\\Acer\\AppData\\Local\\Programs\\Python\\Python313\\python.exe\ncachedir: .pytest_cache\nrootdir: C:\\Users\\Acer\\AppData\\Local\\Temp\\chronofork_ws_pr6zbavl\\replay_gen_sc4_agent_4\nplugins: anyio-4.15.1\ncollecting ... collected 2 items\n\ntests/test_analytics.py::test_collect PASSED                             [ 50%]\ntests/test_analytics.py::test_aggregate PASSED                           [100%]\n\n============================== 2 passed in 0.09s ==============================\n",
       "errors": ""
     },
     "node_ids": [
@@ -203,9 +204,9 @@
     "provenance": {
       "pytest": {
         "source": "REAL",
-        "captured_at": "2026-10-18T03:06:15.745007+00:00"
+        "captured_at": "2026-10-18T10:08:43.869090+00:00"
       }
     },
-    "message": "Analytics tests verified in isolated workspace: 1 passed in 2.6s. Clean multi-tenant repository isolation confirmed."
+    "message": "Analytics tests verified in isolated workspace: 2 passed, 0 failed in 1.16s. Clean multi-tenant repository isolation confirmed."
   }
 ]

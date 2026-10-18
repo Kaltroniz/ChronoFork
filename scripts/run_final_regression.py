@@ -99,6 +99,14 @@ def main():
         clean_val = val.replace("|", "\\|")
         print(f"| `{name}` | {status_icon} | {clean_val} | [`{name}_stdout.txt`]({name}_stdout.txt) |")
 
+    failed = [name for name, rc, _ in results if rc != 0]
+    if failed:
+        print(f"\nREGRESSION FAILED on {len(failed)} script(s): {', '.join(failed)}")
+        sys.exit(1)
+    else:
+        print("\nALL REGRESSION SCRIPTS PASSED.")
+        sys.exit(0)
+
 
 if __name__ == "__main__":
     main()

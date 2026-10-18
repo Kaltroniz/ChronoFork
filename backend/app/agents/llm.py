@@ -91,11 +91,12 @@ class LLMProvider:
             Return JSON list: [{{"agent_id": "agent_1", "agent_name": "Name", "role": "Role", "claim_symbol": "symbol.qualname", "intent": "SIGNATURE_CHANGE|BODY_EDIT"}}]
             """
             models = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-flash-latest", "gemini-2.0-flash"]
+            headers = {"x-goog-api-key": self.api_key, "Content-Type": "application/json"}
             for model_name in models:
                 try:
-                    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={self.api_key}"
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent"
                     payload = {"contents": [{"parts": [{"text": prompt}]}]}
-                    res = httpx.post(url, json=payload, timeout=10.0)
+                    res = httpx.post(url, headers=headers, json=payload, timeout=10.0)
                     if res.status_code == 200:
                         raw = res.json()["candidates"][0]["content"]["parts"][0]["text"]
                         clean = raw.strip().replace("```json", "").replace("```", "").strip()
@@ -129,11 +130,12 @@ class LLMProvider:
             Return ONLY the raw Python code. Do not wrap in markdown or explanations.
             """
             models = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-flash-latest", "gemini-2.0-flash"]
+            headers = {"x-goog-api-key": self.api_key, "Content-Type": "application/json"}
             for model_name in models:
                 try:
-                    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={self.api_key}"
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent"
                     payload = {"contents": [{"parts": [{"text": prompt}]}]}
-                    res = httpx.post(url, json=payload, timeout=12.0)
+                    res = httpx.post(url, headers=headers, json=payload, timeout=12.0)
                     if res.status_code == 200:
                         raw = res.json()["candidates"][0]["content"]["parts"][0]["text"]
                         cleaned = raw.strip()

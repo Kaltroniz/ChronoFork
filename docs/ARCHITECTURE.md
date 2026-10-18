@@ -1,6 +1,6 @@
 # ChronoFork — System Architecture
 
-ChronoFork is an autonomous multi-agent coding swarm coordinator where **FalkorDB is the core brain**. When multiple AI agents modify separate files concurrently, Git reports zero text conflicts while runtime tests break. ChronoFork models codebases and agent intent directly as a graph to detect, serialize, and adapt cross-file dependencies in sub-millisecond time.
+ChronoFork is an autonomous multi-agent coding swarm coordinator where **FalkorDB is the core brain**. When multiple AI agents modify separate files concurrently, Git reports zero text conflicts while runtime tests break. ChronoFork models codebases and agent intent directly as a graph to detect, serialize, and adapt cross-file dependencies in millisecond-scale time.
 
 ---
 
@@ -69,7 +69,7 @@ confirms 0 conflict. first merge order.   via handoff diff.    new confidence (0
 | **Graph Algorithms** | [`backend/app/algorithms.py`](backend/app/algorithms.py) | Computes PageRank and Betweenness Centrality directly in FalkorDB; evaluates unified risk. |
 | **Memory Engine** | [`backend/app/memory.py`](backend/app/memory.py) | Manages episodic and procedural graphs in `mem:<repo>` with heuristic confidence clamping `[0.10, 0.99]`. |
 | **Workspace Sandbox** | [`backend/app/agents/coder.py`](backend/app/agents/coder.py) | Isolated temporary directory manager running Git merge experiments and real `pytest` runners. |
-| **Event Bus & API** | [`backend/app/main.py`](backend/app/main.py) | FastAPI service delivering REST endpoints and SSE telemetry streams with microsecond query timing. |
+| **Event Bus & API** | [`backend/app/main.py`](backend/app/main.py) | FastAPI service delivering REST endpoints and SSE telemetry streams with millisecond-scale query timing. |
 | **Frontend Console** | [`frontend/src/App.tsx`](frontend/src/App.tsx) | React 19 + Cytoscape.js instrument console rendering AST compounds, claim rings, collision paths, and telemetry. |
 
 ---

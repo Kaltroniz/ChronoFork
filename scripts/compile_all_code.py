@@ -119,7 +119,7 @@ def compile_all():
 > **Hackathon**: FalkorDB Graph Hacks 2026 (Track 1: Agents That Act on Connected Data & Track 2: Agent Memory and Coordination)  
 > **Repository**: [github.com/Kaltroniz/ChronoFork](https://github.com/Kaltroniz/ChronoFork)  
 > **Live Public Deployment (AWS)**: [http://34.230.70.144/](http://34.230.70.144/)  
-> **Live FastMCP Endpoint**: `POST http://34.230.70.144/mcp`  
+> **Live MCP-compatible Endpoint**: `POST http://34.230.70.144/mcp` (Read-only in Demo Mode)  
 > **Single Source of Truth**: All metrics and numbers derive strictly from `docs/NUMBERS.md`.
 
 ---
@@ -165,7 +165,7 @@ ChronoFork eliminates this failure mode by replacing dumb text comparisons with 
    - Evaluates structural bottleneck prominence using native FalkorDB algorithms:
      $$\\text{Risk}(S) = 0.5 \\times \\frac{\\text{PageRank}(S)}{\\max \\text{PageRank}} + 0.5 \\times \\frac{\\text{Betweenness}(S)}{\\max \\text{Betweenness}}$$
    - For `taskflow.config.load_config`: PageRank = `0.056058` (norm 1.0), Betweenness = `34.0` / max `48.0` (norm 0.7083), yielding $\\mathbf{0.854}$.
-   - Because $0.854 \\ge 0.50$, the coordinator elevates the coordination policy to **`SERIALIZE_CALLEE_FIRST`**.
+   - The policy is intent-driven: because Agent 1 declares a breaking intent (`SIGNATURE_CHANGE` on `load_config`), the coordinator enforces **`SERIALIZE_CALLEE_FIRST`** (centrality risk $0.854$ reported to rank severity; betweenness sampled across 32 sources with seed 42, so risk is approximate).
 4. **Speculative Fork Simulation (`backend/app/coordinator.py`)**:
    - Creates an isolated graph copy (`graph.copy` in **~55-112 ms**) under `fork:<run_id>:<agent_id>`.
    - Evaluates blast radius and dependent callers in complete isolation without mutating baseline repository data (`risk before == after`, 0.854).

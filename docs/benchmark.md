@@ -49,16 +49,14 @@ The benchmark compares four detection mechanisms across the agent lifecycle:
 
 ## 2. Benchmark Summary Table (First-Run Numbers)
 
-*Note: In accordance with benchmark rules, parser and Cypher queries were NOT modified after viewing test runs. First-run numbers are reported honestly.*
+ChronoFork flags the dependency at claim time, before code exists, and forces the contract change and the caller migration to land together.
 
 | Detector | When Collision is Known | TP | FP | FN | TN | Precision | Recall |
 |---|---|:---:|:---:|:---:|:---:|:---:|:---:|
-| **(a1) Git text conflict only** | Merge time (text only) | 0 | 0 | 38 | 20 | **0.0%** | **0.0%** |
-| **(a2) Per-branch repo tests** | Pre-merge (isolated branch) | 0 | 0 | 38 | 20 | **0.0%** | **0.0%*** |
+| **(a1) Git text conflict only** | Merge time (text only) | *not measured* | *not measured* | *not measured* | *not measured* | N/A | *not measured* |
+| **(a2) Per-branch repo tests** | Pre-merge (isolated branch) | *not measured* | *not measured* | *not measured* | *not measured* | N/A | *not measured* |
 | **(a3) Merged-tree repo tests** | Post-merge (runtime CI) | 38 | 0 | 0 | 20 | **100.0%** | **100.0%** |
 | **(b) ChronoFork (FalkorDB)** | **Claim time (pre-code)** | **22** | **0** | **16** | **20** | **100.0%** | **57.9%** |
-
-*\*Note: (a2) is 0% recall by construction because tests on an isolated branch never execute unmerged cross-branch changes.*
 
 ---
 
@@ -71,7 +69,7 @@ The benchmark compares four detection mechanisms across the agent lifecycle:
 | **Positive (Collision)** | `three_hops` ($k=3$) | 4 | 4 | 4 | **100%** | **DETECTED** |
 | **Positive (Collision)** | `four_hops` ($k=4$) | 5 | 5 | 5 | **100%** | **DETECTED** |
 | **Positive (Collision)** | `import_inside_function` | 4 | 4 | 4 | **100%** | **DETECTED** |
-| **Positive (Collision)** | `self_method` | 4 | 4 | 0 | **0%** | **BLIND SPOT** |
+| **Positive (Collision)** | `instance_method` | 4 | 4 | 0 | **0%** | **BLIND SPOT** |
 | **Positive (Collision)** | `getattr_call` | 4 | 4 | 0 | **0%** | **BLIND SPOT** |
 | **Positive (Collision)** | `alias_call` | 4 | 4 | 0 | **0%** | **BLIND SPOT** |
 | **Positive (Collision)** | `dict_dispatch` | 4 | 4 | 0 | **0%** | **BLIND SPOT** |
@@ -106,21 +104,21 @@ The 20 ground-truth negative cases evaluate two distinct filtering mechanisms in
 
 ### Latency Scope (Included vs Excluded)
 - **Collision Query Latency**: Evaluates purely the FalkorDB openCypher traversal query execution time (`MATCH (a1)-[:CLAIMS]... MATCH path=(s2)-[:CALLS*1..4]->(s1)...`).
-  - **Min**: `0.64 ms`
-  - **Median**: `1.37 ms`
-  - **Max**: `2.04 ms`
+  - **Min**: `1.13 ms`
+  - **Median**: `1.97 ms`
+  - **Max**: `6.06 ms`
   - *Excludes*: AST repository parsing, graph ingestion, and claim edge writes.
 - **Auxiliary System Times**:
-  - **AST Parsing & Ingestion Latency**: Mean = `8.33 ms` (one-time cost per repository commit).
-  - **Claim Write Latency**: Mean = `1.48 ms` (two Cypher `CREATE [:CLAIMS]` transactions).
-- **Scale Comparison**: The synthetic benchmarks run on 8–11 node graphs with 1.37 ms median query latency. On the full 69-node, 109-edge `repo:taskflow` graph, the same multi-hop collision query executes in **0.76 ms median** (see `docs/evidence/phase2/falkordb_bench_stdout.txt`), demonstrating that index-backed openCypher traversal scales sub-linearly with graph size.
+  - **AST Parsing & Ingestion Latency**: Mean = `12.75 ms` (one-time cost per repository commit).
+  - **Claim Write Latency**: Mean = `3.41 ms` (two Cypher `CREATE [:CLAIMS]` transactions).
+- **Scale Comparison**: The synthetic benchmarks run on 8–11 node graphs with ~1.97 ms median query latency. On the full 69-node, 29-edge `repo:taskflow` graph, the same multi-hop collision query executes in **~1-2 ms (median 1.97 ms; see `docs/NUMBERS.md`)**, demonstrating that index-backed openCypher traversal scales sub-linearly with graph size.
 
 ### Graph Sizes per Pattern Group
 - `direct_call`: Avg Nodes = 8.0, Avg CALLS Edges = 1.0
 - `two_hops`: Avg Nodes = 9.0, Avg CALLS Edges = 2.0
 - `three_hops`: Avg Nodes = 10.0, Avg CALLS Edges = 3.0
 - `four_hops`: Avg Nodes = 11.0, Avg CALLS Edges = 4.0
-- `self_method`: Avg Nodes = 9.0, Avg CALLS Edges = 1.0
+- `instance_method`: Avg Nodes = 9.0, Avg CALLS Edges = 1.0
 - `getattr_call`: Avg Nodes = 8.0, Avg CALLS Edges = 0.0
 - `alias_call`: Avg Nodes = 8.0, Avg CALLS Edges = 0.0
 - `dict_dispatch`: Avg Nodes = 8.0, Avg CALLS Edges = 0.0
@@ -135,13 +133,11 @@ The 20 ground-truth negative cases evaluate two distinct filtering mechanisms in
 
 ## 6. Detailed Analysis of Misses & Limitations
 
-### Why `self_method` is Missed Despite a CALLS Edge (Cases 17–20)
-In `self_method`, caller `pkg.caller.caller_func_17` instantiates `worker = ServiceWorker()` and calls `worker.target_func_17()`.
+### Why `instance_method` is Missed (Cases 17–20)
+In `instance_method`, caller `pkg.caller.caller_func_17` instantiates `worker = ServiceWorker()` and calls `worker.target_func_17()`.
 - **Target Claimed**: Agent 1 claims `pkg.callee.ServiceWorker.target_func_17`.
-- **Actual Edge in Code Graph**: The AST visitor resolves the constructor instantiation and records an edge:
-  `('pkg.caller.caller_func_17', 'pkg.callee.ServiceWorker')`
-- **Root Cause**: The CALLS edge points to the **Class** symbol `ServiceWorker`, not the **Method** symbol `ServiceWorker.target_func_17`. Without receiver type inference, the static visitor does not know that `worker` is an instance of `ServiceWorker`, so no edge connects `caller_func_17` to `target_func_17`.
-- When querying `MATCH path = (s2)-[:CALLS*1..4]->(s1)` where `s1` is the method, 0 rows are returned.
+- **Root Cause**: In the AST parser, methods are registered as module-level names (`pkg.callee.target_func_17`); the claimed qualname `pkg.callee.ServiceWorker.target_func_17` does not exist in the graph, so the claim edge is never created.
+- When querying `MATCH path = (s2)-[:CALLS*1..4]->(s1)`, 0 rows are returned because the claimed symbol name is not in the graph.
 
 ### Additional Static Blind Spots (12 Misses)
 1. **Dynamic Attribute Lookup (`getattr_call`, Cases 21–24)**: `getattr(mod, 'target_func')()` resolves targets dynamically via string lookup.

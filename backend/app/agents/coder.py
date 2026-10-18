@@ -30,6 +30,15 @@ class WorkspaceManager:
 
 
 import time
+import re
+
+
+def _parse_summary(stdout: str):
+    lines = [l for l in stdout.splitlines() if " in " in l and re.search(r"passed|failed|error", l)]
+    line = lines[-1] if lines else ""
+    g = lambda p: int(m.group(1)) if (m := re.search(p, line)) else 0
+    secs = float(m.group(1)) if (m := re.search(r" in ([\d.]+)s", line)) else None
+    return g(r"(\d+) passed"), g(r"(\d+) failed") + g(r"(\d+) error"), secs
 
 
 class Verifier:
@@ -57,17 +66,15 @@ class Verifier:
             duration = round(time.perf_counter() - t0, 2)
             passed = (res.returncode == 0)
             
-            # Count passed/failed from output
-            passed_count = res.stdout.count(" PASSED")
-            failed_count = res.stdout.count(" FAILED")
-            error_count = res.stdout.count(" ERROR")
+            passed_count, failed_count, pytest_seconds = _parse_summary(res.stdout)
 
             return {
                 "success": passed,
                 "exit_code": res.returncode,
                 "passed_count": passed_count,
-                "failed_count": failed_count + error_count,
+                "failed_count": failed_count,
                 "duration_seconds": duration,
+                "pytest_seconds": pytest_seconds,
                 "output": res.stdout,
                 "errors": res.stderr
             }
@@ -211,6 +218,58 @@ def test_compute_config_signature():
     cfg2 = {"b": 2, "a": 1}
     assert compute_config_signature(cfg1) == compute_config_signature(cfg2)
 '''
+
+BACKWARD_COMPAT_CONFIG_PATCH = BREAKING_CONFIG_OBJECT_PATCH.replace(
+    "class ConfigObject:", "class ConfigObject(dict):").replace(
+    "    def __init__(self, data: dict):\n",
+    "    def __init__(self, data: dict):\n        super().__init__(data)\n")
+
+REPORTS_PATCH_COMPAT = '''"""Report summary generator."""
+import datetime
+
+
+def calculate_metrics_summary(job_count: int, error_count: int) -> dict:
+    success_rate = 100.0 if job_count == 0 else ((job_count - error_count) / job_count) * 100.0
+    return {"total_jobs": job_count, "failed_jobs": error_count, "success_rate": round(success_rate, 2)}
+
+
+def generate_summary(days: int = 7) -> dict:
+    metrics = calculate_metrics_summary(job_count=120, error_count=2)
+    return {"generated_at": datetime.datetime.now().isoformat(), "period_days": days,
+            "metrics": metrics, "status": "READY", "report_format": "v2_summary"}
+'''
+
+ANALYTICS_PATCH = '''"""Collector module for Analytics repo."""
+import time
+
+
+def collect_datapoint(source: str, value: float) -> dict:
+    return {"source": source, "value": value, "timestamp": time.time()}
+'''
+
+WORKER_RETRY_PATCH = """\"\"\"Worker execution and background job dispatch.\"\"\"
+from taskflow.queue import dequeue_task
+from taskflow.models import create_job_result
+from taskflow.database import save_result
+
+
+def execute_job(job_id: str, token: str) -> dict:
+    \"\"\"Worker with retry loop optimization.\"\"\"
+    retries = 2
+    task = None
+    for attempt in range(retries):
+        task = dequeue_task(job_id, token)
+        if task.get("authorized"):
+            break
+
+    if not task or not task.get("authorized"):
+        return create_job_result(job_id=job_id, status="UNAUTHORIZED", data=None)
+
+    processed_data = {"job_id": job_id, "items_processed": 42, "retries_left": retries, "checksum": "ok"}
+    result = create_job_result(job_id=job_id, status="COMPLETED", data=processed_data)
+    save_result(job_id, result)
+    return result
+"""
 
 
 

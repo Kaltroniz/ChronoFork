@@ -1,0 +1,32 @@
+=== P1 Acceptance Test: Ingesting demo_repo/taskflow ===
+Parsed 69 symbols, 29 CALLS edges, 16 TESTED_BY edges.
+Ingested to FalkorDB: {'graph_key': 'repo:taskflow', 'nodes_count': 69, 'defines_count': 48, 'calls_count': 29, 'tested_by_count': 16, 'imports_count': 26}
+PASSED: Found exact 4-hop call chain: ['taskflow.worker.execute_job', 'taskflow.queue.dequeue_task', 'taskflow.auth.validate_token', 'taskflow.database.get_connection', 'taskflow.config.load_config']
+PASSED: Zero false edges from independent 'reports' subsystem to load_config.
+
+--- Impact Analysis for taskflow.config.load_config ---
+Dependent callers count: 7
+  Caller: taskflow.database.get_connection (depth: 1, chain: taskflow.database.get_connection -> taskflow.config.load_config)
+  Caller: tests.test_config.test_load_config_default (depth: 1, chain: tests.test_config.test_load_config_default -> taskflow.config.load_config)
+  Caller: taskflow.auth.validate_token (depth: 2, chain: taskflow.auth.validate_token -> taskflow.database.get_connection -> taskflow.config.load_config)
+  Caller: taskflow.queue.dequeue_task (depth: 3, chain: taskflow.queue.dequeue_task -> taskflow.auth.validate_token -> taskflow.database.get_connection -> taskflow.config.load_config)
+  Caller: tests.test_auth.test_validate_token_invalid (depth: 3, chain: tests.test_auth.test_validate_token_invalid -> taskflow.auth.validate_token -> taskflow.database.get_connection -> taskflow.config.load_config)
+  Caller: tests.test_auth.test_validate_token_valid (depth: 3, chain: tests.test_auth.test_validate_token_valid -> taskflow.auth.validate_token -> taskflow.database.get_connection -> taskflow.config.load_config)
+  Caller: taskflow.worker.execute_job (depth: 4, chain: taskflow.worker.execute_job -> taskflow.queue.dequeue_task -> taskflow.auth.validate_token -> taskflow.database.get_connection -> taskflow.config.load_config)
+Affected tests count: 5
+  Test: tests.test_auth.test_validate_token_invalid (tests/test_auth.py)
+  Test: tests.test_auth.test_validate_token_valid (tests/test_auth.py)
+  Test: tests.test_config.test_load_config_default (tests/test_config.py)
+  Test: tests.test_worker.test_execute_job_authorized (tests/test_worker.py)
+  Test: tests.test_worker.test_execute_job_unauthorized (tests/test_worker.py)
+
+Shortest call path from worker to load_config: taskflow.worker.execute_job -> taskflow.queue.dequeue_task -> taskflow.auth.validate_token -> taskflow.database.get_connection -> taskflow.config.load_config (hops: 4)
+
+Top 5 Risk-Scored Symbols in taskflow:
+  taskflow.auth.validate_token: risk = 0.8561 (PR: 0.03992, BW: 48.0)
+  taskflow.config.load_config: risk = 0.8542 (PR: 0.056058, BW: 34.0)
+  taskflow.database.get_connection: risk = 0.7988 (PR: 0.044014, BW: 39.0)
+  taskflow.worker.execute_job: risk = 0.6535 (PR: 0.017215, BW: 48.0)
+  taskflow.queue.dequeue_task: risk = 0.5501 (PR: 0.014955, BW: 40.0)
+
+>>> P1 ACCEPTANCE TEST PASSED SUCCESSFULLY! <<<

@@ -34,7 +34,7 @@ RETURN a1.id AS a1, a2.id AS a2, s1.qualname AS s1_qname, s2.qualname AS s2_qnam
 ### Q3: Why does ChronoFork copy the graph per run (`GRAPH.COPY`) instead of operating on a single graph?
 **Answer**:
 - **Isolation of Swarm State**: The baseline code structure in `repo:<name>` must remain pristine. Each swarm execution clones the graph into `coord:<run_id>` via FalkorDB's native `GRAPH.COPY` (median latency **108.32 ms**).
-- **Concurrency & Blast Radius**: Multiple runs or speculative forks (`fork:<run_id>:<agent_id>`) can mutate claims, test candidate patches, and record speculative blast radius without risking race conditions or polluting persistent repository data. Note on fork simulation: speculative fork simulation creates an isolated graph copy (`graph.copy`) used strictly to evaluate blast radius and identify affected upstream dependents in isolation before filesystem edits occur. Because it is an isolated structural copy used for blast radius calculation, it does not apply the patch to the graph schema, so the measured architectural risk score remains identical before and after simulation (`risk before == after`, 0.854).
+- **Concurrency & Blast Radius**: Multiple runs or speculative forks (`fork:<run_id>:<agent_id>`) can mutate claims, test candidate patches, and record speculative blast radius without risking race conditions or polluting persistent repository data. Speculative fork simulation creates an isolated graph copy (`graph.copy`) used strictly to evaluate blast radius; it does not apply the patch.
 
 ---
 
@@ -43,7 +43,7 @@ RETURN a1.id AS a1, a2.id AS a2, s1.qualname AS s1_qname, s2.qualname AS s2_qnam
 From [`backend/app/algorithms.py:53-56`](backend/app/algorithms.py#L53-L56), risk is a normalized blend of structural dependency scarcity (PageRank) and bridge centrality (Betweenness):
 $$\text{Risk}(S) = 0.5 \times \frac{\text{PageRank}(S)}{\max(\text{PageRank})} + 0.5 \times \frac{\text{Betweenness}(S)}{\max(\text{Betweenness})}$$
 - For `taskflow.config.load_config`, raw PageRank is 0.056058 (normalized 1.0000) and raw Betweenness is 34.0 (max 48.0, normalized 0.7083), yielding Risk = $0.5(1.0) + 0.5(0.7083) = \mathbf{0.854}$ (formatted as 0.854 across the UI and documented in `docs/NUMBERS.md`).
-- **Policy Enforcement**: If Agent 1's intent is `SIGNATURE_CHANGE` or `DELETE`, ChronoFork's coordinator **forces policy `SERIALIZE_CALLEE_FIRST` regardless of the risk threshold**, because altering a callee's interface will break caller execution irrespective of centrality.
+- **Policy Enforcement**: Policy is intent-driven (`SIGNATURE_CHANGE` and `DELETE` always serialize). Centrality risk is reported and ranks severity. Betweenness is sampled (32 sources, seed 42), so risk is approximate.
 
 ---
 
@@ -63,7 +63,8 @@ As documented in [`docs/benchmark.md`](docs/benchmark.md):
 1. **Dynamic Attribute Lookup (`getattr`)**: `getattr(mod, 'func')()` cannot be resolved by static AST without runtime dataflow.
 2. **Dynamic Dispatch Tables (`dict_dispatch`)**: `DISPATCH['op']()` table lookups are parsed as subscript calls without dictionary constant propagation.
 3. **Variable Aliasing (`alias`)**: Module-level alias assignments (`alias = func; alias()`) are not aliased across symbol tables by the simple AST visitor.
-4. **Instance Method Resolution (`self_method`)**: In `worker = ServiceWorker(); worker.f()`, the static visitor links the CALLS edge to the class `ServiceWorker` rather than the method symbol `ServiceWorker.f` because it lacks receiver type inference.
+4. **Instance Method Resolution (`instance_method`)**: Methods are registered as module-level names (`pkg.callee.target_func`); the claimed qualname `pkg.callee.ServiceWorker.target_func` does not exist in the graph, so the claim edge is never created.
+5. **Call chains of 5 or more hops**: Chains of 5 hops or more are not checked under the coordinator's bound.
 
 ---
 
@@ -78,7 +79,7 @@ As documented in [`docs/benchmark.md`](docs/benchmark.md):
 ### Q8: What happens if FalkorDB is shut down during execution?
 **Answer**:
 ChronoFork **fails loudly with zero mock fallbacks**:
-- When FalkorDB is stopped, calling `POST /runs` in live mode, `GET /graph/taskflow`, or `GET /collisions/test_run` returns HTTP **`503 Service Unavailable`** with body `{"detail": "FalkorDB connection refused or offline: ... failure to connect ..."}`.
+- When FalkorDB is stopped, calling `POST /runs` in live mode, or `GET /graph/taskflow` returns HTTP **`503 Service Unavailable`** with body `{"detail": "FalkorDB connection refused or offline: ... failure to connect ..."}`.
 - The frontend renders an explicit red error toast banner. No stale mock graphs are rendered. Verified via Playwright in [`docs/screens/live-fail-loudly.png`](docs/screens/live-fail-loudly.png).
 
 ---
@@ -112,8 +113,8 @@ ChronoFork **fails loudly with zero mock fallbacks**:
 ### Q12: What happens if a collision chain is 5 or more hops away?
 **Answer**:
 - The coordinator query uses the bound `[:CALLS*1..4]`.
-- Any dependency chain of length $k \ge 5$ hops is **silent** to ChronoFork under current configuration.
-- This bound represents an intentional engineering trade-off: in empirical software engineering, transitive impact beyond 4 hops decays rapidly, while unbounded Cypher traversals (`*1..`) on dense graphs risk exponential path explosion. Expanding the bound to $k \le 6$ requires only changing the query parameter.
+- Any dependency chain of length $k \ge 5$ hops is not checked under the coordinator's current bound.
+- This bound is an intentional query-cost choice: bounded variable-length path queries maintain predictable 1-2 ms latency, whereas unbounded Cypher traversals (`*1..`) on dense graphs risk exponential path explosion. Expanding the bound to $k \le 6$ requires only changing the query parameter.
 
 ---
 
@@ -122,6 +123,8 @@ ChronoFork **fails loudly with zero mock fallbacks**:
 Configurable via `.env` or Docker Compose environment: `DEMO_MODE=true` (which is default for production safety):
 1. **Live Subprocess Execution**: In `POST /runs`, `DEMO_MODE=true` forces execution to `replay` mode (`req_mode = "replay" if demo_mode else req.mode`), disabling live Git branch creation, live subprocess merges, and live `pytest` invocations on the host.
 2. **Arbitrary Repository Ingestion**: In `POST /repos`, `DEMO_MODE=true` returns HTTP **`403 Forbidden`** (`"Repository upload and ingestion is disabled in Demo Mode."`), completely disabling arbitrary directory tree parsing and FalkorDB graph ingestion from external requests.
+3. **Memory Graph Reset**: `POST /memory/{repo}/reset` returns HTTP `403 Forbidden` in Demo Mode.
+4. **MCP-Compatible Endpoint**: MCP-compatible JSON-RPC endpoint (`/mcp` with hand-rolled `tools/list` and `tools/call`); write tools (`claim_symbols`, `fork_graph`, `record_episode`) are disabled in Demo Mode (returning code `-32001`), allowing only read tools (`get_impact`, `rank_risk`, `recall_memory`).
 
 ---
 
@@ -138,12 +141,10 @@ Configurable via `.env` or Docker Compose environment: `DEMO_MODE=true` (which i
 
 ### Q15: What does Rule 3 mean here?
 **Answer**:
-"Rule 3" has two specific technical contexts in the ChronoFork codebase and hackathon submission:
-1. **FalkorDB openCypher Query Rule 3 (from [`docs/falkordb-verified.md`](falkordb-verified.md))**:
-   *"ShortestPath constraint: Do not assign `p = shortestPath(...)` directly in `MATCH`; use `WITH shortestPath(...) AS p` or `CALL algo.SPpaths`."*
-   FalkorDB's openCypher implementation enforces that `shortestPath` cannot be bound as an inline variable pattern in the initial `MATCH` clause without planner syntax errors. For transitive collision detection, ChronoFork adheres to this by using variable-length path traversal `MATCH path = (s2)-[:CALLS*1..4]->(s1)`, which compiles directly into native sparse matrix-matrix multiplication in FalkorDB.
-2. **Hackathon Submission Rule 3 (from [`docs/SUBMISSION_CHECKLIST.md`](SUBMISSION_CHECKLIST.md))**:
-   Item 3 of the submission requirements mandates publishing every Cypher query verbatim with technical justification explaining why a graph database is necessary over relational SQL or vector stores (transitive traversal, native C-level centrality algorithms, and unified coordination property graph).
+Graph Hacks Rule 3 says the graph must do real work, and the product must stop working if FalkorDB is removed.
+- In Live mode (`DEMO_MODE=false`), stopping the container makes runs fail with HTTP 503 and no fallback.
+- Claims, the collision query, the risk scores, merge ordering and memory recall all run in FalkorDB.
+- Replay mode serves cached events captured from real runs.
 
 ---
 
@@ -152,6 +153,9 @@ Configurable via `.env` or Docker Compose environment: `DEMO_MODE=true` (which i
 - **Google Antigravity**: Used for autonomous codebase implementation, Playwright end-to-end verification, test suite authoring, and Docker containerization.
 - **Anthropic Claude**: Used for initial design review, architectural planning, and benchmark methodology design.
 - **Verified by Team Mutants (Vivek C K & Souhardya Saha)**:
-  - The team personally validated the openCypher collision queries on FalkorDB.
-  - The team personally executed the 5-failed vs 12-passed pytest comparison on real workspaces.
-  - The team personally verified the Docker Compose multi-stage build, container healthchecks, and Playwright UI recordings.
+  - Verified by Vivek C K and Souhardya Saha: we ran the clean-clone docker compose up, the benchmark and the 5-failed/12-passed experiment ourselves, checked the docs against docs/NUMBERS.md and the evidence logs, and can explain the schema, the collision query, the risk formula and the memory update.
+
+---
+
+### Q17: Wouldn't each agent's own tests catch this? Isn't "git merges cleanly" a weak baseline?
+**Answer**: Partly, in this demo. Agent 1's branch changes `load_config`'s contract without migrating its callers, so Agent 1's own branch fails tests too. We did not measure git merges or per-branch tests in the benchmark (those columns say "not measured"); the only measured baseline is the merged-tree test run, which equals ground truth by construction. What we claim and measured is claim-time detection: before any code exists, ChronoFork knows a breaking-intent claim reaches another agent's claim within 4 CALLS hops (22/38 seeded collisions, 0 false positives), and it sequences the contract change and the caller migration. Limits: synthetic corpus, static call resolution only, 4-hop bound.

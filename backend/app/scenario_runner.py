@@ -41,7 +41,11 @@ from backend.app.agents.coder import (
     run_naive_git_merge_experiment,
     BREAKING_CONFIG_OBJECT_PATCH,
     MIGRATED_DATABASE_PATCH,
-    MIGRATED_TEST_CONFIG_PATCH
+    MIGRATED_TEST_CONFIG_PATCH,
+    BACKWARD_COMPAT_CONFIG_PATCH,
+    REPORTS_PATCH_COMPAT,
+    ANALYTICS_PATCH,
+    WORKER_RETRY_PATCH
 )
 from backend.app.agents.llm import llm_provider
 
@@ -72,6 +76,14 @@ def execute_scenario_1(run_id: str = "run_scenario_1", mode: str = "replay") -> 
     Task: 'Migrate load_config to return a ConfigObject and add retry logic to worker jobs'
     Demonstrates real Git clean merge failure vs ChronoFork graph serialization success.
     """
+    try:
+        return _execute_scenario_1_impl(run_id=run_id, mode=mode)
+    finally:
+        cleanup_run_graphs(run_id)
+        event_bus.mark_completed(run_id)
+
+
+def _execute_scenario_1_impl(run_id: str = "run_scenario_1", mode: str = "replay") -> List[Dict[str, Any]]:
     ensure_demo_repos_ingested()
     reset_memory("taskflow")  # Ensure Scenario 1 always starts from a clean Cold Start
     event_bus.init_run(run_id)
@@ -215,7 +227,7 @@ def execute_scenario_1(run_id: str = "run_scenario_1", mode: str = "replay") -> 
         node_ids=c["path_nodes"] if c else [],
         execution_data={"merge_order": merge_order},
         message=(
-            f"POLICY: SERIALIZE (load_config centrality risk = {c['risk_score']:.3f} >= 0.50). "
+            f"POLICY: SERIALIZE (breaking intent {c['intent_a']} on {c['symbol_a']}; centrality risk {c['risk_score']:.3f} reported). "
             f"FalkorDB wrote (:WorkerCoder)-[:BLOCKED_BY]->(:ConfigCoder). "
             f"Callee-first merge order: 1. {merge_order[0]['symbol']} (Callee), 2. {merge_order[1]['symbol']} (Caller)."
         )
@@ -276,6 +288,7 @@ def execute_scenario_1(run_id: str = "run_scenario_1", mode: str = "replay") -> 
         coder_1.apply_patch("taskflow/database.py", MIGRATED_DATABASE_PATCH)
 
     pytest_1 = coder_1.verify()
+    pytest_1["llm_generated"] = (patch_source == "Gemini LLM (Verified)")
 
     event_bus.emit_event(
         run_id=run_id,
@@ -303,30 +316,7 @@ def execute_scenario_1(run_id: str = "run_scenario_1", mode: str = "replay") -> 
     coder_2.apply_patch("taskflow/database.py", migrated_db_patch)
     coder_2.apply_patch("tests/test_config.py", MIGRATED_TEST_CONFIG_PATCH)
 
-    worker_patch = """\"\"\"Worker execution and background job dispatch.\"\"\"
-from taskflow.queue import dequeue_task
-from taskflow.models import create_job_result
-from taskflow.database import save_result
-
-
-def execute_job(job_id: str, token: str) -> dict:
-    \"\"\"Worker with retry loop optimization.\"\"\"
-    retries = 2
-    task = None
-    for attempt in range(retries):
-        task = dequeue_task(job_id, token)
-        if task.get("authorized"):
-            break
-
-    if not task or not task.get("authorized"):
-        return create_job_result(job_id=job_id, status="UNAUTHORIZED", data=None)
-
-    processed_data = {"job_id": job_id, "items_processed": 42, "retries_left": retries, "checksum": "ok"}
-    result = create_job_result(job_id=job_id, status="COMPLETED", data=processed_data)
-    save_result(job_id, result)
-    return result
-"""
-    coder_2.apply_patch("taskflow/worker.py", worker_patch)
+    coder_2.apply_patch("taskflow/worker.py", WORKER_RETRY_PATCH)
     pytest_2 = coder_2.verify()
 
     event_bus.emit_event(
@@ -382,8 +372,6 @@ def execute_job(job_id: str, token: str) -> dict:
         message=f"Memory updated in mem:taskflow! Recorded Episode {ep['episode_id']}. Rule confidence boosted to {new_conf * 100:.0f}%. Next run will recall this!"
     )
 
-    cleanup_run_graphs(run_id)
-    event_bus.mark_completed(run_id)
     return event_bus.get_buffered_events(run_id)
 
 
@@ -394,6 +382,14 @@ def execute_scenario_2(run_id: str = "run_scenario_2", memory_enabled: bool = Tr
     If memory_enabled=True: recalls rule from mem:taskflow, derives BODY_EDIT intent, 0 collisions.
     If memory_enabled=False: ignores memory, uses SIGNATURE_CHANGE, collision occurs! Proves memory value.
     """
+    try:
+        return _execute_scenario_2_impl(run_id=run_id, memory_enabled=memory_enabled)
+    finally:
+        cleanup_run_graphs(run_id)
+        event_bus.mark_completed(run_id)
+
+
+def _execute_scenario_2_impl(run_id: str = "run_scenario_2", memory_enabled: bool = True) -> List[Dict[str, Any]]:
     ensure_demo_repos_ingested()
     event_bus.init_run(run_id)
     repo = "taskflow"
@@ -512,10 +508,12 @@ def execute_scenario_2(run_id: str = "run_scenario_2", memory_enabled: bool = Tr
                 )
             )
 
-            # Real Pytest in Workspace
+            # Real Pytest in Workspace (Merged Tree with Adapted Backward-Compatible Config & Worker)
             ws_mgr = WorkspaceManager(taskflow_path)
-            coder_1 = Coder("agent_1", "ConfigCoder", run_id, ws_mgr)
-            test_res = coder_1.verify()
+            merged = Coder("merged", "Verifier", run_id, ws_mgr)
+            merged.apply_patch("taskflow/config.py", BACKWARD_COMPAT_CONFIG_PATCH)
+            merged.apply_patch("taskflow/worker.py", WORKER_RETRY_PATCH)
+            test_res = merged.verify()
 
             event_bus.emit_event(
                 run_id=run_id,
@@ -524,7 +522,7 @@ def execute_scenario_2(run_id: str = "run_scenario_2", memory_enabled: bool = Tr
                 tool="run_pytest",
                 node_ids=["taskflow.config.load_config", "taskflow.worker.execute_job"],
                 execution_data=test_res,
-                message=f"Both agents executed concurrently without serialization. Real pytest: {test_res['passed_count']} passed in {test_res['duration_seconds']}s!"
+                message=f"Both agents executed concurrently without serialization. Real pytest on merged tree: {test_res['passed_count']} passed, {test_res['failed_count']} failed in {test_res['duration_seconds']}s!"
             )
 
             new_conf = update_rule_confidence(repo, rule["id"], success=True)
@@ -578,8 +576,6 @@ def execute_scenario_2(run_id: str = "run_scenario_2", memory_enabled: bool = Tr
             message="COLLISION RE-OCCURS! Without memory, agents collide on the transitive call chain."
         )
 
-    cleanup_run_graphs(run_id)
-    event_bus.mark_completed(run_id)
     return event_bus.get_buffered_events(run_id)
 
 
@@ -589,6 +585,14 @@ def execute_scenario_3(run_id: str = "run_scenario_3") -> List[Dict[str, Any]]:
     Agent 1 on taskflow core worker; Agent 3 on reports subsystem. Disjoint subgraphs -> PARALLEL_OK.
     Applies small real patches in parallel isolated workspaces and verifies with pytest.
     """
+    try:
+        return _execute_scenario_3_impl(run_id=run_id)
+    finally:
+        cleanup_run_graphs(run_id)
+        event_bus.mark_completed(run_id)
+
+
+def _execute_scenario_3_impl(run_id: str = "run_scenario_3") -> List[Dict[str, Any]]:
     ensure_demo_repos_ingested()
     event_bus.init_run(run_id)
     repo = "taskflow"
@@ -693,25 +697,13 @@ def execute_job(job_id: str, token: str) -> dict:
     coder_2.apply_patch("taskflow/worker.py", worker_patch_sc3)
 
     coder_3 = Coder("agent_3", "ReportsCoder", run_id, ws_mgr)
-    reports_patch_sc3 = """\"\"\"Reporting subsystem for TaskFlow.\"\"\"
-from taskflow.models import create_job_result
-
-
-def generate_summary(results: list) -> dict:
-    \"\"\"Aggregates job results for executive report summary.\"\"\"
-    total = len(results)
-    completed = sum(1 for r in results if r.get("status") == "COMPLETED")
-    return {
-        "total_jobs": total,
-        "completed_jobs": completed,
-        "success_rate": (completed / total) if total > 0 else 0.0,
-        "report_format": "v2_summary"
-    }
-"""
-    coder_3.apply_patch("taskflow/reports/generator.py", reports_patch_sc3)
+    coder_3.apply_patch("taskflow/reports/generator.py", REPORTS_PATCH_COMPAT)
 
     # Verifier runs real pytest on parallel merged workspace
-    test_res = coder_2.verify()
+    merged = Coder("merged", "Verifier", run_id, ws_mgr)
+    merged.apply_patch("taskflow/worker.py", worker_patch_sc3)
+    merged.apply_patch("taskflow/reports/generator.py", REPORTS_PATCH_COMPAT)
+    test_res = merged.verify()
 
     event_bus.emit_event(
         run_id=run_id,
@@ -720,11 +712,9 @@ def generate_summary(results: list) -> dict:
         tool="run_pytest",
         node_ids=["taskflow.worker.execute_job", "taskflow.reports.generator.generate_summary"],
         execution_data=test_res,
-        message=f"Parallel merges validated. Real pytest: {test_res['passed_count']} passed in {test_res['duration_seconds']}s."
+        message=f"Parallel merges validated. Real pytest: {test_res['passed_count']} passed, {test_res['failed_count']} failed in {test_res['duration_seconds']}s."
     )
 
-    cleanup_run_graphs(run_id)
-    event_bus.mark_completed(run_id)
     return event_bus.get_buffered_events(run_id)
 
 
@@ -734,6 +724,14 @@ def execute_scenario_4(run_id: str = "run_scenario_4") -> List[Dict[str, Any]]:
     Demonstrates switching to analytics repo where claims and memory are strictly isolated.
     Applies small real telemetry patch in isolated workspace and verifies with pytest.
     """
+    try:
+        return _execute_scenario_4_impl(run_id=run_id)
+    finally:
+        cleanup_run_graphs(run_id)
+        event_bus.mark_completed(run_id)
+
+
+def _execute_scenario_4_impl(run_id: str = "run_scenario_4") -> List[Dict[str, Any]]:
     ensure_demo_repos_ingested()
     event_bus.init_run(run_id)
     repo = "analytics"
@@ -778,21 +776,10 @@ def execute_scenario_4(run_id: str = "run_scenario_4") -> List[Dict[str, Any]]:
     # Real Workspace Execution: Apply Real Telemetry Patch
     ws_mgr = WorkspaceManager(analytics_path)
     coder = Coder("agent_4", "TelemetryCoder", run_id, ws_mgr)
-    analytics_patch_sc4 = """\"\"\"Telemetry and metric collection pipeline for Analytics.\"\"\"
-import time
-
-
-def collect_datapoint(metric_name: str, value: float) -> dict:
-    \"\"\"Records high-precision telemetry datapoint with timestamp.\"\"\"
-    return {
-        "metric": metric_name,
-        "value": float(value),
-        "timestamp": time.time(),
-        "collector_status": "active"
-    }
-"""
-    coder.apply_patch("analytics/collector.py", analytics_patch_sc4)
+    coder.apply_patch("analytics/collector.py", ANALYTICS_PATCH)
     test_res = coder.verify()
+    if not test_res["success"]:
+        raise RuntimeError(f"Analytics tests failed: {test_res}")
 
     event_bus.emit_event(
         run_id=run_id,
@@ -801,9 +788,7 @@ def collect_datapoint(metric_name: str, value: float) -> dict:
         tool="run_pytest",
         node_ids=["analytics.collector.collect_datapoint"],
         execution_data=test_res,
-        message=f"Analytics tests verified in isolated workspace: {test_res['passed_count']} passed in {test_res['duration_seconds']}s. Clean multi-tenant repository isolation confirmed."
+        message=f"Analytics tests verified in isolated workspace: {test_res['passed_count']} passed, {test_res['failed_count']} failed in {test_res['duration_seconds']}s. Clean multi-tenant repository isolation confirmed."
     )
 
-    cleanup_run_graphs(run_id)
-    event_bus.mark_completed(run_id)
     return event_bus.get_buffered_events(run_id)

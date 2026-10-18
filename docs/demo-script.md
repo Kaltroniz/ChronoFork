@@ -79,11 +79,11 @@
   - Run the application with `DEMO_MODE=false docker compose up`.
   - In the UI, switch Mode toggle from **Replay** to **Live**.
   - Simulate an unreachable database (stop the FalkorDB container or disconnect the network).
-  - Click **Run Swarm** in the UI.
+  - Click **Scenario 1** in the UI.
   - The UI immediately surfaces an explicit red error toast banner at top-right indicating the database is unreachable. Zero events play; no fake mock fallback is triggered.
-  - Restart the FalkorDB container and click **Run Swarm** again $\to$ live execution proceeds immediately with real FalkorDB timestamps and green `REAL` provenance badges.
+  - Restart the FalkorDB container and click **Scenario 1** again $\to$ live execution proceeds immediately with real FalkorDB timestamps and green `REAL` provenance badges.
 - **Voiceover**:
-  > "ChronoFork does not fake anything. If we run with `DEMO_MODE=false` and the database service is offline or unreachable, clicking Run Swarm halts immediately with a clear error notification.
+  > "ChronoFork does not fake anything. If we run with `DEMO_MODE=false` and the database service is offline or unreachable, clicking Scenario 1 halts immediately with a clear error notification.
   > There is zero fallback to cached data or decorative mocks. FalkorDB is the required engine; if it goes down, the swarm halts loudly.
   > Restoring the database resumes live execution with real queries, real git branches, and real test execution."
 

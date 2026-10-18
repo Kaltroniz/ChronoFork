@@ -1,7 +1,7 @@
 [
   {
     "index": 0,
-    "ts": 1792292714.5477765,
+    "ts": 1792318112.158723,
     "run_id": "replay_gen_sc1",
     "agent": "Planner",
     "phase": "PLANNING",
@@ -23,7 +23,7 @@
   },
   {
     "index": 1,
-    "ts": 1792292714.7541175,
+    "ts": 1792318112.303183,
     "run_id": "replay_gen_sc1",
     "agent": "ConfigCoder",
     "phase": "RECALL",
@@ -31,14 +31,14 @@
     "cypher": "MATCH (s:Symbol)<-[:INVOLVED]-(r:ProceduralRule)\n    WHERE s.qualname IN $qnames\n    RETURN DISTINCT r.id AS id, r.rule AS rule, r.advice AS advice, r.confidence AS confidence, r.samples AS samples, s.qualname AS trigger_symbol, r.recommended_intent AS recommended_intent\n    ORDER BY r.confidence DESC",
     "params": {
       "qnames": [
-        "taskflow.config.get_default_config",
         "tests.test_config.test_load_config_default",
-        "taskflow.database.get_connection",
-        "tests.test_config.test_get_default_config",
         "taskflow.auth.validate_token",
-        "taskflow.config.compute_config_signature",
         "taskflow.config.load_config",
-        "tests.test_config.test_compute_config_signature"
+        "taskflow.config.compute_config_signature",
+        "taskflow.config.get_default_config",
+        "tests.test_config.test_compute_config_signature",
+        "taskflow.database.get_connection",
+        "tests.test_config.test_get_default_config"
       ]
     },
     "trace": {
@@ -46,17 +46,17 @@
       "cypher": "MATCH (s:Symbol)<-[:INVOLVED]-(r:ProceduralRule)\n    WHERE s.qualname IN $qnames\n    RETURN DISTINCT r.id AS id, r.rule AS rule, r.advice AS advice, r.confidence AS confidence, r.samples AS samples, s.qualname AS trigger_symbol, r.recommended_intent AS recommended_intent\n    ORDER BY r.confidence DESC",
       "params": {
         "qnames": [
-          "taskflow.config.get_default_config",
           "tests.test_config.test_load_config_default",
-          "taskflow.database.get_connection",
-          "tests.test_config.test_get_default_config",
           "taskflow.auth.validate_token",
-          "taskflow.config.compute_config_signature",
           "taskflow.config.load_config",
-          "tests.test_config.test_compute_config_signature"
+          "taskflow.config.compute_config_signature",
+          "taskflow.config.get_default_config",
+          "tests.test_config.test_compute_config_signature",
+          "taskflow.database.get_connection",
+          "tests.test_config.test_get_default_config"
         ]
       },
-      "duration_ms": 11.28,
+      "duration_ms": 2.75,
       "row_count": 0,
       "rows": [],
       "header": [
@@ -102,14 +102,14 @@
     "provenance": {
       "graph": {
         "source": "REAL",
-        "captured_at": "2026-10-18T03:05:14.754079+00:00"
+        "captured_at": "2026-10-18T10:08:32.303168+00:00"
       }
     },
     "message": "ConfigCoder queried mem:taskflow: 0 prior rules found. Proceeding with initial claim."
   },
   {
     "index": 2,
-    "ts": 1792292714.7622726,
+    "ts": 1792318112.30671,
     "run_id": "replay_gen_sc1",
     "agent": "ConfigCoder",
     "phase": "CLAIM",
@@ -130,7 +130,7 @@
         "intent": "SIGNATURE_CHANGE",
         "subtask": "Return ConfigObject instead of dict"
       },
-      "duration_ms": 8.05,
+      "duration_ms": 3.47,
       "row_count": 1,
       "rows": [
         [
@@ -178,14 +178,14 @@
     "provenance": {
       "graph": {
         "source": "REAL",
-        "captured_at": "2026-10-18T03:05:14.762249+00:00"
+        "captured_at": "2026-10-18T10:08:32.306697+00:00"
       }
     },
     "message": "ConfigCoder declared CLAIM on taskflow.config.load_config with intent SIGNATURE_CHANGE."
   },
   {
     "index": 3,
-    "ts": 1792292714.9677243,
+    "ts": 1792318112.4193685,
     "run_id": "replay_gen_sc1",
     "agent": "ConfigCoder",
     "phase": "FORK_SIMULATION",
@@ -200,7 +200,7 @@
       "params": {
         "qname": "taskflow.config.load_config"
       },
-      "duration_ms": 2.76,
+      "duration_ms": 1.17,
       "row_count": 7,
       "rows": [
         [
@@ -332,14 +332,14 @@
     "provenance": {
       "graph": {
         "source": "REAL",
-        "captured_at": "2026-10-18T03:05:14.967699+00:00"
+        "captured_at": "2026-10-18T10:08:32.419357+00:00"
       }
     },
     "message": "Speculative fork simulation on fork:replay_gen_sc1:agent_1: Centrality risk = 0.854. Blast radius: 7 callers affected across 4 modules."
   },
   {
     "index": 4,
-    "ts": 1792292714.9706483,
+    "ts": 1792318112.4209573,
     "run_id": "replay_gen_sc1",
     "agent": "WorkerCoder",
     "phase": "CLAIM",
@@ -360,7 +360,7 @@
         "intent": "BODY_EDIT",
         "subtask": "Add retry mechanism"
       },
-      "duration_ms": 2.83,
+      "duration_ms": 1.54,
       "row_count": 1,
       "rows": [
         [
@@ -408,14 +408,14 @@
     "provenance": {
       "graph": {
         "source": "REAL",
-        "captured_at": "2026-10-18T03:05:14.970628+00:00"
+        "captured_at": "2026-10-18T10:08:32.420945+00:00"
       }
     },
     "message": "WorkerCoder declared CLAIM on taskflow.worker.execute_job with intent BODY_EDIT in worker.py."
   },
   {
     "index": 5,
-    "ts": 1792292715.0089848,
+    "ts": 1792318112.4360905,
     "run_id": "replay_gen_sc1",
     "agent": "Coordinator",
     "phase": "COLLISION_DETECTION",
@@ -426,7 +426,7 @@
       "graph": "coord:replay_gen_sc1",
       "cypher": "MATCH (a1:Agent)-[c1:CLAIMS]->(s1:Symbol),\n          (a2:Agent)-[c2:CLAIMS]->(s2:Symbol)\n    WHERE a1.id <> a2.id\n      AND c1.intent IN ['SIGNATURE_CHANGE', 'DELETE']\n    MATCH path = (s2)-[:CALLS*1..4]->(s1)\n    RETURN a1.id AS a1, a2.id AS a2, s1.qualname AS s1_qname, s2.qualname AS s2_qname,\n           c1.intent AS intent1, c2.intent AS intent2,\n           [n in nodes(path) | n.qualname] AS path_nodes, length(path) AS hops",
       "params": {},
-      "duration_ms": 5.14,
+      "duration_ms": 3.36,
       "row_count": 1,
       "rows": [
         [
@@ -533,14 +533,14 @@
     "provenance": {
       "graph": {
         "source": "REAL",
-        "captured_at": "2026-10-18T03:05:15.008963+00:00"
+        "captured_at": "2026-10-18T10:08:32.436077+00:00"
       }
     },
     "message": "TRANSITIVE COLLISION DETECTED! FalkorDB uncovered a 4-hop call chain: taskflow.worker.execute_job -> taskflow.queue.dequeue_task -> taskflow.auth.validate_token -> taskflow.database.get_connection -> taskflow.config.load_config. Git diff shows 0 conflicts (different files: config.py vs worker.py). Runtime will crash because worker.execute_job transitively calls load_config!"
   },
   {
     "index": 6,
-    "ts": 1792292722.73485,
+    "ts": 1792318116.7966385,
     "run_id": "replay_gen_sc1",
     "agent": "Coordinator",
     "phase": "GIT_COMPARISON",
@@ -558,8 +558,8 @@
       "pytest_failed": 5,
       "naive_pytest_passed": 7,
       "naive_pytest_failed": 5,
-      "duration_seconds": 2.05,
-      "pytest_output": "============================= test session starts =============================\nplatform win32 -- Python 3.13.2, pytest-9.1.1, pluggy-1.6.0 -- C:\\Users\\Acer\\AppData\\Local\\Programs\\Python\\Python313\\python.exe\ncachedir: .pytest_cache\nrootdir: C:\\Users\\Acer\\AppData\\Local\\Temp\\chronofork_naive_git_4is1ycob\nplugins: anyio-4.15.1\ncollecting ... collected 12 items\n\ntests/test_auth.py::test_extract_claims PASSED                           [  8%]\ntests/test_auth.py::test_validate_token_valid FAILED                     [ 16%]\ntests/test_auth.py::test_validate_token_invalid FAILED                   [ 25%]\ntests/test_config.py::test_get_default_config PASSED                     [ 33%]\ntests/test_config.py::test_load_config_default FAILED                    [ 41%]\ntests/test_config.py::test_compute_config_signature PASSED               [ 50%]\ntests/test_reports.py::test_calculate_metrics_summary PASSED             [ 58%]\ntests/test_reports.py::test_generate_summary PASSED                      [ 66%]\ntests/test_reports.py::test_format_as_markdown PASSED                    [ 75%]\ntests/test_reports.py::test_schedule_report_generation PASSED            [ 83%]\ntests/test_worker.py::test_execute_job_authorized FAILED                 [ 91%]\ntests/test_worker.py::test_execute_job_unauthorized FAILED               [100%]\n\n================================== FAILURES ===================================\n__________________________ test_validate_token_valid __________________________\n\n    def test_validate_token_valid():\n        # Secret is 'chrono-secret-key-42'\n        valid_tok = \"tok_chrono-secret-key-42_user99\"\n>       assert validate_token(valid_tok) is True\n               ^^^^^^^^^^^^^^^^^^^^^^^^^\n\ntests\\test_auth.py:14: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _\ntaskflow\\auth.py:21: in validate_token\n    conn = get_connection(path=path)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _\n\npath = 'app.conf'\n\n    def get_connection(path: str = \"app.conf\") -> dict:\n        \"\"\"\n        Establishes simulated database connection using application config.\n        DEPENDENCY HOP 1 (from auth.validate_token): Calls load_config(path).\n        Expects loaded configuration to be a dictionary.\n        \"\"\"\n        cfg = load_config(path=path)\n        return {\n>           \"db_url\": f\"sqlite:///taskflow_{cfg['env']}.db\",\n                                            ^^^^^^^^^^\n            \"timeout\": cfg[\"timeout\"],\n            \"secret\": cfg[\"auth_secret\"],\n            \"connected\": True\n        }\nE       TypeError: 'ConfigObject' object is not subscriptable\n\ntaskflow\\database.py:15: TypeError\n_________________________ test_validate_token_invalid _________________________\n\n    def test_validate_token_invalid():\n>       assert validate_token(\"invalid_token\") is False\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\ntests\\test_auth.py:18: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _\ntaskflow\\auth.py:21: in validate_token\n    conn = get_connection(path=path)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _\n\npath = 'app.conf'\n\n    def get_connection(path: str = \"app.conf\") -> dict:\n        \"\"\"\n        Establishes simulated database connection using application config.\n        DEPENDENCY HOP 1 (from auth.validate_token): Calls load_config(path).\n        Expects loaded configuration to be a dictionary.\n        \"\"\"\n        cfg = load_config(path=path)\n        return {\n>           \"db_url\": f\"sqlite:///taskflow_{cfg['env']}.db\",\n                                            ^^^^^^^^^^\n            \"timeout\": cfg[\"timeout\"],\n            \"secret\": cfg[\"auth_secret\"],\n            \"connected\": True\n        }\nE       TypeError: 'ConfigObject' object is not subscriptable\n\ntaskflow\\database.py:15: TypeError\n__________________________ test_load_config_default ___________________________\n\n    def test_load_config_default():\n        cfg = load_config()\n>       assert isinstance(cfg, dict)\nE       assert False\nE        +  where False = isinstance(<taskflow.config.ConfigObject object at 0x0000019CE560CCD0>, dict)\n\ntests\\test_config.py:14: AssertionError\n_________________________ test_execute_job_authorized _________________________\n\n    def test_execute_job_authorized():\n        clear_store()\n        token = \"tok_chrono-secret-key-42_sess\"\n>       res = execute_job(job_id=\"job_001\", token=token)\n              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\ntests\\test_worker.py:9: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _\ntaskflow\\worker.py:12: in execute_job\n    task = dequeue_task(job_id, token)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^\ntaskflow\\queue.py:30: in dequeue_task\n    if not validate_token(token):\n           ^^^^^^^^^^^^^^^^^^^^^\ntaskflow\\auth.py:21: in validate_token\n    conn = get_connection(path=path)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _\n\npath = 'app.conf'\n\n    def get_connection(path: str = \"app.conf\") -> dict:\n        \"\"\"\n        Establishes simulated database connection using application config.\n        DEPENDENCY HOP 1 (from auth.validate_token): Calls load_config(path).\n        Expects loaded configuration to be a dictionary.\n        \"\"\"\n        cfg = load_config(path=path)\n        return {\n>           \"db_url\": f\"sqlite:///taskflow_{cfg['env']}.db\",\n                                            ^^^^^^^^^^\n            \"timeout\": cfg[\"timeout\"],\n            \"secret\": cfg[\"auth_secret\"],\n            \"connected\": True\n        }\nE       TypeError: 'ConfigObject' object is not subscriptable\n\ntaskflow\\database.py:15: TypeError\n________________________ test_execute_job_unauthorized ________________________\n\n    def test_execute_job_unauthorized():\n        clear_store()\n>       res = execute_job(job_id=\"job_002\", token=\"bad_token\")\n              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\ntests\\test_worker.py:18: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _\ntaskflow\\worker.py:12: in execute_job\n    task = dequeue_task(job_id, token)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^\ntaskflow\\queue.py:30: in dequeue_task\n    if not validate_token(token):\n           ^^^^^^^^^^^^^^^^^^^^^\ntaskflow\\auth.py:21: in validate_token\n    conn = get_connection(path=path)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _\n\npath = 'app.conf'\n\n    def get_connection(path: str = \"app.conf\") -> dict:\n        \"\"\"\n        Establishes simulated database connection using application config.\n        DEPENDENCY HOP 1 (from auth.validate_token): Calls load_config(path).\n        Expects loaded configuration to be a dictionary.\n        \"\"\"\n        cfg = load_config(path=path)\n        return {\n>           \"db_url\": f\"sqlite:///taskflow_{cfg['env']}.db\",\n                                            ^^^^^^^^^^\n            \"timeout\": cfg[\"timeout\"],\n            \"secret\": cfg[\"auth_secret\"],\n            \"connected\": True\n        }\nE       TypeError: 'ConfigObject' object is not subscriptable\n\ntaskflow\\database.py:15: TypeError\n=========================== short test summary info ===========================\nFAILED tests/test_auth.py::test_validate_token_valid - TypeError: 'ConfigObje...\nFAILED tests/test_auth.py::test_validate_token_invalid - TypeError: 'ConfigOb...\nFAILED tests/test_config.py::test_load_config_default - assert False\nFAILED tests/test_worker.py::test_execute_job_authorized - TypeError: 'Config...\nFAILED tests/test_worker.py::test_execute_job_unauthorized - TypeError: 'Conf...\n========================= 5 failed, 7 passed in 0.44s =========================\n"
+      "duration_seconds": 2.51,
+      "pytest_output": "============================= test session starts =============================\nplatform win32 -- Python 3.13.2, pytest-9.1.1, pluggy-1.6.0 -- C:\\Users\\Acer\\AppData\\Local\\Programs\\Python\\Python313\\python.exe\ncachedir: .pytest_cache\nrootdir: C:\\Users\\Acer\\AppData\\Local\\Temp\\chronofork_naive_git_6zim5uug\nplugins: anyio-4.15.1\ncollecting ... collected 12 items\n\ntests/test_auth.py::test_extract_claims PASSED                           [  8%]\ntests/test_auth.py::test_validate_token_valid FAILED                     [ 16%]\ntests/test_auth.py::test_validate_token_invalid FAILED                   [ 25%]\ntests/test_config.py::test_get_default_config PASSED                     [ 33%]\ntests/test_config.py::test_load_config_default FAILED                    [ 41%]\ntests/test_config.py::test_compute_config_signature PASSED               [ 50%]\ntests/test_reports.py::test_calculate_metrics_summary PASSED             [ 58%]\ntests/test_reports.py::test_generate_summary PASSED                      [ 66%]\ntests/test_reports.py::test_format_as_markdown PASSED                    [ 75%]\ntests/test_reports.py::test_schedule_report_generation PASSED            [ 83%]\ntests/test_worker.py::test_execute_job_authorized FAILED                 [ 91%]\ntests/test_worker.py::test_execute_job_unauthorized FAILED               [100%]\n\n================================== FAILURES ===================================\n__________________________ test_validate_token_valid __________________________\n\n    def test_validate_token_valid():\n        # Secret is 'chrono-secret-key-42'\n        valid_tok = \"tok_chrono-secret-key-42_user99\"\n>       assert validate_token(valid_tok) is True\n               ^^^^^^^^^^^^^^^^^^^^^^^^^\n\ntests\\test_auth.py:14: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _\ntaskflow\\auth.py:21: in validate_token\n    conn = get_connection(path=path)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _\n\npath = 'app.conf'\n\n    def get_connection(path: str = \"app.conf\") -> dict:\n        \"\"\"\n        Establishes simulated database connection using application config.\n        DEPENDENCY HOP 1 (from auth.validate_token): Calls load_config(path).\n        Expects loaded configuration to be a dictionary.\n        \"\"\"\n        cfg = load_config(path=path)\n        return {\n>           \"db_url\": f\"sqlite:///taskflow_{cfg['env']}.db\",\n                                            ^^^^^^^^^^\n            \"timeout\": cfg[\"timeout\"],\n            \"secret\": cfg[\"auth_secret\"],\n            \"connected\": True\n        }\nE       TypeError: 'ConfigObject' object is not subscriptable\n\ntaskflow\\database.py:15: TypeError\n_________________________ test_validate_token_invalid _________________________\n\n    def test_validate_token_invalid():\n>       assert validate_token(\"invalid_token\") is False\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\ntests\\test_auth.py:18: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _\ntaskflow\\auth.py:21: in validate_token\n    conn = get_connection(path=path)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _\n\npath = 'app.conf'\n\n    def get_connection(path: str = \"app.conf\") -> dict:\n        \"\"\"\n        Establishes simulated database connection using application config.\n        DEPENDENCY HOP 1 (from auth.validate_token): Calls load_config(path).\n        Expects loaded configuration to be a dictionary.\n        \"\"\"\n        cfg = load_config(path=path)\n        return {\n>           \"db_url\": f\"sqlite:///taskflow_{cfg['env']}.db\",\n                                            ^^^^^^^^^^\n            \"timeout\": cfg[\"timeout\"],\n            \"secret\": cfg[\"auth_secret\"],\n            \"connected\": True\n        }\nE       TypeError: 'ConfigObject' object is not subscriptable\n\ntaskflow\\database.py:15: TypeError\n__________________________ test_load_config_default ___________________________\n\n    def test_load_config_default():\n        cfg = load_config()\n>       assert isinstance(cfg, dict)\nE       assert False\nE        +  where False = isinstance(<taskflow.config.ConfigObject object at 0x0000020639C40CD0>, dict)\n\ntests\\test_config.py:14: AssertionError\n_________________________ test_execute_job_authorized _________________________\n\n    def test_execute_job_authorized():\n        clear_store()\n        token = \"tok_chrono-secret-key-42_sess\"\n>       res = execute_job(job_id=\"job_001\", token=token)\n              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\ntests\\test_worker.py:9: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _\ntaskflow\\worker.py:12: in execute_job\n    task = dequeue_task(job_id, token)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^\ntaskflow\\queue.py:30: in dequeue_task\n    if not validate_token(token):\n           ^^^^^^^^^^^^^^^^^^^^^\ntaskflow\\auth.py:21: in validate_token\n    conn = get_connection(path=path)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _\n\npath = 'app.conf'\n\n    def get_connection(path: str = \"app.conf\") -> dict:\n        \"\"\"\n        Establishes simulated database connection using application config.\n        DEPENDENCY HOP 1 (from auth.validate_token): Calls load_config(path).\n        Expects loaded configuration to be a dictionary.\n        \"\"\"\n        cfg = load_config(path=path)\n        return {\n>           \"db_url\": f\"sqlite:///taskflow_{cfg['env']}.db\",\n                                            ^^^^^^^^^^\n            \"timeout\": cfg[\"timeout\"],\n            \"secret\": cfg[\"auth_secret\"],\n            \"connected\": True\n        }\nE       TypeError: 'ConfigObject' object is not subscriptable\n\ntaskflow\\database.py:15: TypeError\n________________________ test_execute_job_unauthorized ________________________\n\n    def test_execute_job_unauthorized():\n        clear_store()\n>       res = execute_job(job_id=\"job_002\", token=\"bad_token\")\n              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\ntests\\test_worker.py:18: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _\ntaskflow\\worker.py:12: in execute_job\n    task = dequeue_task(job_id, token)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^\ntaskflow\\queue.py:30: in dequeue_task\n    if not validate_token(token):\n           ^^^^^^^^^^^^^^^^^^^^^\ntaskflow\\auth.py:21: in validate_token\n    conn = get_connection(path=path)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _\n\npath = 'app.conf'\n\n    def get_connection(path: str = \"app.conf\") -> dict:\n        \"\"\"\n        Establishes simulated database connection using application config.\n        DEPENDENCY HOP 1 (from auth.validate_token): Calls load_config(path).\n        Expects loaded configuration to be a dictionary.\n        \"\"\"\n        cfg = load_config(path=path)\n        return {\n>           \"db_url\": f\"sqlite:///taskflow_{cfg['env']}.db\",\n                                            ^^^^^^^^^^\n            \"timeout\": cfg[\"timeout\"],\n            \"secret\": cfg[\"auth_secret\"],\n            \"connected\": True\n        }\nE       TypeError: 'ConfigObject' object is not subscriptable\n\ntaskflow\\database.py:15: TypeError\n=========================== short test summary info ===========================\nFAILED tests/test_auth.py::test_validate_token_valid - TypeError: 'ConfigObje...\nFAILED tests/test_auth.py::test_validate_token_invalid - TypeError: 'ConfigOb...\nFAILED tests/test_config.py::test_load_config_default - assert False\nFAILED tests/test_worker.py::test_execute_job_authorized - TypeError: 'Config...\nFAILED tests/test_worker.py::test_execute_job_unauthorized - TypeError: 'Conf...\n========================= 5 failed, 7 passed in 0.51s =========================\n"
     },
     "node_ids": [],
     "edge_ids": [],
@@ -569,18 +569,18 @@
     "provenance": {
       "git": {
         "source": "REAL",
-        "captured_at": "2026-10-18T03:05:22.734476+00:00"
+        "captured_at": "2026-10-18T10:08:36.796604+00:00"
       },
       "pytest": {
         "source": "REAL",
-        "captured_at": "2026-10-18T03:05:22.734476+00:00"
+        "captured_at": "2026-10-18T10:08:36.796604+00:00"
       }
     },
     "message": "NAIVE GIT MERGE RUN: Git merged agent-1-config and agent-2-worker cleanly (0 conflicts, exit code 0). BUT running pytest fails! Pytest: 5 FAILED, 7 PASSED. Git catches line conflicts. ChronoFork catches the ones Git can't see!"
   },
   {
     "index": 7,
-    "ts": 1792292722.7578614,
+    "ts": 1792318116.7995274,
     "run_id": "replay_gen_sc1",
     "agent": "Coordinator",
     "phase": "RESOLUTION",
@@ -591,7 +591,7 @@
       "graph": "coord:replay_gen_sc1",
       "cypher": "MATCH (a:Agent)-[:CLAIMS]->(s:Symbol)\n    OPTIONAL MATCH path = (s)-[:CALLS*1..4]->(dep:Symbol)<-[:CLAIMS]-(other:Agent)\n    WHERE other.id <> a.id\n    RETURN a.id AS agent_id,\n           s.qualname AS symbol,\n           count(dep) AS outgoing_claimed_dependencies,\n           collect(DISTINCT dep.qualname) AS depends_on\n    ORDER BY outgoing_claimed_dependencies ASC",
       "params": {},
-      "duration_ms": 22.85,
+      "duration_ms": 2.79,
       "row_count": 2,
       "rows": [
         [
@@ -647,7 +647,7 @@
           "depends_on": [
             "taskflow.config.load_config"
           ],
-          "policy_action": "MERGE_AFTER_CALLER"
+          "policy_action": "MERGE_AFTER_CALLEE"
         }
       ]
     },
@@ -693,14 +693,14 @@
     "provenance": {
       "graph": {
         "source": "REAL",
-        "captured_at": "2026-10-18T03:05:22.757831+00:00"
+        "captured_at": "2026-10-18T10:08:36.799509+00:00"
       }
     },
-    "message": "POLICY: SERIALIZE (load_config centrality risk = 0.854 >= 0.50). FalkorDB wrote (:WorkerCoder)-[:BLOCKED_BY]->(:ConfigCoder). Callee-first merge order: 1. taskflow.config.load_config (Callee), 2. taskflow.worker.execute_job (Caller)."
+    "message": "POLICY: SERIALIZE (breaking intent SIGNATURE_CHANGE on taskflow.config.load_config; centrality risk 0.854 reported). FalkorDB wrote (:WorkerCoder)-[:BLOCKED_BY]->(:ConfigCoder). Callee-first merge order: 1. taskflow.config.load_config (Callee), 2. taskflow.worker.execute_job (Caller)."
   },
   {
     "index": 8,
-    "ts": 1792292722.784644,
+    "ts": 1792318116.8031795,
     "run_id": "replay_gen_sc1",
     "agent": "ConfigCoder",
     "phase": "IMPACT_ANALYSIS",
@@ -715,7 +715,7 @@
       "params": {
         "target_qname": "taskflow.config.load_config"
       },
-      "duration_ms": 22.39,
+      "duration_ms": 1.88,
       "row_count": 5,
       "rows": [
         [
@@ -866,7 +866,7 @@
           "lineno": 16
         }
       ],
-      "query_time_ms": 26.61
+      "query_time_ms": 3.52
     },
     "node_ids": [
       "taskflow.config.load_config",
@@ -885,14 +885,14 @@
     "provenance": {
       "graph": {
         "source": "REAL",
-        "captured_at": "2026-10-18T03:05:22.784618+00:00"
+        "captured_at": "2026-10-18T10:08:36.803160+00:00"
       }
     },
     "message": "FalkorDB Graph Impact on taskflow.config.load_config: Found 7 callers (taskflow.database.get_connection, tests.test_config.test_load_config_default, taskflow.auth.validate_token, taskflow.queue.dequeue_task, tests.test_auth.test_validate_token_invalid, tests.test_auth.test_validate_token_valid, taskflow.worker.execute_job) and 5 test suites. ConfigCoder migrates callers to prevent runtime crashes."
   },
   {
     "index": 9,
-    "ts": 1792292732.0516002,
+    "ts": 1792318117.9310317,
     "run_id": "replay_gen_sc1",
     "agent": "ConfigCoder",
     "phase": "CODE_GEN",
@@ -905,9 +905,11 @@
       "exit_code": 0,
       "passed_count": 12,
       "failed_count": 0,
-      "duration_seconds": 7.6,
-      "output": "============================= test session starts =============================\nplatform win32 -- Python 3.13.2, pytest-9.1.1, pluggy-1.6.0 -- C:\\Users\\Acer\\AppData\\Local\\Programs\\Python\\Python313\\python.exe\ncachedir: .pytest_cache\nrootdir: C:\\Users\\Acer\\AppData\\Local\\Temp\\chronofork_ws_tqu6b7rg\\replay_gen_sc1_agent_1\nplugins: anyio-4.15.1\ncollecting ... collected 12 items\n\ntests/test_auth.py::test_extract_claims PASSED                           [  8%]\ntests/test_auth.py::test_validate_token_valid PASSED                     [ 16%]\ntests/test_auth.py::test_validate_token_invalid PASSED                   [ 25%]\ntests/test_config.py::test_get_default_config PASSED                     [ 33%]\ntests/test_config.py::test_load_config_default PASSED                    [ 41%]\ntests/test_config.py::test_compute_config_signature PASSED               [ 50%]\ntests/test_reports.py::test_calculate_metrics_summary PASSED             [ 58%]\ntests/test_reports.py::test_generate_summary PASSED                      [ 66%]\ntests/test_reports.py::test_format_as_markdown PASSED                    [ 75%]\ntests/test_reports.py::test_schedule_report_generation PASSED            [ 83%]\ntests/test_worker.py::test_execute_job_authorized PASSED                 [ 91%]\ntests/test_worker.py::test_execute_job_unauthorized PASSED               [100%]\n\n============================= 12 passed in 3.31s ==============================\n",
-      "errors": ""
+      "duration_seconds": 1.02,
+      "pytest_seconds": 0.19,
+      "output": "============================= test session starts =============================\nplatform win32 -- Python 3.13.2, pytest-9.1.1, pluggy-1.6.0 -- C:\\Users\\Acer\\AppData\\Local\\Programs\\Python\\Python313\\python.exe\ncachedir: .pytest_cache\nrootdir: C:\\Users\\Acer\\AppData\\Local\\Temp\\chronofork_ws_rshr1j90\\replay_gen_sc1_agent_1\nplugins: anyio-4.15.1\ncollecting ... collected 12 items\n\ntests/test_auth.py::test_extract_claims PASSED                           [  8%]\ntests/test_auth.py::test_validate_token_valid PASSED                     [ 16%]\ntests/test_auth.py::test_validate_token_invalid PASSED                   [ 25%]\ntests/test_config.py::test_get_default_config PASSED                     [ 33%]\ntests/test_config.py::test_load_config_default PASSED                    [ 41%]\ntests/test_config.py::test_compute_config_signature PASSED               [ 50%]\ntests/test_reports.py::test_calculate_metrics_summary PASSED             [ 58%]\ntests/test_reports.py::test_generate_summary PASSED                      [ 66%]\ntests/test_reports.py::test_format_as_markdown PASSED                    [ 75%]\ntests/test_reports.py::test_schedule_report_generation PASSED            [ 83%]\ntests/test_worker.py::test_execute_job_authorized PASSED                 [ 91%]\ntests/test_worker.py::test_execute_job_unauthorized PASSED               [100%]\n\n============================= 12 passed in 0.19s ==============================\n",
+      "errors": "",
+      "llm_generated": false
     },
     "node_ids": [
       "taskflow.config.load_config",
@@ -920,14 +922,14 @@
     "provenance": {
       "pytest": {
         "source": "REAL",
-        "captured_at": "2026-10-18T03:05:32.051567+00:00"
+        "captured_at": "2026-10-18T10:08:37.930997+00:00"
       }
     },
-    "message": "ConfigCoder migrated config.py and callers (database.py via deterministic). Real pytest in isolated workspace: 12 passed, 0 failed in 7.6s."
+    "message": "ConfigCoder migrated config.py and callers (database.py via deterministic). Real pytest in isolated workspace: 12 passed, 0 failed in 1.02s."
   },
   {
     "index": 10,
-    "ts": 1792292732.0582433,
+    "ts": 1792318117.9355721,
     "run_id": "replay_gen_sc1",
     "agent": "Coordinator",
     "phase": "HANDOFF",
@@ -946,7 +948,7 @@
         "to_agent": "agent_2",
         "reason": "ConfigObject contract and callers migrated"
       },
-      "duration_ms": 6.56,
+      "duration_ms": 4.45,
       "row_count": 0,
       "rows": [],
       "header": [],
@@ -961,14 +963,14 @@
     "provenance": {
       "graph": {
         "source": "REAL",
-        "captured_at": "2026-10-18T03:05:32.058219+00:00"
+        "captured_at": "2026-10-18T10:08:37.935546+00:00"
       }
     },
     "message": "Agent handoff: FalkorDB cleared BLOCKED_BY and wrote (:ConfigCoder)-[:HANDED_OFF_TO]->(:WorkerCoder). WorkerCoder unblocked!"
   },
   {
     "index": 11,
-    "ts": 1792292739.295945,
+    "ts": 1792318119.0158763,
     "run_id": "replay_gen_sc1",
     "agent": "WorkerCoder",
     "phase": "CODE_GEN",
@@ -981,8 +983,9 @@
       "exit_code": 0,
       "passed_count": 12,
       "failed_count": 0,
-      "duration_seconds": 6.07,
-      "output": "============================= test session starts =============================\nplatform win32 -- Python 3.13.2, pytest-9.1.1, pluggy-1.6.0 -- C:\\Users\\Acer\\AppData\\Local\\Programs\\Python\\Python313\\python.exe\ncachedir: .pytest_cache\nrootdir: C:\\Users\\Acer\\AppData\\Local\\Temp\\chronofork_ws_tqu6b7rg\\replay_gen_sc1_agent_2\nplugins: anyio-4.15.1\ncollecting ... collected 12 items\n\ntests/test_auth.py::test_extract_claims PASSED                           [  8%]\ntests/test_auth.py::test_validate_token_valid PASSED                     [ 16%]\ntests/test_auth.py::test_validate_token_invalid PASSED                   [ 25%]\ntests/test_config.py::test_get_default_config PASSED                     [ 33%]\ntests/test_config.py::test_load_config_default PASSED                    [ 41%]\ntests/test_config.py::test_compute_config_signature PASSED               [ 50%]\ntests/test_reports.py::test_calculate_metrics_summary PASSED             [ 58%]\ntests/test_reports.py::test_generate_summary PASSED                      [ 66%]\ntests/test_reports.py::test_format_as_markdown PASSED                    [ 75%]\ntests/test_reports.py::test_schedule_report_generation PASSED            [ 83%]\ntests/test_worker.py::test_execute_job_authorized PASSED                 [ 91%]\ntests/test_worker.py::test_execute_job_unauthorized PASSED               [100%]\n\n============================= 12 passed in 1.09s ==============================\n",
+      "duration_seconds": 0.96,
+      "pytest_seconds": 0.15,
+      "output": "============================= test session starts =============================\nplatform win32 -- Python 3.13.2, pytest-9.1.1, pluggy-1.6.0 -- C:\\Users\\Acer\\AppData\\Local\\Programs\\Python\\Python313\\python.exe\ncachedir: .pytest_cache\nrootdir: C:\\Users\\Acer\\AppData\\Local\\Temp\\chronofork_ws_rshr1j90\\replay_gen_sc1_agent_2\nplugins: anyio-4.15.1\ncollecting ... collected 12 items\n\ntests/test_auth.py::test_extract_claims PASSED                           [  8%]\ntests/test_auth.py::test_validate_token_valid PASSED                     [ 16%]\ntests/test_auth.py::test_validate_token_invalid PASSED                   [ 25%]\ntests/test_config.py::test_get_default_config PASSED                     [ 33%]\ntests/test_config.py::test_load_config_default PASSED                    [ 41%]\ntests/test_config.py::test_compute_config_signature PASSED               [ 50%]\ntests/test_reports.py::test_calculate_metrics_summary PASSED             [ 58%]\ntests/test_reports.py::test_generate_summary PASSED                      [ 66%]\ntests/test_reports.py::test_format_as_markdown PASSED                    [ 75%]\ntests/test_reports.py::test_schedule_report_generation PASSED            [ 83%]\ntests/test_worker.py::test_execute_job_authorized PASSED                 [ 91%]\ntests/test_worker.py::test_execute_job_unauthorized PASSED               [100%]\n\n============================= 12 passed in 0.15s ==============================\n",
       "errors": ""
     },
     "node_ids": [
@@ -995,14 +998,14 @@
     "provenance": {
       "pytest": {
         "source": "REAL",
-        "captured_at": "2026-10-18T03:05:39.295907+00:00"
+        "captured_at": "2026-10-18T10:08:39.015841+00:00"
       }
     },
-    "message": "WorkerCoder patched worker.py against migrated contract. Real pytest: 12 passed, 0 failed in 6.07s."
+    "message": "WorkerCoder patched worker.py against migrated contract. Real pytest: 12 passed, 0 failed in 0.96s."
   },
   {
     "index": 12,
-    "ts": 1792292739.295979,
+    "ts": 1792318119.0159094,
     "run_id": "replay_gen_sc1",
     "agent": "Verifier",
     "phase": "VERIFICATION",
@@ -1015,8 +1018,9 @@
       "exit_code": 0,
       "passed_count": 12,
       "failed_count": 0,
-      "duration_seconds": 6.07,
-      "output": "============================= test session starts =============================\nplatform win32 -- Python 3.13.2, pytest-9.1.1, pluggy-1.6.0 -- C:\\Users\\Acer\\AppData\\Local\\Programs\\Python\\Python313\\python.exe\ncachedir: .pytest_cache\nrootdir: C:\\Users\\Acer\\AppData\\Local\\Temp\\chronofork_ws_tqu6b7rg\\replay_gen_sc1_agent_2\nplugins: anyio-4.15.1\ncollecting ... collected 12 items\n\ntests/test_auth.py::test_extract_claims PASSED                           [  8%]\ntests/test_auth.py::test_validate_token_valid PASSED                     [ 16%]\ntests/test_auth.py::test_validate_token_invalid PASSED                   [ 25%]\ntests/test_config.py::test_get_default_config PASSED                     [ 33%]\ntests/test_config.py::test_load_config_default PASSED                    [ 41%]\ntests/test_config.py::test_compute_config_signature PASSED               [ 50%]\ntests/test_reports.py::test_calculate_metrics_summary PASSED             [ 58%]\ntests/test_reports.py::test_generate_summary PASSED                      [ 66%]\ntests/test_reports.py::test_format_as_markdown PASSED                    [ 75%]\ntests/test_reports.py::test_schedule_report_generation PASSED            [ 83%]\ntests/test_worker.py::test_execute_job_authorized PASSED                 [ 91%]\ntests/test_worker.py::test_execute_job_unauthorized PASSED               [100%]\n\n============================= 12 passed in 1.09s ==============================\n",
+      "duration_seconds": 0.96,
+      "pytest_seconds": 0.15,
+      "output": "============================= test session starts =============================\nplatform win32 -- Python 3.13.2, pytest-9.1.1, pluggy-1.6.0 -- C:\\Users\\Acer\\AppData\\Local\\Programs\\Python\\Python313\\python.exe\ncachedir: .pytest_cache\nrootdir: C:\\Users\\Acer\\AppData\\Local\\Temp\\chronofork_ws_rshr1j90\\replay_gen_sc1_agent_2\nplugins: anyio-4.15.1\ncollecting ... collected 12 items\n\ntests/test_auth.py::test_extract_claims PASSED                           [  8%]\ntests/test_auth.py::test_validate_token_valid PASSED                     [ 16%]\ntests/test_auth.py::test_validate_token_invalid PASSED                   [ 25%]\ntests/test_config.py::test_get_default_config PASSED                     [ 33%]\ntests/test_config.py::test_load_config_default PASSED                    [ 41%]\ntests/test_config.py::test_compute_config_signature PASSED               [ 50%]\ntests/test_reports.py::test_calculate_metrics_summary PASSED             [ 58%]\ntests/test_reports.py::test_generate_summary PASSED                      [ 66%]\ntests/test_reports.py::test_format_as_markdown PASSED                    [ 75%]\ntests/test_reports.py::test_schedule_report_generation PASSED            [ 83%]\ntests/test_worker.py::test_execute_job_authorized PASSED                 [ 91%]\ntests/test_worker.py::test_execute_job_unauthorized PASSED               [100%]\n\n============================= 12 passed in 0.15s ==============================\n",
       "errors": ""
     },
     "node_ids": [
@@ -1030,14 +1034,14 @@
     "provenance": {
       "pytest": {
         "source": "REAL",
-        "captured_at": "2026-10-18T03:05:39.295967+00:00"
+        "captured_at": "2026-10-18T10:08:39.015896+00:00"
       }
     },
-    "message": "Verifier executed pytest on merged workspace: 12 passed in 6.07s. All 12 test suites passing!"
+    "message": "Verifier executed pytest on merged workspace: 12 passed in 0.96s. All 12 test suites passing!"
   },
   {
     "index": 13,
-    "ts": 1792292739.3342087,
+    "ts": 1792318119.0388126,
     "run_id": "replay_gen_sc1",
     "agent": "Coordinator",
     "phase": "MEMORY_UPDATE",
@@ -1054,7 +1058,7 @@
         "rule_id": "rule_cfg_worker_transitive",
         "qname": "taskflow.worker.execute_job"
       },
-      "duration_ms": 3.01,
+      "duration_ms": 2.18,
       "row_count": 0,
       "rows": [],
       "header": [],
@@ -1066,7 +1070,7 @@
     "scores": {},
     "collision": null,
     "memory_write": {
-      "episode_id": "ep_1792292739_3bc346",
+      "episode_id": "ep_1792318119_8519f3",
       "rule_id": "rule_cfg_worker_transitive",
       "confidence": 0.95,
       "rule_text": "load_config signature changes break transitive caller worker.execute_job (4 hops)"
@@ -1074,9 +1078,9 @@
     "provenance": {
       "graph": {
         "source": "REAL",
-        "captured_at": "2026-10-18T03:05:39.334183+00:00"
+        "captured_at": "2026-10-18T10:08:39.038791+00:00"
       }
     },
-    "message": "Memory updated in mem:taskflow! Recorded Episode ep_1792292739_3bc346. Rule confidence boosted to 95%. Next run will recall this!"
+    "message": "Memory updated in mem:taskflow! Recorded Episode ep_1792318119_8519f3. Rule confidence boosted to 95%. Next run will recall this!"
   }
 ]

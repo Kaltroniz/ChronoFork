@@ -493,28 +493,7 @@ async function runPhase9Suite() {
       await page.screenshot({ path: path.join(OUT_DIR, '09-focus-view-4hop.png') });
       console.log('📸 Saved 09-focus-view-4hop.png');
 
-      // clean-clone-story.png
-      await selectScenario(4, 4);
-      await page.evaluate(() => window.__chronoSetIndex(3));
-      await page.waitForTimeout(600);
-      await page.screenshot({ path: path.join(OUT_DIR, 'clean-clone-story.png') });
-      console.log('📸 Saved clean-clone-story.png');
 
-      // live-fail-loudly.png
-      await page.evaluate(() => {
-        const banner = document.createElement('div');
-        banner.id = 'test-fail-loudly-banner';
-        banner.className = 'fixed top-14 left-1/2 -translate-x-1/2 z-50 bg-[#EF4444] text-white px-4 py-2 rounded shadow-2xl font-mono text-sm border border-red-300';
-        banner.innerText = 'HTTP 503: FalkorDB offline - swarm execution halted loudly (no fallback to mock/cache)';
-        document.body.appendChild(banner);
-      });
-      await page.waitForTimeout(300);
-      await page.screenshot({ path: path.join(OUT_DIR, 'live-fail-loudly.png') });
-      await page.evaluate(() => {
-        const b = document.getElementById('test-fail-loudly-banner');
-        if (b) b.remove();
-      });
-      console.log('📸 Saved live-fail-loudly.png');
     }
 
     await context.close();

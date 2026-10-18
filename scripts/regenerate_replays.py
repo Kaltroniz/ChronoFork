@@ -51,12 +51,12 @@ def print_scenario_metrics(name: str, events: list):
         if "passed_count" in data:
             pytest_passed = data.get("passed_count")
             pytest_failed = data.get("failed_count", 0)
-            pytest_internal_s = data.get("duration_seconds")
+            pytest_internal_s = data.get("pytest_seconds") or data.get("duration_seconds")
             break
         elif "pytest_passed" in data:
             pytest_passed = data.get("pytest_passed")
             pytest_failed = data.get("pytest_failed", 0)
-            pytest_internal_s = data.get("duration_seconds")
+            pytest_internal_s = data.get("pytest_seconds") or data.get("duration_seconds")
             break
 
     risk_str = f"{risk:.3f}" if risk is not None else "None"

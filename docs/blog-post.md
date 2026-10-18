@@ -87,7 +87,7 @@ RETURN a1.id AS agent_a, a2.id AS agent_b,
 Not all collisions carry equal risk. Modifying an internal helper function on a leaf node is low danger; modifying a foundational module sitting at the bottleneck of the entire system threatens catastrophic failure.
 FalkorDB executes graph algorithms directly in Redis memory without exporting data to external graph engines:
 - `CALL algo.pageRank('Symbol', 'CALLS')`: Computes structural prominence across all 69 symbols in **1.36 ms** (median on repo:taskflow).
-- `CALL algo.betweenness({nodeLabels: ['Symbol'], relationshipTypes: ['CALLS']})`: Identifies bridge functions on the shortest paths in **1.80 ms** (median on repo:taskflow).
+- `CALL algo.betweenness({nodeLabels: ['Symbol'], relationshipTypes: ['CALLS']})`: Identifies bridge functions on shortest paths in **1.80 ms** (median on repo:taskflow; sampled across 32 sources with seed 42, so betweenness and risk are approximate).
 
 ### 3. Fast Speculative Graph Branching (`108.3 ms` median)
 Before an agent writes a single line of physical code, it forks the repository graph using FalkorDB's native `GRAPH.COPY` (`graph.copy(clone_key)` in **108.32 ms** median on repo:taskflow). The agent speculatively modifies the function's AST signature, re-runs PageRank and reverse `CALLS` queries on the fork, and calculates its exact blast radius without impacting other agents.
@@ -108,7 +108,7 @@ ChronoFork agents don't guess — they traverse connected graph structures at ev
    Within a sub-2 ms range (**~1-2 ms**, median 1.97 ms; see `docs/evidence/phase8/benchmark_detection_stdout.txt` and `docs/NUMBERS.md`), the agent knows that altering `load_config` impacts 7 callers across 4 modules and threatens 5 unit test suites.
 
 2. **Centrality-Driven Risk Scoring**:
-   ChronoFork combines PageRank ($PR$) and Betweenness ($BW$) into a normalized risk metric ($0.0 \le \text{Risk} \le 1.0$). For `taskflow.config.load_config`, $PR = 0.056058$ (normalized 1.0) and $BW = 34.0$ / Max $48.0$ (normalized 0.7083), yielding Risk = $0.5 \times 1.0 + 0.5 \times 0.7083 = \mathbf{0.854}$. Because $0.854 \ge 0.50$, the Coordinator refuses optimistic parallel merges and elevates the coordination policy to `SERIALIZE`.
+   ChronoFork combines PageRank ($PR$) and Betweenness ($BW$) into a normalized risk metric ($0.0 \le \text{Risk} \le 1.0$). For `taskflow.config.load_config`, $PR = 0.056058$ (normalized 1.0) and $BW = 34.0$ / Max $48.0$ (normalized 0.7083), yielding Risk = $0.5 \times 1.0 + 0.5 \times 0.7083 = \mathbf{0.854}$. The coordination policy is intent-driven: `SIGNATURE_CHANGE` and `DELETE` always serialize regardless of risk score. Risk is reported to rank architectural severity. Because betweenness is sampled (32 sources, seed 42), the computed risk score is approximate.
 
 3. **Speculative Fork Simulation**:
    Using `fork:<run_id>:<agent_id>`, ChronoFork creates an isolated graph copy (`graph.copy` in **~55-112 ms**) to evaluate blast radius and identify affected upstream dependents in isolation before filesystem edits occur. Because the fork is an isolated structural copy used specifically for impact projection rather than applying AST modifications to the graph schema, the measured architectural risk score remains identical before and after simulation (`risk before == after`, 0.854).
@@ -121,7 +121,7 @@ ChronoFork agents don't guess — they traverse connected graph structures at ev
 At run start, FalkorDB clones the repository into `coord:<run_id>`. Coordination entities (`:Run`, `:Agent`) attach directly to the AST code `:Symbol` nodes via `[:CLAIMS]` edges.
 
 When Agent 1 claims `load_config` and Agent 2 claims `worker.execute_job`, the Coordinator detects the 4-hop call path and evaluates the policy:
-- `load_config` Risk = $\mathbf{0.854} \ge 0.50$ $\implies$ **Policy: SERIALIZE**.
+- **Policy is intent-driven**: Breaking intent `SIGNATURE_CHANGE` on `load_config` triggers **Policy: SERIALIZE** (centrality risk $0.854$ reported to rank severity).
 - FalkorDB writes an explicit blocking edge:
   `(:WorkerCoder)-[:BLOCKED_BY]->(:ConfigCoder)`
 
@@ -176,7 +176,7 @@ Agent patches in the demonstration are scripted; git merge, pytest execution, an
 | Coordination Strategy | Git Merge Status | Real Pytest Verification | Pytest-Internal Time | Wall Clock Time | Outcome |
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | **Naive Git Merge** | `0 line conflicts` (Exit 0) | **5 FAILED**, 7 PASSED | **0.44s** | **~1.48s** | 💥 **Silent Production Crash** |
-| **ChronoFork Serialized** | Callee-First Graph Order | **12 PASSED**, 0 FAILED | **1.09s** | **~1.7s** | ✅ **Clean Zero-Defect Production** |
+| **ChronoFork Serialized** | Callee-First Graph Order | **12 PASSED**, 0 FAILED | **0.15s** | **~0.96s** | ✅ **Clean Zero-Defect Production** |
 
 ```text
 ============================= test session starts =============================
@@ -215,7 +215,9 @@ FAILED tests/test_worker.py::test_execute_job_unauthorized - TypeError: 'ConfigO
 ======================== 5 failed, 7 passed in 0.44s =========================
 ```
 
-In the ChronoFork console, the **Verdict Tab** displays this exact comparison side-by-side: Naive Git merge fails 5 tests in **0.44s** (pytest-internal duration; **~1.48s** total wall clock time including git operations), whereas ChronoFork's serialized merge passes all 12 tests in **1.09s** (pytest-internal duration; **~1.7s** total wall clock time) (see `docs/NUMBERS.md` and `docs/evidence/phase9/naive_merge_pytest_output.txt`).
+> **A caveat we want to be upfront about:** in this demo, Agent 1's branch changes `load_config`'s contract without migrating its callers, so Agent 1's own branch also fails tests. We did not measure git merges or per-branch tests in the benchmark. What ChronoFork adds is claim-time detection: before any code is written it knows a breaking change on `load_config` reaches `execute_job` four hops away, and it sequences the contract change and the caller migration so they land together.
+
+In the ChronoFork console, the **Verdict Tab** displays this exact comparison side-by-side: Naive Git merge fails 5 tests in **0.44s** (pytest-internal duration; **~1.48s** total wall clock time including git operations), whereas ChronoFork's serialized merge passes all 12 tests in **0.15s** (pytest-internal duration; **~0.96s** total wall clock time) (see `docs/NUMBERS.md` and `docs/evidence/phase9/naive_merge_pytest_output.txt`).
 
 ---
 
@@ -230,16 +232,16 @@ ChronoFork features a high-performance dark console built with **React 19**, **C
 
 ---
 
-## 7 Standardized FastMCP Tools
+## 7 Standardized MCP-Compatible Tools
 
-ChronoFork exposes its entire coordination engine through 7 official Model Context Protocol (MCP) tools:
+ChronoFork exposes its coordination engine through an MCP-compatible JSON-RPC endpoint (`POST http://34.230.70.144/mcp` with hand-rolled `tools/list` and `tools/call`). On the public AWS deployment, the endpoint is **read-only**: only `get_impact`, `rank_risk`, and `recall_memory` are permitted, while write tools are disabled in Demo Mode (returning code `-32001`):
 
-1. `get_impact(repo_name, qualname, max_hops=4)`
-2. `rank_risk(repo_name)`
+1. `get_impact(repo_name, qualname, max_hops=4)` *(Read-only)*
+2. `rank_risk(repo_name)` *(Read-only)*
 3. `claim_symbols(run_id, agent_id, qualnames, intent, reason)`
 4. `detect_collisions(run_id)`
 5. `fork_graph(run_id, agent_id, repo_name)`
-6. `recall_memory(repo_name, symbol_qualnames)`
+6. `recall_memory(repo_name, symbol_qualnames)` *(Read-only)*
 7. `record_episode(repo_name, run_id, task, outcome, summary, involved_symbols, rule_learned)`
 
 External AI coding agents running in Cursor, Claude Desktop, or custom orchestrators can connect directly to ChronoFork's MCP server and participate in graph-coordinated swarms.
@@ -255,7 +257,7 @@ All performance benchmarks are taken from saved test and execution logs on `repo
 - **Betweenness Centrality (`algo.betweenness`)**: Range = **~1-3 ms** (Min 1.39 ms, **Median 1.80 ms**, Max 2.60 ms)
 - **Variable-Length Path Traversal (`CALLS*1..4`)**: Range = **~1-2 ms** (Min 1.13 ms, **Median 1.97 ms**, Max 6.06 ms; `docs/evidence/phase8/benchmark_detection_stdout.txt`)
 - **Real Subprocess Pytest (Naive Git Merge)**: 5 failed, 7 passed in **0.44s** (pytest-internal duration; **~1.48s** wall clock; `docs/evidence/phase9/naive_merge_pytest_output.txt`)
-- **Real Subprocess Pytest (ChronoFork Verifier)**: 12 passed in **1.09s** (pytest-internal duration; **~1.7s** wall clock; `docs/evidence/phase9/regenerate_replays_stdout.txt`)
+- **Real Subprocess Pytest (ChronoFork Verifier)**: 12 passed in **0.15s** (pytest-internal duration; **~0.96s** wall clock; `docs/evidence/phase9/regenerate_replays_stdout.txt`)
 - **Collision Detection Benchmark ($N = 58$ Cases)**: Precision **100.0%**, Recall **57.9%** overall (100% on standard static call chains, 22/22; 100% specificity on safe cases, 20/20 with 0 false positives), Median Decision Time = **1.97 ms** (`docs/evidence/phase8/benchmark_detection_stdout.txt`)
 
 ---

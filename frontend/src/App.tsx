@@ -44,6 +44,7 @@ export const App: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isDevFixture, setIsDevFixture] = useState<boolean>(false);
   const [memoryWasReset, setMemoryWasReset] = useState<boolean>(false);
+  const [sc1CollisionRef, setSc1CollisionRef] = useState<{ intent: string; hops: number } | null>(null);
 
   // Refs
   const eventSourceRef = useRef<EventSource | null>(null);
@@ -204,6 +205,13 @@ export const App: React.FC = () => {
             const normalized = normalizeEvent(raw);
             receivedEvents.push(normalized);
             setEvents([...receivedEvents]);
+
+            if (scId === 1 && normalized.collision) {
+              setSc1CollisionRef({
+                intent: normalized.collision.intent_a,
+                hops: normalized.collision.hops
+              });
+            }
 
             if (normalized.phase === 'MEMORY_UPDATE' || normalized.phase === 'MEMORY_PERSISTENCE' || normalized.memory_write) {
               setMemoryWasReset(false);
@@ -466,6 +474,7 @@ export const App: React.FC = () => {
             }}
             onSelectNode={(nodeId) => setSelectedNodeId(nodeId)}
             currentScenario={currentScenario}
+            sc1CollisionRef={sc1CollisionRef}
           />
         </div>
 

@@ -14,7 +14,7 @@
 
 When multiple AI agents write code in parallel, Git only detects direct line overlaps in the same file. If Agent 1 changes a function's signature (`load_config`) and Agent 2 edits a consumer 4 call hops away (`execute_job`), Git merges cleanly with **0 text conflicts** — but CI immediately crashes at runtime with `TypeError`.
 
-**ChronoFork** compiles repositories into an openCypher code graph in **FalkorDB**. Agents claim symbols on the graph before writing code. A single multi-hop Cypher traversal detects transitive collisions in **1.37 ms**, calculates architectural risk via native PageRank and Betweenness, enforces topological callee-first serialization, and records procedural memory so agents learn from collisions and never repeat them.
+**ChronoFork** compiles repositories into an openCypher code graph in **FalkorDB**. Agents claim symbols on the graph before writing code. A single multi-hop Cypher traversal detects transitive collisions in **~1-2 ms (median 1.97 ms)**, calculates architectural risk via native PageRank and Betweenness, enforces topological callee-first serialization, and records procedural memory so agents learn from collisions and never repeat them.
 
 ---
 
@@ -175,7 +175,7 @@ RETURN a1.id AS a1, a2.id AS a2, s1.qualname AS s1_qname, s2.qualname AS s2_qnam
        c1.intent AS intent1, c2.intent AS intent2,
        [n in nodes(path) | n.qualname] AS path_nodes, length(path) AS hops
 ```
-*Why a graph is required*: Detecting arbitrary-depth caller chains across separate files in SQL requires recursive CTEs with expensive self-joins. In FalkorDB, openCypher evaluates this 4-hop chain in **0.76 ms**.
+*Why a graph is required*: Detecting arbitrary-depth caller chains across separate files in SQL requires recursive CTEs with expensive self-joins. In FalkorDB, openCypher evaluates this 4-hop chain in **~1-2 ms**.
 
 ### 2. Native Graph Centrality Risk Scoring
 From [`backend/app/algorithms.py:30-45`](backend/app/algorithms.py#L30-L45):
@@ -236,7 +236,7 @@ All metrics documented here derive strictly from `docs/NUMBERS.md` and underlyin
 
 ### 3. Real Verification Pytest Timings
 - **Naive Git Merge**: **5 FAILED**, 7 PASSED in **0.44s** (pytest-internal duration; **~1.48s** wall clock duration).
-- **ChronoFork Serialized**: **12 PASSED**, 0 FAILED in **1.09s** (pytest-internal duration; **~1.7s** wall clock duration).
+- **ChronoFork Serialized**: **12 PASSED**, 0 FAILED in **0.15s** (pytest-internal duration; **~0.96s** wall clock duration).
 
 ---
 
@@ -254,4 +254,4 @@ All metrics documented here derive strictly from `docs/NUMBERS.md` and underlyin
 
 - **Google Antigravity**: Used for autonomous codebase implementation, Playwright end-to-end verification, test authoring, and Docker containerization.
 - **Anthropic Claude**: Used for initial design review, architectural planning, and benchmark methodology analysis.
-- **TEAM TO CONFIRM: what we personally verified**: The team personally reviewed the openCypher collision queries, ran the Playwright test suites, verified the 5-failed vs 12-passed pytest outputs, and inspected the Docker Compose deployment.
+- **Personal Verification**: Verified by Vivek C K and Souhardya Saha: we ran the clean-clone docker compose up, the benchmark and the 5-failed/12-passed experiment ourselves, checked the docs against docs/NUMBERS.md and the evidence logs, and can explain the schema, the collision query, the risk formula and the memory update.

@@ -39,7 +39,7 @@ Any claim without an underlying code path or verification log was flagged and re
 - **Claims Verified by Test Logs / Code Paths**: 20
 - **Claims Pending Team Confirmation**: 1 (Claim 21)
 - **Discrepancies Resolved**:
-  1. Updated blog post naive pytest duration to 0.44s pytest-internal (~1.48s wall clock) and verifier 1.09s pytest-internal (~1.7s wall clock).
+  1. Updated blog post naive pytest duration to 0.44s pytest-internal (~1.48s wall clock) and verifier 0.15s pytest-internal (~0.96s wall clock).
   2. Updated `load_config` risk to exact computed score `0.854` (PageRank norm 1.0, Betweenness norm 0.7083).
   3. Replaced all stale benchmark ranges with measured medians and bounds from `NUMBERS.md`.
   4. Eliminated all machine-local absolute links across documentation.

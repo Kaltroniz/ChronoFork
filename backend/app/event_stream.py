@@ -12,6 +12,9 @@ import time
 from typing import Dict, List, Any, Optional, AsyncGenerator
 
 
+MAX_RUNS = 100
+
+
 class EventBuffer:
     def __init__(self):
         # run_id -> List of event dicts
@@ -22,6 +25,10 @@ class EventBuffer:
         self._completed: Dict[str, bool] = {}
 
     def init_run(self, run_id: str) -> None:
+        while len(self._buffers) >= MAX_RUNS:
+            oldest = next(iter(self._buffers))
+            for d in (self._buffers, self._listeners, self._completed):
+                d.pop(oldest, None)
         self._buffers[run_id] = []
         self._listeners[run_id] = []
         self._completed[run_id] = False

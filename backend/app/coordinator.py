@@ -110,7 +110,6 @@ def detect_collisions(run_id: str) -> List[Dict[str, Any]]:
     Writes BLOCKED_BY edges in coord:<run_id>.
     """
     coord_key = f"coord:{run_id}"
-    rankings = compute_risk_rankings(coord_key)
     pr_scores = run_pagerank(coord_key)
     bw_scores = run_betweenness(coord_key)
     max_pr = max(pr_scores.values()) if pr_scores and max(pr_scores.values()) > 0 else 1.0
@@ -189,12 +188,8 @@ def detect_collisions(run_id: str) -> List[Dict[str, Any]]:
             "formula": f"0.5 * {pr_norm:.6f} + 0.5 * {bw_norm:.4f} = {risk_a:.3f}"
         }
 
-        # CENTRALITY RISK DRIVES DECISION:
-        # High-risk node (>= 0.5) or breaking signature change mandates SERIALIZE
-        if risk_a >= 0.5 or intent1 == ClaimIntent.SIGNATURE_CHANGE:
-            policy = CollisionPolicy.SERIALIZE
-        else:
-            policy = CollisionPolicy.REPLAN
+        BREAKING = (ClaimIntent.SIGNATURE_CHANGE, ClaimIntent.DELETE)
+        policy = CollisionPolicy.SERIALIZE if (intent1 in BREAKING or risk_a >= 0.5) else CollisionPolicy.REPLAN
 
         coll = {
             "type": "TRANSITIVE_CALL_COLLISION",
@@ -322,7 +317,7 @@ def compute_merge_order(run_id: str) -> List[Dict[str, Any]]:
             "symbol": row[1],
             "outgoing_dependencies": row[2],
             "depends_on": row[3],
-            "policy_action": "MERGE_FIRST_CALLEE" if row[2] == 0 else "MERGE_AFTER_CALLER"
+            "policy_action": "MERGE_FIRST_CALLEE" if row[2] == 0 else "MERGE_AFTER_CALLEE"
         })
     return merge_order
 

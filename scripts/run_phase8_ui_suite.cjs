@@ -487,40 +487,7 @@ async function runPhase8Suite() {
       console.log('📸 Saved 07-zero-path-proof.png');
 
       // clean-clone-story.png
-      await selectScenario(1, 10);
-      await page.waitForTimeout(600);
-      await page.evaluate(() => window.__chronoSetIndex(7));
-      await page.waitForTimeout(400);
-      await page.screenshot({ path: path.join(OUT_DIR, 'clean-clone-story.png') });
-      console.log('📸 Saved clean-clone-story.png');
 
-      // live-fail-loudly.png (simulate FalkorDB offline 503)
-      await page.route('**/runs', async (route) => {
-        if (route.request().method() === 'POST') {
-          await route.fulfill({
-            status: 503,
-            contentType: 'application/json',
-            body: JSON.stringify({
-              detail: 'Live run execution failed (FalkorDB connection refused or offline): Error connecting to 127.0.0.1:6379'
-            })
-          });
-        } else {
-          await route.continue();
-        }
-      });
-
-      const liveBtn = page.locator('button:has-text("Live")');
-      if (await liveBtn.isVisible()) {
-        await liveBtn.click();
-        await page.waitForTimeout(300);
-      }
-      const runBtn = page.locator('button:has-text("Run Swarm")');
-      if (await runBtn.isVisible()) {
-        await runBtn.click();
-        await page.waitForTimeout(600);
-      }
-      await page.screenshot({ path: path.join(OUT_DIR, 'live-fail-loudly.png') });
-      console.log('📸 Saved live-fail-loudly.png');
     }
 
     await context.close();
