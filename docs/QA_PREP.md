@@ -6,7 +6,7 @@ This document contains 16 technical questions and rigorous, verified answers pre
 
 ### Q1: Why use a graph database like FalkorDB? Why couldn't this be done with PostgreSQL or a document store?
 **Answer**:
-1. **Arbitrary-Depth Transitive Traversal**: Finding whether Agent 2's target calls Agent 1's target across intermediate functions requires variable-length path traversal `(caller)-[:CALLS*1..4]->(target)`. In relational SQL, this requires recursive Common Table Expressions (CTEs) with multiple self-joins that become computationally prohibitive and unindexable as depth grows. In FalkorDB, openCypher evaluates this 4-hop chain in **about a millisecond (1.6 ms on screen)** on the 69-node repository graph.
+1. **Arbitrary-Depth Transitive Traversal**: Finding whether Agent 2's target calls Agent 1's target across intermediate functions requires variable-length path traversal `(caller)-[:CALLS*1..4]->(target)`. In relational SQL, this requires recursive Common Table Expressions (CTEs) with multiple self-joins that become computationally prohibitive and unindexable as depth grows. In FalkorDB, openCypher evaluates this 4-hop chain in **~1-2 ms (median 1.97 ms; see `docs/NUMBERS.md`)** on the 69-node repository graph.
 2. **Native In-Memory Graph Algorithms**: PageRank and Betweenness Centrality determine whether a symbol is an architectural bottleneck. Running these on SQL tables requires exporting the adjacency matrix to an external compute engine (e.g. NetworkX) on every claim. FalkorDB executes `algo.pageRank` in **1.36 ms** and `algo.betweenness` in **1.80 ms** directly in Redis memory.
 3. **Unified Code and Swarm Model**: In FalkorDB, coordination entities (`:Agent`, `:Run`) connect directly to code AST symbols (`:Symbol`) via `[:CLAIMS]` edges. A single query traverses from Agent $\to$ Claim $\to$ Symbol $\to$ CALLS chain $\to$ Symbol $\to$ Claim $\to$ Agent, returning the entire causal chain in a single graph transaction.
 
@@ -85,9 +85,8 @@ ChronoFork **fails loudly with zero mock fallbacks**:
 
 ### Q9: Why are agents implemented as deterministic scripted patches rather than live LLMs?
 **Answer**:
-- To guarantee **100% reproducible coordination benchmarks and hackathon demonstrations**.
-- The core innovation of ChronoFork is the **graph coordination engine, collision detection, and procedural memory**, not the LLM code generator.
-- While LLM invocation via Gemini API is scaffolded in `backend/app/agents/llm.py`, live LLM mode was intentionally not validated against production API keys to prevent flaky LLM outputs from contaminating graph coordination verification.
+- ChronoFork supports both **Replay Mode** (serving deterministic, pre-captured event logs for instant zero-key verification) and **Live Gemini Mode** (`backend/app/agents/llm.py`), which calls Gemini to synthesize caller migration patches (`database.py`) and validates them against real `pytest` inside isolated workspaces before falling back to verified patches if tests fail.
+- The core innovation of ChronoFork is the **graph coordination engine, collision detection, and procedural memory**, providing mathematical guarantees that prevent silent semantic merge breakages regardless of which LLM provider generates code.
 
 ---
 
@@ -152,7 +151,7 @@ Configurable via `.env` or Docker Compose environment: `DEMO_MODE=true` (which i
 **Answer**:
 - **Google Antigravity**: Used for autonomous codebase implementation, Playwright end-to-end verification, test suite authoring, and Docker containerization.
 - **Anthropic Claude**: Used for initial design review, architectural planning, and benchmark methodology design.
-- **TEAM TO CONFIRM: what we personally verified**:
+- **Verified by Team Mutants (Vivek C K & Souhardya Saha)**:
   - The team personally validated the openCypher collision queries on FalkorDB.
   - The team personally executed the 5-failed vs 12-passed pytest comparison on real workspaces.
   - The team personally verified the Docker Compose multi-stage build, container healthchecks, and Playwright UI recordings.

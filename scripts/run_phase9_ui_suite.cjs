@@ -356,7 +356,7 @@ async function runPhase9Suite() {
     await page.evaluate(() => window.__chronoSetIndex(0));
     await page.waitForTimeout(400);
 
-    const memTab = page.locator('button:has-text("Memory Drawer")');
+    const memTab = page.locator('button:has-text("Memory (")');
     if (await memTab.isVisible()) {
       await memTab.click();
       await page.waitForTimeout(300);

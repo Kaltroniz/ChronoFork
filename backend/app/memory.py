@@ -86,7 +86,6 @@ def record_episode(
         falkor_client.query(mem_key, link_sym_query, {"ep_id": ep_id, "qname": qname})
 
     # Record or link ProceduralRule if provided
-    # Record or link ProceduralRule if provided
     rule_id = None
     if rule_learned:
         rule_id = rule_learned.get("id") or f"rule_{uuid.uuid4().hex[:6]}"

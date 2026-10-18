@@ -69,8 +69,8 @@ A hackathon rule we took to heart is: *FalkorDB must be the irreplaceable core o
 
 Here is why ChronoFork cannot exist without FalkorDB:
 
-### 1. Variable-Length Transitive Traversals (`0.76 ms` median)
-Detecting transitive collisions requires discovering whether Agent 2's target calls Agent 1's target up to arbitrary depths. In SQL, this requires recursive Common Table Expressions (CTEs) with repeated self-joins that become computationally prohibitive as call trees branch. In FalkorDB, openCypher traverses arbitrary depths in **0.76 ms** (median on repo:taskflow):
+### 1. Variable-Length Transitive Traversals (~1-2 ms, median 1.97 ms)
+Detecting transitive collisions requires discovering whether Agent 2's target calls Agent 1's target up to arbitrary depths. In SQL, this requires recursive Common Table Expressions (CTEs) with repeated self-joins that become computationally prohibitive as call trees branch. In FalkorDB, openCypher traverses arbitrary depths in **~1-2 ms** (median 1.97 ms on repo:taskflow; see `docs/NUMBERS.md`):
 
 ```cypher
 MATCH (a1:Agent)-[c1:CLAIMS]->(s1:Symbol),
@@ -101,22 +101,9 @@ ChronoFork agents don't guess — they traverse connected graph structures at ev
 1. **Reverse Impact Analysis**:
    When an agent targets `config.load_config`, FalkorDB executes a reverse traversal along incoming `CALLS` and `TESTED_BY` edges:
    ```cypher
-   MATCH (target:Symbol {qualname: $qualname})
-   OPTIONAL MATCH path = (caller:Symbol)-[:CALLS*1..4]->(target)
-   OPTIONAL MATCH (target)<-[:TESTED_BY]-(direct_test:Test)
-   OPTIONAL MATCH (caller)<-[:TESTED_BY]-(transitive_test:Test)
-   RETURN collect(DISTINCT caller.qualname) AS dependent_callers,
-          collect(DISTINCT direct_test.qualname) + collect(DISTINCT transitive_test.qualname) AS affected_tests
-   ```
-1. **Reverse Impact Analysis**:
-   When an agent targets `config.load_config`, FalkorDB executes a reverse traversal along incoming `CALLS` and `TESTED_BY` edges:
-   ```cypher
-   MATCH (target:Symbol {qualname: $qualname})
-   OPTIONAL MATCH path = (caller:Symbol)-[:CALLS*1..4]->(target)
-   OPTIONAL MATCH (target)<-[:TESTED_BY]-(direct_test:Test)
-   OPTIONAL MATCH (caller)<-[:TESTED_BY]-(transitive_test:Test)
-   RETURN collect(DISTINCT caller.qualname) AS dependent_callers,
-          collect(DISTINCT direct_test.qualname) + collect(DISTINCT transitive_test.qualname) AS affected_tests
+   MATCH (target:Symbol {qualname: $target_qname})<-[:CALLS*0..4]-(sym:Symbol)-[:TESTED_BY]->(tst:Symbol:Test)
+   RETURN DISTINCT tst.qualname AS test_name, tst.path AS test_path, tst.lineno AS lineno
+   ORDER BY test_name
    ```
    Within a sub-2 ms range (**~1-2 ms**, median 1.97 ms; see `docs/evidence/phase8/benchmark_detection_stdout.txt` and `docs/NUMBERS.md`), the agent knows that altering `load_config` impacts 7 callers across 4 modules and threatens 5 unit test suites.
 
@@ -141,10 +128,14 @@ When Agent 1 claims `load_config` and Agent 2 claims `worker.execute_job`, the C
 ### Graph-Computed Merge Order
 Rather than hardcoding execution sequences, ChronoFork calculates the optimal merge order dynamically via an openCypher query:
 ```cypher
-MATCH (a:Agent)-[c:CLAIMS]->(s:Symbol)
-OPTIONAL MATCH (s)<-[:CALLS*1..4]-(s_caller:Symbol)<-[:CLAIMS]-(a_caller:Agent)
-RETURN a.id AS agent_id, a.name AS agent_name, s.qualname AS symbol, count(s_caller) AS depth
-ORDER BY depth DESC
+MATCH (a:Agent)-[:CLAIMS]->(s:Symbol)
+OPTIONAL MATCH path = (s)-[:CALLS*1..4]->(dep:Symbol)<-[:CLAIMS]-(other:Agent)
+WHERE other.id <> a.id
+RETURN a.id AS agent_id,
+       s.qualname AS symbol,
+       count(dep) AS outgoing_claimed_dependencies,
+       collect(DISTINCT dep.qualname) AS depends_on
+ORDER BY outgoing_claimed_dependencies ASC
 ```
 This guarantees dependencies (callees) are patched, verified, and merged before callers run.
 

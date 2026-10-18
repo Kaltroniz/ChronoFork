@@ -73,6 +73,7 @@ def execute_scenario_1(run_id: str = "run_scenario_1", mode: str = "replay") -> 
     Demonstrates real Git clean merge failure vs ChronoFork graph serialization success.
     """
     ensure_demo_repos_ingested()
+    reset_memory("taskflow")  # Ensure Scenario 1 always starts from a clean Cold Start
     event_bus.init_run(run_id)
     repo = "taskflow"
     taskflow_path = get_repo_path("taskflow")

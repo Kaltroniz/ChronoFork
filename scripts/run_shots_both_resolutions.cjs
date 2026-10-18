@@ -183,7 +183,7 @@ async function runResolution(width, height) {
     await page.waitForTimeout(1000);
     await page.evaluate(() => (window).__chronoSetIndex(6));
     await page.waitForTimeout(600);
-    const memTab = page.locator('button:has-text("Memory Drawer")');
+    const memTab = page.locator('button:has-text("Memory (")');
     if (await memTab.isVisible()) {
       await memTab.click();
       await page.waitForTimeout(300);

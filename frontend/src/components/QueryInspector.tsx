@@ -89,7 +89,8 @@ export const QueryInspector: React.FC<QueryInspectorProps> = ({ activeEvent }) =
     if (trace?.cypher) {
       navigator.clipboard.writeText(trace.cypher);
     }
-    window.open('http://localhost:3000', '_blank', 'noopener,noreferrer');
+    const host = window.location.hostname || 'localhost';
+    window.open(`http://${host}:3000`, '_blank', 'noopener,noreferrer');
   };
 
   return (

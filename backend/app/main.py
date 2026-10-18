@@ -373,7 +373,9 @@ def ingest_repo(req: IngestRequest):
     # Sanitize path to prevent arbitrary directory traversal
     resolved_path = os.path.abspath(req.repo_path)
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-    
+
+    if not resolved_path.startswith(base_dir):
+        raise HTTPException(status_code=403, detail="Repository path must reside within the project workspace.")
     if not os.path.exists(resolved_path):
         raise HTTPException(status_code=400, detail="Repository path does not exist.")
 

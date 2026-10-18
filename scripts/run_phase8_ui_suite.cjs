@@ -338,7 +338,7 @@ async function runPhase8Suite() {
     await page.evaluate(() => window.__chronoSetIndex(0));
     await page.waitForTimeout(400);
 
-    const memTab = page.locator('button:has-text("Memory Drawer")');
+    const memTab = page.locator('button:has-text("Memory (")');
     if (await memTab.isVisible()) {
       await memTab.click();
       await page.waitForTimeout(300);
@@ -471,7 +471,7 @@ async function runPhase8Suite() {
       await selectScenario(2, 7);
       await page.evaluate(() => window.__chronoSetIndex(6));
       await page.waitForTimeout(500);
-      const mTab = page.locator('button:has-text("Memory Drawer")');
+      const mTab = page.locator('button:has-text("Memory (")');
       if (await mTab.isVisible()) {
         await mTab.click();
         await page.waitForTimeout(400);

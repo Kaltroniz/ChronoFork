@@ -43,7 +43,7 @@ FalkorDB maintains four distinct graph namespaces per repository:
 1. PLANNING          2. RECALL            3. CLAIM             4. COLLISION DETECTION
 Planner decomposes   Agents query         Agents write         openCypher traverses
 task into subtasks   mem:<repo> for       [:CLAIMS] edges      (s2)-[:CALLS*1..4]->(s1)
-and assigns agents.  procedural rules.    to coord graph.      in 0.76 ms.
+and assigns agents.  procedural rules.    to coord graph.      in ~1-2 ms (1.97 ms).
       │                    │                    │                    │
       ▼                    ▼                    ▼                    ▼
 5. GIT COMPARISON    6. RESOLUTION        7. EXECUTION         8. VERIFICATION & MEMORY

@@ -34,54 +34,54 @@ class LLMProvider:
             ""
         )
 
+    def _deterministic_plan(self, user_task: str) -> list:
+        if "reports" in user_task.lower():
+            return [
+                {
+                    "agent_id": "agent_1",
+                    "agent_name": "WorkerCoder",
+                    "role": "Core Pipeline",
+                    "color": "#3b82f6",
+                    "claim_symbol": "taskflow.worker.execute_job",
+                    "intent": "BODY_EDIT",
+                    "subtask": "Queue optimizations and retry logic"
+                },
+                {
+                    "agent_id": "agent_3",
+                    "agent_name": "ReportsCoder",
+                    "role": "Analytics",
+                    "color": "#10b981",
+                    "claim_symbol": "taskflow.reports.generator.generate_summary",
+                    "intent": "BODY_EDIT",
+                    "subtask": "Quarterly analytics report aggregation"
+                }
+            ]
+        return [
+            {
+                "agent_id": "agent_1",
+                "agent_name": "ConfigCoder",
+                "role": "Backend Configuration",
+                "color": "#3b82f6",
+                "claim_symbol": "taskflow.config.load_config",
+                "intent": "SIGNATURE_CHANGE",
+                "subtask": "Migrate load_config to return ConfigObject"
+            },
+            {
+                "agent_id": "agent_2",
+                "agent_name": "WorkerCoder",
+                "role": "Background Worker",
+                "color": "#f59e0b",
+                "claim_symbol": "taskflow.worker.execute_job",
+                "intent": "BODY_EDIT",
+                "subtask": "Add retry loop and job metrics"
+            }
+        ]
+
     def plan_subtasks(self, user_task: str, repo_symbols: list) -> list:
         """Decomposes a task into agent subtasks with symbol claims and intents."""
-        # If API key is not present or mock requested, use deterministic synthesis
         if not self.api_key or self.provider == "mock":
-            if "reports" in user_task.lower():
-                return [
-                    {
-                        "agent_id": "agent_1",
-                        "agent_name": "WorkerCoder",
-                        "role": "Core Pipeline",
-                        "color": "#3b82f6",
-                        "claim_symbol": "taskflow.worker.execute_job",
-                        "intent": "BODY_EDIT",
-                        "subtask": "Queue optimizations and retry logic"
-                    },
-                    {
-                        "agent_id": "agent_3",
-                        "agent_name": "ReportsCoder",
-                        "role": "Analytics",
-                        "color": "#10b981",
-                        "claim_symbol": "taskflow.reports.generator.generate_summary",
-                        "intent": "BODY_EDIT",
-                        "subtask": "Quarterly analytics report aggregation"
-                    }
-                ]
-            else:
-                return [
-                    {
-                        "agent_id": "agent_1",
-                        "agent_name": "ConfigCoder",
-                        "role": "Backend Configuration",
-                        "color": "#3b82f6",
-                        "claim_symbol": "taskflow.config.load_config",
-                        "intent": "SIGNATURE_CHANGE",
-                        "subtask": "Migrate load_config to return ConfigObject"
-                    },
-                    {
-                        "agent_id": "agent_2",
-                        "agent_name": "WorkerCoder",
-                        "role": "Background Worker",
-                        "color": "#f59e0b",
-                        "claim_symbol": "taskflow.worker.execute_job",
-                        "intent": "BODY_EDIT",
-                        "subtask": "Add retry loop and job metrics"
-                    }
-                ]
+            return self._deterministic_plan(user_task)
 
-        # Live Gemini API call
         try:
             import httpx
             prompt = f"""
@@ -90,7 +90,7 @@ class LLMProvider:
             AVAILABLE SYMBOLS: {repo_symbols[:15]}
             Return JSON list: [{{"agent_id": "agent_1", "agent_name": "Name", "role": "Role", "claim_symbol": "symbol.qualname", "intent": "SIGNATURE_CHANGE|BODY_EDIT"}}]
             """
-            models = ["gemini-3.5-flash-lite", "gemini-flash-latest", "gemini-3.8-flash", "gemini-2.0-flash"]
+            models = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-flash-latest", "gemini-2.0-flash"]
             for model_name in models:
                 try:
                     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={self.api_key}"
@@ -105,8 +105,7 @@ class LLMProvider:
         except Exception as e:
             print(f"Live LLM call error (falling back to deterministic synthesis): {e}")
 
-        # Fallback
-        return self.plan_subtasks(user_task, repo_symbols)
+        return self._deterministic_plan(user_task)
 
     def generate_migration_patch(self, symbol_name: str, callers: list, original_code: str) -> Optional[str]:
         """Uses Gemini to generate the caller migration patch from graph impact list."""
@@ -129,7 +128,7 @@ class LLMProvider:
             Rewrite the code so it safely accesses ConfigObject attributes (`cfg.env`, `cfg.timeout`, `cfg.auth_secret`) or falls back to dict access.
             Return ONLY the raw Python code. Do not wrap in markdown or explanations.
             """
-            models = ["gemini-3.5-flash-lite", "gemini-flash-latest", "gemini-3.8-flash", "gemini-2.0-flash"]
+            models = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-flash-latest", "gemini-2.0-flash"]
             for model_name in models:
                 try:
                     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={self.api_key}"
@@ -157,7 +156,7 @@ class LLMProvider:
         return {
             "provider": self.provider,
             "configured": has_key,
-            "models_supported": ["gemini-3.5-flash-lite", "gemini-flash-latest", "gemini-3.8-flash"],
+            "models_supported": ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-flash-latest", "gemini-2.0-flash"],
             "live_mode_available": has_key,
             "mode": "live-gemini" if has_key else "deterministic-fallback"
         }

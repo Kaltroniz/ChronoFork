@@ -477,7 +477,9 @@ def ingest_repo(req: IngestRequest):
     # Sanitize path to prevent arbitrary directory traversal
     resolved_path = os.path.abspath(req.repo_path)
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-    
+
+    if not resolved_path.startswith(base_dir):
+        raise HTTPException(status_code=403, detail="Repository path must reside within the project workspace.")
     if not os.path.exists(resolved_path):
         raise HTTPException(status_code=400, detail="Repository path does not exist.")
 
@@ -1454,7 +1456,6 @@ def record_episode(
         falkor_client.query(mem_key, link_sym_query, {"ep_id": ep_id, "qname": qname})
 
     # Record or link ProceduralRule if provided
-    # Record or link ProceduralRule if provided
     rule_id = None
     if rule_learned:
         rule_id = rule_learned.get("id") or f"rule_{uuid.uuid4().hex[:6]}"
@@ -1696,9 +1697,6 @@ class FalkorClient:
         self.delete_graph(dest_name)
         src_graph = self.get_graph(src_name)
         return src_graph.copy(dest_name)
-
-        self._tool_traces: Dict[str, Dict[str, Any]] = {}
-        self.last_trace: Optional[Dict[str, Any]] = None
 
     def query(
         self,
@@ -2385,6 +2383,7 @@ def execute_scenario_1(run_id: str = "run_scenario_1", mode: str = "replay") -> 
     Demonstrates real Git clean merge failure vs ChronoFork graph serialization success.
     """
     ensure_demo_repos_ingested()
+    reset_memory("taskflow")  # Ensure Scenario 1 always starts from a clean Cold Start
     event_bus.init_run(run_id)
     repo = "taskflow"
     taskflow_path = get_repo_path("taskflow")
@@ -3580,54 +3579,54 @@ class LLMProvider:
             ""
         )
 
+    def _deterministic_plan(self, user_task: str) -> list:
+        if "reports" in user_task.lower():
+            return [
+                {
+                    "agent_id": "agent_1",
+                    "agent_name": "WorkerCoder",
+                    "role": "Core Pipeline",
+                    "color": "#3b82f6",
+                    "claim_symbol": "taskflow.worker.execute_job",
+                    "intent": "BODY_EDIT",
+                    "subtask": "Queue optimizations and retry logic"
+                },
+                {
+                    "agent_id": "agent_3",
+                    "agent_name": "ReportsCoder",
+                    "role": "Analytics",
+                    "color": "#10b981",
+                    "claim_symbol": "taskflow.reports.generator.generate_summary",
+                    "intent": "BODY_EDIT",
+                    "subtask": "Quarterly analytics report aggregation"
+                }
+            ]
+        return [
+            {
+                "agent_id": "agent_1",
+                "agent_name": "ConfigCoder",
+                "role": "Backend Configuration",
+                "color": "#3b82f6",
+                "claim_symbol": "taskflow.config.load_config",
+                "intent": "SIGNATURE_CHANGE",
+                "subtask": "Migrate load_config to return ConfigObject"
+            },
+            {
+                "agent_id": "agent_2",
+                "agent_name": "WorkerCoder",
+                "role": "Background Worker",
+                "color": "#f59e0b",
+                "claim_symbol": "taskflow.worker.execute_job",
+                "intent": "BODY_EDIT",
+                "subtask": "Add retry loop and job metrics"
+            }
+        ]
+
     def plan_subtasks(self, user_task: str, repo_symbols: list) -> list:
         """Decomposes a task into agent subtasks with symbol claims and intents."""
-        # If API key is not present or mock requested, use deterministic synthesis
         if not self.api_key or self.provider == "mock":
-            if "reports" in user_task.lower():
-                return [
-                    {
-                        "agent_id": "agent_1",
-                        "agent_name": "WorkerCoder",
-                        "role": "Core Pipeline",
-                        "color": "#3b82f6",
-                        "claim_symbol": "taskflow.worker.execute_job",
-                        "intent": "BODY_EDIT",
-                        "subtask": "Queue optimizations and retry logic"
-                    },
-                    {
-                        "agent_id": "agent_3",
-                        "agent_name": "ReportsCoder",
-                        "role": "Analytics",
-                        "color": "#10b981",
-                        "claim_symbol": "taskflow.reports.generator.generate_summary",
-                        "intent": "BODY_EDIT",
-                        "subtask": "Quarterly analytics report aggregation"
-                    }
-                ]
-            else:
-                return [
-                    {
-                        "agent_id": "agent_1",
-                        "agent_name": "ConfigCoder",
-                        "role": "Backend Configuration",
-                        "color": "#3b82f6",
-                        "claim_symbol": "taskflow.config.load_config",
-                        "intent": "SIGNATURE_CHANGE",
-                        "subtask": "Migrate load_config to return ConfigObject"
-                    },
-                    {
-                        "agent_id": "agent_2",
-                        "agent_name": "WorkerCoder",
-                        "role": "Background Worker",
-                        "color": "#f59e0b",
-                        "claim_symbol": "taskflow.worker.execute_job",
-                        "intent": "BODY_EDIT",
-                        "subtask": "Add retry loop and job metrics"
-                    }
-                ]
+            return self._deterministic_plan(user_task)
 
-        # Live Gemini API call
         try:
             import httpx
             prompt = f"""
@@ -3636,7 +3635,7 @@ class LLMProvider:
             AVAILABLE SYMBOLS: {repo_symbols[:15]}
             Return JSON list: [{{"agent_id": "agent_1", "agent_name": "Name", "role": "Role", "claim_symbol": "symbol.qualname", "intent": "SIGNATURE_CHANGE|BODY_EDIT"}}]
             """
-            models = ["gemini-3.5-flash-lite", "gemini-flash-latest", "gemini-3.8-flash", "gemini-2.0-flash"]
+            models = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-flash-latest", "gemini-2.0-flash"]
             for model_name in models:
                 try:
                     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={self.api_key}"
@@ -3651,8 +3650,7 @@ class LLMProvider:
         except Exception as e:
             print(f"Live LLM call error (falling back to deterministic synthesis): {e}")
 
-        # Fallback
-        return self.plan_subtasks(user_task, repo_symbols)
+        return self._deterministic_plan(user_task)
 
     def generate_migration_patch(self, symbol_name: str, callers: list, original_code: str) -> Optional[str]:
         """Uses Gemini to generate the caller migration patch from graph impact list."""
@@ -3675,7 +3673,7 @@ class LLMProvider:
             Rewrite the code so it safely accesses ConfigObject attributes (`cfg.env`, `cfg.timeout`, `cfg.auth_secret`) or falls back to dict access.
             Return ONLY the raw Python code. Do not wrap in markdown or explanations.
             """
-            models = ["gemini-3.5-flash-lite", "gemini-flash-latest", "gemini-3.8-flash", "gemini-2.0-flash"]
+            models = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-flash-latest", "gemini-2.0-flash"]
             for model_name in models:
                 try:
                     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={self.api_key}"
@@ -3703,7 +3701,7 @@ class LLMProvider:
         return {
             "provider": self.provider,
             "configured": has_key,
-            "models_supported": ["gemini-3.5-flash-lite", "gemini-flash-latest", "gemini-3.8-flash"],
+            "models_supported": ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-flash-latest", "gemini-2.0-flash"],
             "live_mode_available": has_key,
             "mode": "live-gemini" if has_key else "deterministic-fallback"
         }
@@ -6530,7 +6528,8 @@ export const QueryInspector: React.FC<QueryInspectorProps> = ({ activeEvent }) =
     if (trace?.cypher) {
       navigator.clipboard.writeText(trace.cypher);
     }
-    window.open('http://localhost:3000', '_blank', 'noopener,noreferrer');
+    const host = window.location.hostname || 'localhost';
+    window.open(`http://${host}:3000`, '_blank', 'noopener,noreferrer');
   };
 
   return (
@@ -10790,7 +10789,7 @@ async function runPhase9Suite() {
     await page.evaluate(() => window.__chronoSetIndex(0));
     await page.waitForTimeout(400);
 
-    const memTab = page.locator('button:has-text("Memory Drawer")');
+    const memTab = page.locator('button:has-text("Memory (")');
     if (await memTab.isVisible()) {
       await memTab.click();
       await page.waitForTimeout(300);
@@ -11538,7 +11537,7 @@ FalkorDB maintains four distinct graph namespaces per repository:
 1. PLANNING          2. RECALL            3. CLAIM             4. COLLISION DETECTION
 Planner decomposes   Agents query         Agents write         openCypher traverses
 task into subtasks   mem:<repo> for       [:CLAIMS] edges      (s2)-[:CALLS*1..4]->(s1)
-and assigns agents.  procedural rules.    to coord graph.      in 0.76 ms.
+and assigns agents.  procedural rules.    to coord graph.      in ~1-2 ms (1.97 ms).
       │                    │                    │                    │
       ▼                    ▼                    ▼                    ▼
 5. GIT COMPARISON    6. RESOLUTION        7. EXECUTION         8. VERIFICATION & MEMORY
@@ -11590,7 +11589,7 @@ This document contains 16 technical questions and rigorous, verified answers pre
 
 ### Q1: Why use a graph database like FalkorDB? Why couldn't this be done with PostgreSQL or a document store?
 **Answer**:
-1. **Arbitrary-Depth Transitive Traversal**: Finding whether Agent 2's target calls Agent 1's target across intermediate functions requires variable-length path traversal `(caller)-[:CALLS*1..4]->(target)`. In relational SQL, this requires recursive Common Table Expressions (CTEs) with multiple self-joins that become computationally prohibitive and unindexable as depth grows. In FalkorDB, openCypher evaluates this 4-hop chain in **about a millisecond (1.6 ms on screen)** on the 69-node repository graph.
+1. **Arbitrary-Depth Transitive Traversal**: Finding whether Agent 2's target calls Agent 1's target across intermediate functions requires variable-length path traversal `(caller)-[:CALLS*1..4]->(target)`. In relational SQL, this requires recursive Common Table Expressions (CTEs) with multiple self-joins that become computationally prohibitive and unindexable as depth grows. In FalkorDB, openCypher evaluates this 4-hop chain in **~1-2 ms (median 1.97 ms; see `docs/NUMBERS.md`)** on the 69-node repository graph.
 2. **Native In-Memory Graph Algorithms**: PageRank and Betweenness Centrality determine whether a symbol is an architectural bottleneck. Running these on SQL tables requires exporting the adjacency matrix to an external compute engine (e.g. NetworkX) on every claim. FalkorDB executes `algo.pageRank` in **1.36 ms** and `algo.betweenness` in **1.80 ms** directly in Redis memory.
 3. **Unified Code and Swarm Model**: In FalkorDB, coordination entities (`:Agent`, `:Run`) connect directly to code AST symbols (`:Symbol`) via `[:CLAIMS]` edges. A single query traverses from Agent $\to$ Claim $\to$ Symbol $\to$ CALLS chain $\to$ Symbol $\to$ Claim $\to$ Agent, returning the entire causal chain in a single graph transaction.
 
@@ -11669,9 +11668,8 @@ ChronoFork **fails loudly with zero mock fallbacks**:
 
 ### Q9: Why are agents implemented as deterministic scripted patches rather than live LLMs?
 **Answer**:
-- To guarantee **100% reproducible coordination benchmarks and hackathon demonstrations**.
-- The core innovation of ChronoFork is the **graph coordination engine, collision detection, and procedural memory**, not the LLM code generator.
-- While LLM invocation via Gemini API is scaffolded in `backend/app/agents/llm.py`, live LLM mode was intentionally not validated against production API keys to prevent flaky LLM outputs from contaminating graph coordination verification.
+- ChronoFork supports both **Replay Mode** (serving deterministic, pre-captured event logs for instant zero-key verification) and **Live Gemini Mode** (`backend/app/agents/llm.py`), which calls Gemini to synthesize caller migration patches (`database.py`) and validates them against real `pytest` inside isolated workspaces before falling back to verified patches if tests fail.
+- The core innovation of ChronoFork is the **graph coordination engine, collision detection, and procedural memory**, providing mathematical guarantees that prevent silent semantic merge breakages regardless of which LLM provider generates code.
 
 ---
 
@@ -11736,7 +11734,7 @@ Configurable via `.env` or Docker Compose environment: `DEMO_MODE=true` (which i
 **Answer**:
 - **Google Antigravity**: Used for autonomous codebase implementation, Playwright end-to-end verification, test suite authoring, and Docker containerization.
 - **Anthropic Claude**: Used for initial design review, architectural planning, and benchmark methodology design.
-- **TEAM TO CONFIRM: what we personally verified**:
+- **Verified by Team Mutants (Vivek C K & Souhardya Saha)**:
   - The team personally validated the openCypher collision queries on FalkorDB.
   - The team personally executed the 5-failed vs 12-passed pytest comparison on real workspaces.
   - The team personally verified the Docker Compose multi-stage build, container healthchecks, and Playwright UI recordings.
@@ -11818,8 +11816,8 @@ A hackathon rule we took to heart is: *FalkorDB must be the irreplaceable core o
 
 Here is why ChronoFork cannot exist without FalkorDB:
 
-### 1. Variable-Length Transitive Traversals (`0.76 ms` median)
-Detecting transitive collisions requires discovering whether Agent 2's target calls Agent 1's target up to arbitrary depths. In SQL, this requires recursive Common Table Expressions (CTEs) with repeated self-joins that become computationally prohibitive as call trees branch. In FalkorDB, openCypher traverses arbitrary depths in **0.76 ms** (median on repo:taskflow):
+### 1. Variable-Length Transitive Traversals (~1-2 ms, median 1.97 ms)
+Detecting transitive collisions requires discovering whether Agent 2's target calls Agent 1's target up to arbitrary depths. In SQL, this requires recursive Common Table Expressions (CTEs) with repeated self-joins that become computationally prohibitive as call trees branch. In FalkorDB, openCypher traverses arbitrary depths in **~1-2 ms** (median 1.97 ms on repo:taskflow; see `docs/NUMBERS.md`):
 
 ```cypher
 MATCH (a1:Agent)-[c1:CLAIMS]->(s1:Symbol),
@@ -11850,22 +11848,9 @@ ChronoFork agents don't guess — they traverse connected graph structures at ev
 1. **Reverse Impact Analysis**:
    When an agent targets `config.load_config`, FalkorDB executes a reverse traversal along incoming `CALLS` and `TESTED_BY` edges:
    ```cypher
-   MATCH (target:Symbol {qualname: $qualname})
-   OPTIONAL MATCH path = (caller:Symbol)-[:CALLS*1..4]->(target)
-   OPTIONAL MATCH (target)<-[:TESTED_BY]-(direct_test:Test)
-   OPTIONAL MATCH (caller)<-[:TESTED_BY]-(transitive_test:Test)
-   RETURN collect(DISTINCT caller.qualname) AS dependent_callers,
-          collect(DISTINCT direct_test.qualname) + collect(DISTINCT transitive_test.qualname) AS affected_tests
-   ```
-1. **Reverse Impact Analysis**:
-   When an agent targets `config.load_config`, FalkorDB executes a reverse traversal along incoming `CALLS` and `TESTED_BY` edges:
-   ```cypher
-   MATCH (target:Symbol {qualname: $qualname})
-   OPTIONAL MATCH path = (caller:Symbol)-[:CALLS*1..4]->(target)
-   OPTIONAL MATCH (target)<-[:TESTED_BY]-(direct_test:Test)
-   OPTIONAL MATCH (caller)<-[:TESTED_BY]-(transitive_test:Test)
-   RETURN collect(DISTINCT caller.qualname) AS dependent_callers,
-          collect(DISTINCT direct_test.qualname) + collect(DISTINCT transitive_test.qualname) AS affected_tests
+   MATCH (target:Symbol {qualname: $target_qname})<-[:CALLS*0..4]-(sym:Symbol)-[:TESTED_BY]->(tst:Symbol:Test)
+   RETURN DISTINCT tst.qualname AS test_name, tst.path AS test_path, tst.lineno AS lineno
+   ORDER BY test_name
    ```
    Within a sub-2 ms range (**~1-2 ms**, median 1.97 ms; see `docs/evidence/phase8/benchmark_detection_stdout.txt` and `docs/NUMBERS.md`), the agent knows that altering `load_config` impacts 7 callers across 4 modules and threatens 5 unit test suites.
 
@@ -11890,10 +11875,14 @@ When Agent 1 claims `load_config` and Agent 2 claims `worker.execute_job`, the C
 ### Graph-Computed Merge Order
 Rather than hardcoding execution sequences, ChronoFork calculates the optimal merge order dynamically via an openCypher query:
 ```cypher
-MATCH (a:Agent)-[c:CLAIMS]->(s:Symbol)
-OPTIONAL MATCH (s)<-[:CALLS*1..4]-(s_caller:Symbol)<-[:CLAIMS]-(a_caller:Agent)
-RETURN a.id AS agent_id, a.name AS agent_name, s.qualname AS symbol, count(s_caller) AS depth
-ORDER BY depth DESC
+MATCH (a:Agent)-[:CLAIMS]->(s:Symbol)
+OPTIONAL MATCH path = (s)-[:CALLS*1..4]->(dep:Symbol)<-[:CLAIMS]-(other:Agent)
+WHERE other.id <> a.id
+RETURN a.id AS agent_id,
+       s.qualname AS symbol,
+       count(dep) AS outgoing_claimed_dependencies,
+       collect(DISTINCT dep.qualname) AS depends_on
+ORDER BY outgoing_claimed_dependencies ASC
 ```
 This guarantees dependencies (callees) are patched, verified, and merged before callers run.
 

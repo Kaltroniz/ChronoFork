@@ -82,9 +82,6 @@ class FalkorClient:
         src_graph = self.get_graph(src_name)
         return src_graph.copy(dest_name)
 
-        self._tool_traces: Dict[str, Dict[str, Any]] = {}
-        self.last_trace: Optional[Dict[str, Any]] = None
-
     def query(
         self,
         graph_name: str,
